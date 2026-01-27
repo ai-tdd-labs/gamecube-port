@@ -137,6 +137,12 @@ class DolphinGDB:
         """Continue CPU execution."""
         self._send('c')
 
+    def run_and_halt(self, duration=0.5):
+        """Continue execution for a duration then halt."""
+        self.cont()
+        time.sleep(duration)
+        self.halt()
+
     def close(self):
         if self.sock:
             self.sock.close()
@@ -208,6 +214,8 @@ Examples:
                         help='Dolphin GDB port (default: 9090)')
     parser.add_argument('--halt', action='store_true',
                         help='Halt CPU before reading (for stable state)')
+    parser.add_argument('--run', type=float, default=0,
+                        help='Run emulation for N seconds before halting (use with DOLs that write test data)')
     parser.add_argument('--continue', dest='cont', action='store_true',
                         help='Continue CPU after reading')
 
@@ -244,7 +252,10 @@ Examples:
         sys.exit(1)
 
     try:
-        if args.halt:
+        if args.run > 0:
+            print(f"Running emulation for {args.run}s then halting...")
+            gdb.run_and_halt(args.run)
+        elif args.halt:
             print("Halting CPU...")
             gdb.halt()
 

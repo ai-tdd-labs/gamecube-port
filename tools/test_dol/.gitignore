@@ -1,0 +1,9 @@
+# Build artifacts
+build/
+*.o
+*.elf
+*.elf.map
+*.d
+
+# Keep the DOL files (they're the output we want)
+!*.dol
