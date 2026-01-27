@@ -24,6 +24,48 @@ bd update <id> --status in_progress          # Start
 bd close <id> --reason "Tested: works"       # Only after confirmed
 ```
 
+## Test-First Workflow (VERPLICHT)
+
+Bij nieuwe SDK functie implementeren, volg ALTIJD deze volgorde:
+
+```
+1. LEES SDK eerst
+   → src/dolphin/ in MP4 decomp bekijken
+   → Begrijp wat de functie doet, parameters, returns
+
+2. ONTWERP test
+   → Wat checken we? Welke RAM adressen?
+   → Schrijf test case beschrijving
+
+3. BOUW test DOL
+   → Mini-DOL die alleen die ene functie test
+   → Gebruik devkitPPC (zie /build-dol skill)
+
+4. RUN in Dolphin → expected.bin
+   → Draai DOL in Dolphin met GDB stub
+   → Dump RAM naar expected.bin (zie /dolphin-debug skill)
+
+5. PAS DAN: implementeer runtime
+   → Nu mag je code schrijven
+   → Test tegen expected.bin (zie /ram-compare skill)
+```
+
+**REGELS:**
+- ❌ NOOIT: task "Implement DVDInit()" zonder test
+- ✅ ALTIJD: task "Test voor DVDInit ontwerpen" eerst
+- ❌ NOOIT: code schrijven voordat expected.bin bestaat
+- ✅ ALTIJD: Dolphin output = waarheid
+
+**SDK locatie:**
+```
+/Users/chrislamark/projects/recomp/gamecube_static_recomp/decomp_mario_party_4/
+├── src/dolphin/     # SDK source code
+│   ├── dvd/         # DVD functies
+│   ├── os/          # OS functies
+│   └── gx/          # Graphics functies
+└── include/dolphin/ # Headers
+```
+
 ## Quick Reference
 
 ```bash
