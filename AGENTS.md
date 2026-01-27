@@ -2,6 +2,28 @@
 
 This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get started.
 
+## Task Management Rules
+
+**ALWAYS create tasks before starting work:**
+- Break work into small, testable tasks
+- Use `bd create "Title" --body "Description"`
+- Set dependencies with `bd dep add <blocked> <blocker>`
+
+**ONLY close tasks when CONFIRMED complete:**
+- Task must be tested and verified working
+- Never close based on "should work" - must be proven
+- If unsure, leave open and add comment
+- Use `bd close <id> --reason "why"` with clear reason
+
+**Task workflow:**
+```bash
+bd create "Task title" --body "Description"  # Create
+bd update <id> --status in_progress          # Start
+# ... do the work ...
+# ... TEST and VERIFY ...
+bd close <id> --reason "Tested: works"       # Only after confirmed
+```
+
 ## Quick Reference
 
 ```bash
