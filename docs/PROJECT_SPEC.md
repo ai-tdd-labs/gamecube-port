@@ -8,13 +8,24 @@ Build a native runtime for GameCube games that produces **hardware-equivalent ou
 
 ### Test-Driven AI Development
 - AI writes code, but **tests determine correctness**
-- No "looks good" - only **pixel-exact, RAM-exact, audio-exact** validation
+- No "looks good" - only **bit-exact** validation
 - AI iterates until tests pass, with zero interpretation
 
 ### Ground Truth
 - **Dolphin** = the oracle (accurate GameCube emulator)
-- Every GX operation must produce identical output to Dolphin
-- Frame 2 of each test = stable reference image
+- Every operation must produce identical output to Dolphin
+- No discussion, no feeling - just bit-exact comparison
+
+### What We Compare Per Subsystem
+
+| Subsystem | Test Method | What We Compare |
+|-----------|-------------|-----------------|
+| **DVD** | RAM dump | Bytes loaded into memory |
+| **OS** | RAM dump | Heap state, thread state |
+| **GX** | Pixel compare | Rendered frame (PNG) |
+| **DSP/Audio** | Sample compare | PCM audio buffers |
+| **SI** | State compare | Controller input registers |
+| **VI** | Timing check | Frame count, sync |
 
 ---
 
@@ -62,12 +73,114 @@ Following the approach of RT64 (used by N64Recomp projects):
 
 ### Key Components
 
-1. **GX Runtime** - Translates GX calls to abstract RHI
-2. **RHI Layer** - Platform-agnostic render interface
-3. **Render Backends** - Metal/Vulkan/D3D12 implementations
-4. **Test Harness** - Validates pixel-exact output against Dolphin
-5. **Pattern Library** - Database of known GX behavior patterns
-6. **AI Integration** - LLM assists with code generation within test constraints
+1. **DVD Runtime** - File I/O from disc images
+2. **OS Runtime** - Memory management, threads, interrupts
+3. **GX Runtime** - Translates GX calls to abstract RHI
+4. **RHI Layer** - Platform-agnostic render interface
+5. **Render Backends** - Metal/Vulkan/D3D12 implementations
+6. **Audio Runtime** - DSP/AI audio processing
+7. **Test Harness** - Validates bit-exact output against Dolphin
+8. **AI Integration** - LLM assists with code generation within test constraints
+
+---
+
+## DVD Subsystem (Start Here)
+
+DVD is the simplest subsystem to implement and test. Start here before moving to GX.
+
+### Why DVD First?
+
+1. **Simpelste test**: input → RAM bytes → vergelijk
+2. **Geen pixels**: geen shaders, geen GPU
+3. **Games hebben het nodig**: zonder DVD geen asset loading
+4. **Goed te isoleren**: één functie, één test
+
+### How DVD Works
+
+```
+Game calls: DVDRead("/Object/Link.arc", dst=0x80300000, size=4096)
+            │
+            ▼
+DVD system reads from disc image
+            │
+            ▼
+Data lands in RAM at destination address
+            │
+            ▼
+Test: Compare RAM[dst..dst+size] with expected bytes
+```
+
+### DVD Unit Test Structure
+
+A DVD unit test is a **mini-DOL** that does only one thing:
+
+```c
+// test_dvd_read_basic.c
+int main() {
+    OSInit();
+    DVDInit();
+
+    // One DVD operation
+    DVDRead("/Object/Link.arc", (void*)0x80300000, 4096);
+
+    // Signal done (or hang)
+    while(1) {}
+}
+```
+
+### DVD Test Flow
+
+```
+1. Compile mini-DOL with single DVD operation
+2. Run in Dolphin
+3. Dump RAM[dst..dst+size] → expected.bin
+4. Run same DOL in our runtime
+5. Dump same RAM range → actual.bin
+6. Compare: expected.bin == actual.bin
+7. PASS if identical, FAIL if different
+```
+
+### DVD Functions to Test
+
+| Function | What It Does | Test Focus |
+|----------|--------------|------------|
+| `DVDInit()` | Initialize DVD system | No crash, state correct |
+| `DVDOpen()` | Open file handle | Handle valid, no error |
+| `DVDRead()` | Sync read to RAM | Bytes in RAM match |
+| `DVDReadAsync()` | Async read | Bytes match after callback |
+| `DVDClose()` | Close handle | Clean state |
+| `DVDGetLength()` | Get file size | Correct size returned |
+
+### Example Test Case
+
+```yaml
+test_id: dvd_read_basic_001
+file: "/Object/Link.arc"
+destination: 0x80300000
+size: 4096
+expected_hash: sha256:abc123...
+validation: RAM[0x80300000..0x80300FFF] == expected bytes
+```
+
+---
+
+## OS Subsystem
+
+After DVD, implement OS basics needed by most games.
+
+### OS Functions to Test
+
+| Function | What It Does | Test Focus |
+|----------|--------------|------------|
+| `OSInit()` | Initialize OS | Heap setup, no crash |
+| `OSAlloc()` | Allocate memory | Pointer valid, RAM correct |
+| `OSFree()` | Free memory | Heap state clean |
+| `OSGetTime()` | Get system time | Timing correct |
+| `OSCreateThread()` | Create thread | Thread runs |
+
+### OS Test Method
+
+Same as DVD: mini-DOL → Dolphin → RAM dump → compare.
 
 ---
 
@@ -160,26 +273,43 @@ Games reuse the same GX patterns with different data. Instead of learning every 
 ## AI Integration Rules
 
 ### What AI Does
-- Writes GX→RHI translation code
-- Generates platform-agnostic shader templates
-- Implements backend-specific code (Metal/Vulkan/D3D12)
+- Reads Nintendo SDK documentation for function behavior
+- Writes unit tests per SDK function
+- Implements runtime code (DVD, OS, GX, etc.)
 - Analyzes test failures and proposes fixes
-- Identifies patterns in game code
+- Logs all sessions for review
 
 ### What AI Does NOT Do
 - Decide if output "looks correct"
 - Skip or interpret test results
 - Hallucinate hardware behavior
 - Work without test validation
+- Argue with Dolphin ground truth
 
 ### AI Workflow
 
 ```
-Human defines: test requirements, GX specifications
-AI proposes: implementation code
-Tests verify: pixel-exact correctness
-AI iterates: until tests pass
+1. AI reads SDK docs for function X
+2. AI writes mini-DOL unit test for X
+3. Run in Dolphin → capture expected output
+4. AI implements function X in runtime
+5. Run same test → capture actual output
+6. Compare: expected == actual?
+7. If FAIL: AI fixes code, repeat from step 4
+8. If PASS: next function
 ```
+
+### Test-Driven AI Development (Key Insight)
+
+From the original brainstorm:
+
+> "AI zonder tests = vibes"
+> "AI met tests = engineering"
+
+The tests are the "straight jacket" that keeps AI productive:
+- AI can only move within test boundaries
+- No interpretation, only bit-exact comparison
+- If test fails, AI must fix - no discussion
 
 ### Constraints for AI
 
@@ -187,6 +317,7 @@ AI iterates: until tests pass
 2. **Tests are truth** - Dolphin output is always correct
 3. **Small changes** - One fix per iteration
 4. **Explain reasoning** - Document why each change was made
+5. **Log everything** - Sessions saved for AI #2 to review
 
 ---
 
@@ -198,6 +329,15 @@ gamecube/
 │   ├── PROJECT_SPEC.md          # This file
 │   └── chatgpt-chats/           # Original brainstorm conversations
 ├── runtime/
+│   ├── dvd/                     # DVD subsystem (START HERE)
+│   │   ├── dvd.h                # DVD API interface
+│   │   ├── dvd.cpp              # DVDInit, DVDRead, etc.
+│   │   └── disc_image.cpp       # ISO/GCM reading
+│   ├── os/                      # OS subsystem
+│   │   ├── os.h                 # OS API interface
+│   │   ├── os_init.cpp          # OSInit
+│   │   ├── os_memory.cpp        # Heap, allocation
+│   │   └── os_thread.cpp        # Threading
 │   ├── gx/                      # GX API implementation
 │   │   ├── blend.cpp            # Blending modes
 │   │   ├── tev.cpp              # TEV stages
@@ -219,14 +359,23 @@ gamecube/
 │           └── shaders/         # HLSL shaders
 ├── tests/
 │   ├── harness/                 # Test runner code
-│   ├── cases/                   # Individual test definitions
-│   │   ├── gx_blend_001.bin
-│   │   └── gx_tev_001.bin
-│   └── expected/                # Dolphin reference images
-│       ├── gx_blend_001.png
-│       └── gx_tev_001.png
+│   ├── sdk/                     # SDK unit tests (mini-DOLs)
+│   │   ├── dvd/                 # DVD tests
+│   │   │   ├── dvd_read_basic.c
+│   │   │   └── dvd_read_async.c
+│   │   ├── os/                  # OS tests
+│   │   │   └── os_init.c
+│   │   └── gx/                  # GX tests
+│   │       └── gx_blend_001.c
+│   └── expected/                # Dolphin reference data
+│       ├── dvd/                 # RAM dumps
+│       │   └── dvd_read_basic.bin
+│       └── gx/                  # Screenshots
+│           └── gx_blend_001.png
 ├── tools/
 │   ├── dolphin_runner.py        # Headless Dolphin automation
+│   ├── ram_dump.py              # RAM extraction from Dolphin
+│   ├── ram_compare.py           # Binary diff tool
 │   ├── pixel_compare.py         # Image diff tool
 │   └── pattern_extractor.py     # GX pattern mining
 └── .beads/                      # Task tracking
@@ -236,31 +385,43 @@ gamecube/
 
 ## Development Phases
 
-### Phase 1: Test Infrastructure
+### Phase 0: DVD Subsystem (Start Here)
+- [ ] Build Dolphin RAM dump tool
+- [ ] Create RAM comparison tool
+- [ ] Implement DVDInit()
+- [ ] Implement DVDRead() (sync)
+- [ ] Pass first 5 DVD unit tests
+
+### Phase 1: OS Basics
+- [ ] Implement OSInit()
+- [ ] Implement basic memory allocation
+- [ ] Pass OS unit tests
+
+### Phase 2: Test Infrastructure
 - [ ] Build Dolphin headless test runner
 - [ ] Create pixel comparison tool
 - [ ] Define first 10 GX micro-tests
 - [ ] Validate test harness works
 
-### Phase 2: Basic GX Runtime
+### Phase 3: Basic GX Runtime
 - [ ] Implement GXSetBlendMode
 - [ ] Implement GXSetZMode
 - [ ] Implement basic TEV (1 stage)
-- [ ] Pass first 10 tests
+- [ ] Pass first 10 GX tests
 
-### Phase 3: Pattern Library
+### Phase 4: Pattern Library
 - [ ] Extract patterns from 5 games
 - [ ] Cluster into pattern categories
 - [ ] Create shader templates per pattern
 - [ ] Build pattern recognition system
 
-### Phase 4: Full Runtime
+### Phase 5: Full Runtime
 - [ ] Complete GX API coverage
 - [ ] All TEV stages
 - [ ] EFB copies
 - [ ] Pass 1000+ tests
 
-### Phase 5: Game Testing
+### Phase 6: Game Testing
 - [ ] Run simple homebrew
 - [ ] Run commercial game intro
 - [ ] Full game playable
