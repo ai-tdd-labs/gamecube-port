@@ -31,19 +31,43 @@ Original Game (DOL/ELF)
          │
          ▼
     GX Runtime Layer
-    (GX API → Vulkan/Metal)
+    (GX API → RHI abstraction)
+         │
+         ▼
+    Render Backend
+    ┌─────────┬─────────┬─────────┐
+    │  Metal  │ Vulkan  │  D3D12  │
+    │ (macOS) │ (Linux) │ (Win)   │
+    └─────────┴─────────┴─────────┘
          │
          ▼
     Native Executable
-    (runs on PC/Mac/console)
 ```
+
+### Rendering Backend (RT64-style)
+
+Following the approach of RT64 (used by N64Recomp projects):
+
+| Platform | Primary API | Status |
+|----------|-------------|--------|
+| macOS | **Metal** | Native, best performance |
+| Linux | **Vulkan** | Native |
+| Windows | **D3D12** / Vulkan | D3D12 preferred |
+
+**Why this approach:**
+- Metal is native on macOS (no translation layer overhead)
+- Vulkan via MoltenVK adds unnecessary overhead on Mac
+- OpenGL is deprecated on macOS (stuck at 4.1)
+- Single RHI (Render Hardware Interface) abstracts platform differences
 
 ### Key Components
 
-1. **GX Runtime** - Translates GX calls to modern GPU APIs
-2. **Test Harness** - Validates pixel-exact output against Dolphin
-3. **Pattern Library** - Database of known GX behavior patterns
-4. **AI Integration** - LLM assists with code generation within test constraints
+1. **GX Runtime** - Translates GX calls to abstract RHI
+2. **RHI Layer** - Platform-agnostic render interface
+3. **Render Backends** - Metal/Vulkan/D3D12 implementations
+4. **Test Harness** - Validates pixel-exact output against Dolphin
+5. **Pattern Library** - Database of known GX behavior patterns
+6. **AI Integration** - LLM assists with code generation within test constraints
 
 ---
 
@@ -117,10 +141,11 @@ Games reuse the same GX patterns with different data. Instead of learning every 
 3. For each pattern:
    - Create minimal test case
    - Run on Dolphin → capture ground truth
-   - Build Vulkan shader template
+   - Build shader template (platform-agnostic)
 4. At runtime:
    - Recognize incoming GX pattern
    - Select matching shader template
+   - Compile to native backend (Metal/Vulkan/D3D12)
    - Apply with current parameters
 ```
 
@@ -135,8 +160,9 @@ Games reuse the same GX patterns with different data. Instead of learning every 
 ## AI Integration Rules
 
 ### What AI Does
-- Writes GX→Vulkan translation code
-- Generates shader templates
+- Writes GX→RHI translation code
+- Generates platform-agnostic shader templates
+- Implements backend-specific code (Metal/Vulkan/D3D12)
 - Analyzes test failures and proposes fixes
 - Identifies patterns in game code
 
@@ -177,8 +203,20 @@ gamecube/
 │   │   ├── tev.cpp              # TEV stages
 │   │   ├── texture.cpp          # Texture handling
 │   │   └── z_buffer.cpp         # Depth buffer
-│   └── vulkan/                  # Vulkan backend
-│       └── shaders/             # Generated shader templates
+│   ├── rhi/                     # Render Hardware Interface
+│   │   ├── rhi.h                # Abstract interface
+│   │   ├── types.h              # Common types
+│   │   └── shader_compiler.cpp  # Cross-platform shader handling
+│   └── backends/                # Platform-specific implementations
+│       ├── metal/               # macOS backend
+│       │   ├── metal_device.mm
+│       │   └── shaders/         # Metal shaders (.metal)
+│       ├── vulkan/              # Linux/Windows backend
+│       │   ├── vulkan_device.cpp
+│       │   └── shaders/         # SPIR-V shaders
+│       └── d3d12/               # Windows backend (optional)
+│           ├── d3d12_device.cpp
+│           └── shaders/         # HLSL shaders
 ├── tests/
 │   ├── harness/                 # Test runner code
 │   ├── cases/                   # Individual test definitions
