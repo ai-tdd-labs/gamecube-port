@@ -1,4 +1,4 @@
-# VIInit SDK DOL test build
+# OSSetArenaLo DOL test build (Dolphin expected)
 TOPDIR ?= $(CURDIR)
 REPO_ROOT := $(shell git -C "$(TOPDIR)" rev-parse --show-toplevel)
 
@@ -9,11 +9,11 @@ endif
 export DEVKITPPC := $(DEVKITPRO)/devkitPPC
 include $(DEVKITPRO)/devkitPPC/gamecube_rules
 
-TARGET := vi_set_next_frame_buffer_min_001
+TARGET := os_set_arena_lo_min_001
 BUILD := build
 SOURCES := .
 
-INCLUDE := -I$(REPO_ROOT)/tools/sdk_dol/include -I$(REPO_ROOT)/decomp_mario_party_4/include -I$(REPO_ROOT)/decomp_mario_party_4 -I$(LIBOGC_INC)
+INCLUDE := -I$(REPO_ROOT) -I$(REPO_ROOT)/decomp_mario_party_4/include -I$(LIBOGC_INC)
 CFLAGS = -g -O2 -Wall -std=gnu89 $(MACHDEP) $(INCLUDE)
 LDFLAGS = -g $(MACHDEP) -Wl,-Map,$(notdir $@).map
 

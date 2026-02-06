@@ -38,3 +38,22 @@ This repository is the memory.
 
 - New tests go under tests/sdk/<subsystem>/<function>/
 - Harness templates and shared boilerplate go under tests/harness/
+
+### Canon test layout (per SDK function)
+
+```
+tests/sdk/<subsystem>/<function>/
+  dol/
+    generic/<case_id>/            # minimal + edge cases (not tied to a specific game)
+    mp4/<case_id>/                # realistic calls (mirrors MP4 callsites/args)
+    tp/<case_id>/                 # realistic calls (mirrors TP callsites/args)
+    ww/<case_id>/                 # realistic calls (mirrors WW callsites/args)
+    ac/<case_id>/                 # realistic calls (mirrors AC callsites/args)
+  expected/<test_name>.bin        # Dolphin oracle dumps (bit-exact)
+  actual/<test_name>.bin          # Host/sdk_port dumps (bit-exact)
+  README.md                       # optional: what the cases represent
+```
+
+Naming:
+- Prefer `<function>_<case_id>` for the built `.dol` base name so expected bins do not collide.
+- Use `generic/` for synthetic (minimal/edge) tests. Use per-game folders for realistic callsite tests.

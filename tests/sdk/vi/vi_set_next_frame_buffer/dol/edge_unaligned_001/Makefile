@@ -1,6 +1,6 @@
 # VIInit SDK DOL test build
 TOPDIR ?= $(CURDIR)
-REPO_ROOT := $(abspath $(TOPDIR)/../../../../../..)
+REPO_ROOT := $(shell git -C "$(TOPDIR)" rev-parse --show-toplevel)
 
 ifeq ($(strip $(DEVKITPRO)),)
 $(error "Please set DEVKITPRO in your environment. export DEVKITPRO=/opt/devkitpro")
