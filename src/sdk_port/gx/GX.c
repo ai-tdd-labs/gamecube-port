@@ -55,6 +55,35 @@ u32 gc_gx_zmode_update_enable;
 
 u32 gc_gx_color_update_enable;
 
+// Vertex descriptor/format state (GXAttr).
+u32 gc_gx_vcd_lo;
+u32 gc_gx_vcd_hi;
+u32 gc_gx_has_nrms;
+u32 gc_gx_has_binrms;
+u32 gc_gx_nrm_type;
+u32 gc_gx_dirty_state;
+u32 gc_gx_dirty_vat;
+u32 gc_gx_vat_a[8];
+u32 gc_gx_vat_b[8];
+u32 gc_gx_vat_c[8];
+
+// Vertex array base/stride state (GXSetArray writes CP regs).
+u32 gc_gx_array_base[32];
+u32 gc_gx_array_stride[32];
+
+// TEV state mirror (GXTev).
+u32 gc_gx_tevc[16];
+u32 gc_gx_teva[16];
+u32 gc_gx_tref[8];
+u32 gc_gx_texmap_id[16];
+u32 gc_gx_tev_tc_enab;
+
+// Immediate-mode vertex helpers (in the real SDK these write to the FIFO).
+u32 gc_gx_pos3f32_x_bits;
+u32 gc_gx_pos3f32_y_bits;
+u32 gc_gx_pos3f32_z_bits;
+u32 gc_gx_pos1x16_last;
+
 typedef struct {
     uint8_t _dummy;
 } GXFifoObj;
@@ -74,6 +103,38 @@ GXFifoObj *GXInit(void *base, u32 size) {
     gc_gx_dl_save_context = 1;
     gc_gx_gen_mode = 0;
     gc_gx_bp_mask = 0xFF;
+
+    // Keep deterministic defaults for higher-level GX state tracked by our tests.
+    gc_gx_vcd_lo = 0;
+    gc_gx_vcd_hi = 0;
+    gc_gx_has_nrms = 0;
+    gc_gx_has_binrms = 0;
+    gc_gx_nrm_type = 0;
+    gc_gx_dirty_state = 0;
+    gc_gx_dirty_vat = 0;
+    for (u32 i = 0; i < 8; i++) {
+        gc_gx_vat_a[i] = 0;
+        gc_gx_vat_b[i] = 0;
+        gc_gx_vat_c[i] = 0;
+    }
+    for (u32 i = 0; i < 32; i++) {
+        gc_gx_array_base[i] = 0;
+        gc_gx_array_stride[i] = 0;
+    }
+    for (u32 i = 0; i < 16; i++) {
+        gc_gx_tevc[i] = 0;
+        gc_gx_teva[i] = 0;
+        gc_gx_texmap_id[i] = 0;
+    }
+    for (u32 i = 0; i < 8; i++) {
+        gc_gx_tref[i] = 0;
+    }
+    gc_gx_tev_tc_enab = 0;
+    gc_gx_pos3f32_x_bits = 0;
+    gc_gx_pos3f32_y_bits = 0;
+    gc_gx_pos3f32_z_bits = 0;
+    gc_gx_pos1x16_last = 0;
+
     return &s_fifo_obj;
 }
 
@@ -334,4 +395,278 @@ void GXReadMemMetric(u32 *cp_req, u32 *tc_req, u32 *cpu_rd_req, u32 *cpu_wr_req,
     if (pe_req) *pe_req = gc_gx_mem_metrics[7];
     if (rf_req) *rf_req = gc_gx_mem_metrics[8];
     if (fi_req) *fi_req = gc_gx_mem_metrics[9];
+}
+
+// ---- Batch 1 (MP4 callsite-driven) GX APIs ----
+
+// GXAttr constants used by our tests. We only need values for the branches we exercise.
+enum {
+    GX_VA_PNMTXIDX = 0,
+    GX_VA_TEX0MTXIDX = 1,
+    GX_VA_TEX1MTXIDX = 2,
+    GX_VA_TEX2MTXIDX = 3,
+    GX_VA_TEX3MTXIDX = 4,
+    GX_VA_TEX4MTXIDX = 5,
+    GX_VA_TEX5MTXIDX = 6,
+    GX_VA_TEX6MTXIDX = 7,
+    GX_VA_TEX7MTXIDX = 8,
+    GX_VA_POS = 9,
+    GX_VA_NRM = 10,
+    GX_VA_CLR0 = 11,
+    GX_VA_CLR1 = 12,
+    GX_VA_TEX0 = 13,
+    GX_VA_TEX1 = 14,
+    GX_VA_TEX2 = 15,
+    GX_VA_TEX3 = 16,
+    GX_VA_TEX4 = 17,
+    GX_VA_TEX5 = 18,
+    GX_VA_TEX6 = 19,
+    GX_VA_TEX7 = 20,
+    GX_VA_NBT = 25,
+};
+
+static inline void gc_gx_set_vcd_attr(u32 attr, u32 type) {
+    switch (attr) {
+    case GX_VA_PNMTXIDX:   gc_gx_vcd_lo = set_field(gc_gx_vcd_lo, 1, 0, type); break;
+    case GX_VA_TEX0MTXIDX: gc_gx_vcd_lo = set_field(gc_gx_vcd_lo, 1, 1, type); break;
+    case GX_VA_TEX1MTXIDX: gc_gx_vcd_lo = set_field(gc_gx_vcd_lo, 1, 2, type); break;
+    case GX_VA_TEX2MTXIDX: gc_gx_vcd_lo = set_field(gc_gx_vcd_lo, 1, 3, type); break;
+    case GX_VA_TEX3MTXIDX: gc_gx_vcd_lo = set_field(gc_gx_vcd_lo, 1, 4, type); break;
+    case GX_VA_TEX4MTXIDX: gc_gx_vcd_lo = set_field(gc_gx_vcd_lo, 1, 5, type); break;
+    case GX_VA_TEX5MTXIDX: gc_gx_vcd_lo = set_field(gc_gx_vcd_lo, 1, 6, type); break;
+    case GX_VA_TEX6MTXIDX: gc_gx_vcd_lo = set_field(gc_gx_vcd_lo, 1, 7, type); break;
+    case GX_VA_TEX7MTXIDX: gc_gx_vcd_lo = set_field(gc_gx_vcd_lo, 1, 8, type); break;
+    case GX_VA_POS:        gc_gx_vcd_lo = set_field(gc_gx_vcd_lo, 2, 9, type); break;
+    case GX_VA_NRM:
+        if (type != 0) { gc_gx_has_nrms = 1; gc_gx_has_binrms = 0; gc_gx_nrm_type = type; }
+        else { gc_gx_has_nrms = 0; }
+        break;
+    case GX_VA_NBT:
+        if (type != 0) { gc_gx_has_binrms = 1; gc_gx_has_nrms = 0; gc_gx_nrm_type = type; }
+        else { gc_gx_has_binrms = 0; }
+        break;
+    case GX_VA_CLR0: gc_gx_vcd_lo = set_field(gc_gx_vcd_lo, 2, 13, type); break;
+    case GX_VA_CLR1: gc_gx_vcd_lo = set_field(gc_gx_vcd_lo, 2, 15, type); break;
+    case GX_VA_TEX0: gc_gx_vcd_hi = set_field(gc_gx_vcd_hi, 2, 0, type); break;
+    case GX_VA_TEX1: gc_gx_vcd_hi = set_field(gc_gx_vcd_hi, 2, 2, type); break;
+    case GX_VA_TEX2: gc_gx_vcd_hi = set_field(gc_gx_vcd_hi, 2, 4, type); break;
+    case GX_VA_TEX3: gc_gx_vcd_hi = set_field(gc_gx_vcd_hi, 2, 6, type); break;
+    case GX_VA_TEX4: gc_gx_vcd_hi = set_field(gc_gx_vcd_hi, 2, 8, type); break;
+    case GX_VA_TEX5: gc_gx_vcd_hi = set_field(gc_gx_vcd_hi, 2, 10, type); break;
+    case GX_VA_TEX6: gc_gx_vcd_hi = set_field(gc_gx_vcd_hi, 2, 12, type); break;
+    case GX_VA_TEX7: gc_gx_vcd_hi = set_field(gc_gx_vcd_hi, 2, 14, type); break;
+    default: break;
+    }
+}
+
+void GXSetVtxDesc(u32 attr, u32 type) {
+    gc_gx_set_vcd_attr(attr, type);
+    if (gc_gx_has_nrms || gc_gx_has_binrms) {
+        gc_gx_vcd_lo = set_field(gc_gx_vcd_lo, 2, 11, gc_gx_nrm_type);
+    } else {
+        gc_gx_vcd_lo = set_field(gc_gx_vcd_lo, 2, 11, 0);
+    }
+    gc_gx_dirty_state |= 8u;
+}
+
+static inline void gc_gx_set_vat(u32 *va, u32 *vb, u32 *vc, u32 attr, u32 cnt, u32 type, u8 shft) {
+    switch (attr) {
+    case GX_VA_POS:
+        *va = set_field(*va, 1, 0, cnt);
+        *va = set_field(*va, 3, 1, type);
+        *va = set_field(*va, 5, 4, shft);
+        break;
+    case GX_VA_NRM:
+    case GX_VA_NBT:
+        *va = set_field(*va, 3, 10, type);
+        if (cnt == 2) { // GX_NRM_NBT3
+            *va = set_field(*va, 1, 9, 1);
+            *va = set_field(*va, 1, 31, 1);
+        } else {
+            *va = set_field(*va, 1, 9, cnt);
+            *va = set_field(*va, 1, 31, 0);
+        }
+        break;
+    case GX_VA_CLR0:
+        *va = set_field(*va, 1, 13, cnt);
+        *va = set_field(*va, 3, 14, type);
+        break;
+    case GX_VA_CLR1:
+        *va = set_field(*va, 1, 17, cnt);
+        *va = set_field(*va, 3, 18, type);
+        break;
+    case GX_VA_TEX0:
+        *va = set_field(*va, 1, 21, cnt);
+        *va = set_field(*va, 3, 22, type);
+        *va = set_field(*va, 5, 25, shft);
+        break;
+    case GX_VA_TEX1:
+        *vb = set_field(*vb, 1, 0, cnt);
+        *vb = set_field(*vb, 3, 1, type);
+        *vb = set_field(*vb, 5, 4, shft);
+        break;
+    case GX_VA_TEX2:
+        *vb = set_field(*vb, 1, 9, cnt);
+        *vb = set_field(*vb, 3, 10, type);
+        *vb = set_field(*vb, 5, 13, shft);
+        break;
+    case GX_VA_TEX3:
+        *vb = set_field(*vb, 1, 18, cnt);
+        *vb = set_field(*vb, 3, 19, type);
+        *vb = set_field(*vb, 5, 22, shft);
+        break;
+    case GX_VA_TEX4:
+        *vb = set_field(*vb, 1, 27, cnt);
+        *vb = set_field(*vb, 3, 28, type);
+        *vc = set_field(*vc, 5, 0, shft);
+        break;
+    case GX_VA_TEX5:
+        *vc = set_field(*vc, 1, 5, cnt);
+        *vc = set_field(*vc, 3, 6, type);
+        *vc = set_field(*vc, 5, 9, shft);
+        break;
+    case GX_VA_TEX6:
+        *vc = set_field(*vc, 1, 14, cnt);
+        *vc = set_field(*vc, 3, 15, type);
+        *vc = set_field(*vc, 5, 18, shft);
+        break;
+    case GX_VA_TEX7:
+        *vc = set_field(*vc, 1, 23, cnt);
+        *vc = set_field(*vc, 3, 24, type);
+        *vc = set_field(*vc, 5, 27, shft);
+        break;
+    default:
+        break;
+    }
+}
+
+void GXSetVtxAttrFmt(u32 vtxfmt, u32 attr, u32 cnt, u32 type, u8 frac) {
+    if (vtxfmt >= 8) return;
+    u32 *va = &gc_gx_vat_a[vtxfmt];
+    u32 *vb = &gc_gx_vat_b[vtxfmt];
+    u32 *vc = &gc_gx_vat_c[vtxfmt];
+    gc_gx_set_vat(va, vb, vc, attr, cnt, type, frac);
+    gc_gx_dirty_state |= 0x10u;
+    gc_gx_dirty_vat |= (u32)(1u << (u8)vtxfmt);
+}
+
+void GXSetArray(u32 attr, const void *base_ptr, u8 stride) {
+    // Mirror SDK: attr==NBT aliases to NRM.
+    if (attr == GX_VA_NBT) attr = GX_VA_NRM;
+    if (attr < GX_VA_POS) return;
+    u32 cp_attr = attr - GX_VA_POS;
+    if (cp_attr >= 32) return;
+    u32 phy_addr = (u32)(uintptr_t)base_ptr & 0x3FFFFFFFu;
+    gc_gx_array_base[cp_attr] = phy_addr;
+    gc_gx_array_stride[cp_attr] = (u32)stride;
+}
+
+static inline u32 f32_bits(float f) {
+    union { float f; u32 u; } u;
+    u.f = f;
+    return u.u;
+}
+
+void GXPosition3f32(float x, float y, float z) {
+    gc_gx_pos3f32_x_bits = f32_bits(x);
+    gc_gx_pos3f32_y_bits = f32_bits(y);
+    gc_gx_pos3f32_z_bits = f32_bits(z);
+}
+
+void GXPosition1x16(u16 x) {
+    gc_gx_pos1x16_last = (u32)x;
+}
+
+void GXSetTevColorIn(u32 stage, u32 a, u32 b, u32 c, u32 d) {
+    if (stage >= 16) return;
+    u32 reg = gc_gx_tevc[stage];
+    reg = set_field(reg, 4, 12, a);
+    reg = set_field(reg, 4, 8, b);
+    reg = set_field(reg, 4, 4, c);
+    reg = set_field(reg, 4, 0, d);
+    gc_gx_tevc[stage] = reg;
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXSetTevAlphaIn(u32 stage, u32 a, u32 b, u32 c, u32 d) {
+    if (stage >= 16) return;
+    u32 reg = gc_gx_teva[stage];
+    reg = set_field(reg, 3, 13, a);
+    reg = set_field(reg, 3, 10, b);
+    reg = set_field(reg, 3, 7, c);
+    reg = set_field(reg, 3, 4, d);
+    gc_gx_teva[stage] = reg;
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXSetTevColorOp(u32 stage, u32 op, u32 bias, u32 scale, u32 clamp, u32 out_reg) {
+    if (stage >= 16) return;
+    u32 reg = gc_gx_tevc[stage];
+    reg = set_field(reg, 1, 18, op & 1u);
+    if (op <= 1) {
+        reg = set_field(reg, 2, 20, scale);
+        reg = set_field(reg, 2, 16, bias);
+    } else {
+        reg = set_field(reg, 2, 20, (op >> 1) & 3u);
+        reg = set_field(reg, 2, 16, 3u);
+    }
+    reg = set_field(reg, 1, 19, clamp & 0xFFu);
+    reg = set_field(reg, 2, 22, out_reg);
+    gc_gx_tevc[stage] = reg;
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXSetTevAlphaOp(u32 stage, u32 op, u32 bias, u32 scale, u32 clamp, u32 out_reg) {
+    if (stage >= 16) return;
+    u32 reg = gc_gx_teva[stage];
+    reg = set_field(reg, 1, 18, op & 1u);
+    if (op <= 1) {
+        reg = set_field(reg, 2, 20, scale);
+        reg = set_field(reg, 2, 16, bias);
+    } else {
+        reg = set_field(reg, 2, 20, (op >> 1) & 3u);
+        reg = set_field(reg, 2, 16, 3u);
+    }
+    reg = set_field(reg, 1, 19, clamp & 0xFFu);
+    reg = set_field(reg, 2, 22, out_reg);
+    gc_gx_teva[stage] = reg;
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXSetTevOrder(u32 stage, u32 coord, u32 map, u32 color) {
+    static const int c2r[] = { 0, 1, 0, 1, 0, 1, 7, 5, 6 };
+    if (stage >= 16) return;
+
+    u32 *ptref = &gc_gx_tref[stage / 2];
+    gc_gx_texmap_id[stage] = map;
+
+    u32 tmap = map & ~0x100u;
+    if (tmap >= 8u) tmap = 0; // GX_TEXMAP0
+
+    u32 tcoord;
+    if (coord >= 8u) {
+        tcoord = 0; // GX_TEXCOORD0
+        gc_gx_tev_tc_enab &= ~(1u << stage);
+    } else {
+        tcoord = coord;
+        gc_gx_tev_tc_enab |= (1u << stage);
+    }
+
+    u32 rasc = (color == 0xFFu) ? 7u : (u32)c2r[color];
+    u32 enable = (map != 0xFFu) && ((map & 0x100u) == 0);
+
+    if (stage & 1u) {
+        *ptref = set_field(*ptref, 3, 12, tmap);
+        *ptref = set_field(*ptref, 3, 15, tcoord);
+        *ptref = set_field(*ptref, 3, 19, rasc);
+        *ptref = set_field(*ptref, 1, 18, enable);
+    } else {
+        *ptref = set_field(*ptref, 3, 0, tmap);
+        *ptref = set_field(*ptref, 3, 3, tcoord);
+        *ptref = set_field(*ptref, 3, 7, rasc);
+        *ptref = set_field(*ptref, 1, 6, enable);
+    }
+
+    gc_gx_bp_sent_not = 0;
+    gc_gx_dirty_state |= 1u;
 }
