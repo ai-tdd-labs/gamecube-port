@@ -4,7 +4,6 @@
 .trash/
 .claude/
 .codex/
-.beads/
 
 # Decomp/source drops (likely proprietary)
 decomp_*/
