@@ -2,6 +2,8 @@
 #include "gc_host_scenario.h"
 #include "gc_host_test.h"
 
+#include "gc_mem.h"
+
 #include <stdint.h>
 
 int main(int argc, char **argv) {
@@ -12,6 +14,9 @@ int main(int argc, char **argv) {
     if (gc_ram_init(&ram, 0x80000000u, 0x02000000u) != 0) { // 32 MiB
         die("gc_ram_init failed");
     }
+
+    // Make sdk_port address translation available for the scenario.
+    gc_mem_set(ram.base, ram.size, ram.buf);
 
     gc_scenario_run(&ram);
 
@@ -29,4 +34,3 @@ int main(int argc, char **argv) {
     gc_ram_free(&ram);
     return 0;
 }
-

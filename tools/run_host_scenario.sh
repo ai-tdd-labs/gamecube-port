@@ -35,7 +35,11 @@ fi
 port_srcs=()
 case "$subsystem" in
   os)
-    port_srcs+=("$repo_root/src/sdk_port/os/OSArena.c")
+    port_srcs+=(
+      "$repo_root/src/sdk_port/gc_mem.c"
+      "$repo_root/src/sdk_port/os/OSArena.c"
+      "$repo_root/src/sdk_port/os/OSAlloc.c"
+    )
     ;;
   *)
     echo "fatal: no sdk_port sources configured for subsystem: $subsystem" >&2
@@ -57,4 +61,3 @@ cc -O2 -g \
 
 echo "[host-run] $exe"
 (cd "$scenario_dir" && "$exe")
-
