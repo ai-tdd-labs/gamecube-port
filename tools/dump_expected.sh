@@ -24,10 +24,14 @@ fi
 
 mkdir -p "$(dirname "$OUT_BIN")"
 
+# Keep the workflow deterministic: kill stale headless Dolphin instances that
+# might still be bound to the GDB stub port (e.g. after a crash).
+pkill -f "Dolphin -b -d -e" >/dev/null 2>&1 || true
+
 # Occasional transient failures can happen while Dolphin is starting up.
 # Retry a few times to keep the workflow deterministic and low-friction.
 for attempt in 1 2 3; do
-  if python3 tools/ram_dump.py \
+  if PYTHONUNBUFFERED=1 python3 -u tools/ram_dump.py \
       --exec "$DOL_PATH" \
       --addr "$ADDR" \
       --size "$SIZE" \

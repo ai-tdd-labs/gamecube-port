@@ -103,7 +103,11 @@ int main(void) {
   // vectors for stability.
   gc_disable_interrupts();
   gc_arm_decrementer_far_future();
-  *(volatile uint32_t *)0x80000900u = 0x48000000u; // decrementer vector: "b ."
+  // Dolphin may report the decrementer vector PC as either 0x00000900 or
+  // 0x80000900 depending on MSR[IP]/addressing; patch both to a safe infinite
+  // loop ("b .") so an unexpected interrupt doesn't execute zeros.
+  *(volatile uint32_t *)0x00000900u = 0x48000000u;
+  *(volatile uint32_t *)0x80000900u = 0x48000000u;
 
   // Wire sdk_port virtual RAM to MEM1.
   gc_mem_set(0x80000000u, 0x01800000u, (uint8_t *)0x80000000u);
