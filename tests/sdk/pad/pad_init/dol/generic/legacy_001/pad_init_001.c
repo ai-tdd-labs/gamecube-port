@@ -19,7 +19,15 @@ static inline void store_be32(volatile uint8_t *p, uint32_t v) {
     p[3] = (uint8_t)(v & 0xFF);
 }
 #else
-#include <dolphin/types.h>
+#include <stdint.h>
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef int BOOL;
+#ifndef TRUE
+#define TRUE 1
+#define FALSE 0
+#endif
 #define RESULT_PTR() ((volatile u32 *)0x80300000)
 
 #define SI_MAX_CHAN 4

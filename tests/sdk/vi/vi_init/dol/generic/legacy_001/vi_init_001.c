@@ -13,11 +13,13 @@ static inline void store_be32(volatile uint8_t *p, uint32_t v) {
     p[3] = (uint8_t)(v & 0xFF);
 }
 #else
-#include <dolphin/types.h>
-#include <dolphin/vi.h>
-void OSInit(void);
+#include <stdint.h>
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
 #define RESULT_PTR() ((volatile u32 *)0x80300000)
-#define TEST_OS_INIT() OSInit()
+static void TEST_OS_INIT(void) {}
+#define VI_NTSC 0
 #endif
 
 #ifndef GC_HOST_TEST

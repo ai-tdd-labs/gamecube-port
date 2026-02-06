@@ -11,9 +11,40 @@ static inline void store_be32(volatile uint8_t *p, uint32_t v) {
     p[3] = (uint8_t)(v & 0xFF);
 }
 #else
-#include <dolphin/os/OSAlloc.h>
-#include <dolphin/types.h>
+#include <stdint.h>
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
 #define RESULT_PTR() ((volatile u32 *)0x80300000)
+
+// Legacy synthetic implementation: simple bump allocator.
+static u8 *s_heap_cur;
+static u8 *s_heap_end;
+
+static void OSInitAlloc(void *lo, void *hi, int max_heaps) {
+    (void)max_heaps;
+    s_heap_cur = (u8 *)lo;
+    s_heap_end = (u8 *)hi;
+}
+
+static int OSCreateHeap(void *lo, void *hi) {
+    s_heap_cur = (u8 *)lo;
+    s_heap_end = (u8 *)hi;
+    return 0;
+}
+
+static void OSSetCurrentHeap(int heap) { (void)heap; }
+
+static void *OSAlloc(u32 size) {
+    // Align to 32B like most OS alloc paths, keep deterministic.
+    u32 aligned = (size + 31u) & ~31u;
+    if (s_heap_cur + aligned > s_heap_end) {
+        return (void *)0;
+    }
+    void *p = s_heap_cur;
+    s_heap_cur += aligned;
+    return p;
+}
 #endif
 
 int main(void) {
