@@ -45,6 +45,13 @@ static inline void gc_arm_decrementer_far_future(void) {
       : "r3");
 }
 
+static inline void gc_safepoint(void) {
+  // Called code may enable interrupts and/or program the decrementer.
+  // Force a stable, non-interrupting environment for our smoke harness.
+  gc_disable_interrupts();
+  gc_arm_decrementer_far_future();
+}
+
 static inline void store_u32be_ptr(volatile uint8_t *p, uint32_t v) {
   p[0] = (uint8_t)(v >> 24);
   p[1] = (uint8_t)(v >> 16);
@@ -99,27 +106,30 @@ static void emit_snapshot(void) {
 
 int main(void) {
   // Make this DOL robust against periodic exceptions while we are dumping MEM1.
-  // We ignore the first 0x4000 bytes in diffs, so it's safe to touch low-memory
-  // vectors for stability.
-  gc_disable_interrupts();
-  gc_arm_decrementer_far_future();
-  // Dolphin may report the decrementer vector PC as either 0x00000900 or
-  // 0x80000900 depending on MSR[IP]/addressing; patch both to a safe infinite
-  // loop ("b .") so an unexpected interrupt doesn't execute zeros.
-  *(volatile uint32_t *)0x00000900u = 0x48000000u;
-  *(volatile uint32_t *)0x80000900u = 0x48000000u;
+  //
+  // NOTE: Do NOT write low exception vectors (e.g. 0x00000900) because Dolphin
+  // can warn about invalid low-memory writes unless MMU is enabled. Instead, we
+  // prevent the interrupt from happening in the first place by forcing a
+  // safepoint before/after each SDK call.
+  gc_safepoint();
 
   // Wire sdk_port virtual RAM to MEM1.
   gc_mem_set(0x80000000u, 0x01800000u, (uint8_t *)0x80000000u);
 
   // First 20 MP4 HuSysInit SDK calls (from docs/sdk/mp4/MP4_chain_all.csv).
   OSInit();
+  gc_safepoint();
   DVDInit();
+  gc_safepoint();
   VIInit();
+  gc_safepoint();
   PADInit();
+  gc_safepoint();
 
   (void)OSGetProgressiveMode();
+  gc_safepoint();
   (void)VIGetDTVStatus();
+  gc_safepoint();
 
   // Provide deterministic GXRenderModeObj fields so VIConfigure/GXAdjustForOverscan
   // produce deterministic side effects.
@@ -150,24 +160,37 @@ int main(void) {
   rm->xFBmode = 1;
 
   VIConfigure(dummy_rmode);
+  gc_safepoint();
   VIConfigurePan(0, 0, 0, 0);
+  gc_safepoint();
 
   (void)OSAlloc(0x100);
+  gc_safepoint();
 
   GXInit((void *)0x81000000u, 0x10000);
+  gc_safepoint();
 
   OSInitFastCast();
+  gc_safepoint();
   (void)VIGetTvFormat();
+  gc_safepoint();
 
   uint8_t overscan_out[256] __attribute__((aligned(32)));
   GXAdjustForOverscan((GXRenderModeObj *)dummy_rmode, (GXRenderModeObj *)overscan_out, 0, 0);
+  gc_safepoint();
   GXSetViewport(0.0f, 0.0f, 640.0f, 480.0f, 0.0f, 1.0f);
+  gc_safepoint();
   GXSetScissor(0, 0, 640, 480);
+  gc_safepoint();
   GXSetDispCopySrc(0, 0, 640, 480);
+  gc_safepoint();
   GXSetDispCopyDst(640, 480);
+  gc_safepoint();
   (void)GXSetDispCopyYScale(1.0f);
+  gc_safepoint();
 
   OSReport("mp4_init_chain_001 done\n");
+  gc_safepoint();
 
   // Marker in MEM1 for sanity.
   *(volatile uint32_t *)0x80300000 = 0xC0DEF00Du;
