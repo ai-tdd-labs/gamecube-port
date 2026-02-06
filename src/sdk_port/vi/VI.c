@@ -6,10 +6,16 @@ typedef uint32_t u32;
 u16 gc_vi_regs[64];
 u32 gc_vi_disable_calls;
 u32 gc_vi_restore_calls;
+u32 gc_vi_flush_calls;
+u32 gc_vi_wait_retrace_calls;
 
 // VISetNextFrameBuffer is used very early by games (including MP4). For now our
 // deterministic tests only require that the symbol exists.
 void VISetNextFrameBuffer(void *fb) { (void)fb; }
+
+void VIFlush(void) { gc_vi_flush_calls++; }
+
+void VIWaitForRetrace(void) { gc_vi_wait_retrace_calls++; }
 
 static int OSDisableInterrupts(void) {
     gc_vi_disable_calls++;

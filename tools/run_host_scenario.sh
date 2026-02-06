@@ -42,6 +42,7 @@ case "$subsystem" in
       "$repo_root/src/sdk_port/os/OSInit.c"
       "$repo_root/src/sdk_port/os/OSFastCast.c"
       "$repo_root/src/sdk_port/os/OSError.c"
+      "$repo_root/src/sdk_port/os/OSSystem.c"
       "$repo_root/src/sdk_port/os/OSRtc.c"
     )
     ;;
