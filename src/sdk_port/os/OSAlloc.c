@@ -109,3 +109,11 @@ int OSCreateHeap(void *start, void *end) {
 
     return -1;
 }
+
+int OSSetCurrentHeap(int heap) {
+    // SDK contract: set __OSCurrHeap and return previous.
+    // Asserts in the original SDK are intentionally omitted; tests drive correctness.
+    int prev = (int)__OSCurrHeap;
+    __OSCurrHeap = (int32_t)heap;
+    return prev;
+}
