@@ -21,6 +21,10 @@ static inline int32_t load_i32be(uint32_t addr) {
     return (int32_t)(((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | (uint32_t)p[3]);
 }
 
+static inline uint32_t load_u32be(uint32_t addr) {
+    return (uint32_t)load_i32be(addr);
+}
+
 static inline uint32_t round_up(uint32_t x, uint32_t a) {
     return (x + (a - 1)) & ~(a - 1);
 }
@@ -94,10 +98,11 @@ int OSCreateHeap(void *start, void *end) {
             store_u32be(hd + 0, new_size);
 
             // Write the initial free list cell at start:
-            // prev=0, next=0, size=new_size
+            // prev=0, next=0, size=new_size, hd=0 (free cell)
             store_u32be(s + 0, 0);
             store_u32be(s + 4, 0);
             store_u32be(s + 8, new_size);
+            store_u32be(s + 12, 0);
 
             // hd->free = start, hd->allocated = 0
             store_u32be(hd + 4, s);
@@ -116,4 +121,79 @@ int OSSetCurrentHeap(int heap) {
     int prev = (int)__OSCurrHeap;
     __OSCurrHeap = (int32_t)heap;
     return prev;
+}
+
+void *OSAllocFromHeap(int heap, uint32_t size) {
+    // Port of OSAllocFromHeap (OSAlloc.c).
+    // We intentionally keep asserts out; expected-vs-actual tests drive correctness.
+    if ((int32_t)size <= 0) return (void *)0;
+
+    const uint32_t heap_array = __gc_osalloc_heap_array;
+    const int32_t num_heaps = __gc_osalloc_num_heaps;
+    if (heap_array == 0 || heap < 0 || heap >= num_heaps) return (void *)0;
+
+    const uint32_t hd = heap_array + (uint32_t)heap * (uint32_t)HEAPDESC_SIZE;
+    const int32_t hd_size = load_i32be(hd + 0);
+    if (hd_size < 0) return (void *)0;
+
+    // size includes 0x20 header, then rounded up to 32 bytes.
+    uint32_t req = size + 0x20u;
+    req = round_up(req, ALIGNMENT);
+
+    uint32_t cell = load_u32be(hd + 4); // hd->free
+    while (cell != 0) {
+        uint32_t cell_size = load_u32be(cell + 8);
+        if ((int32_t)req <= (int32_t)cell_size) break;
+        cell = load_u32be(cell + 4); // next
+    }
+    if (cell == 0) return (void *)0;
+
+    const uint32_t cell_prev = load_u32be(cell + 0);
+    const uint32_t cell_next = load_u32be(cell + 4);
+    const uint32_t cell_size = load_u32be(cell + 8);
+
+    uint32_t leftover = cell_size - req;
+    if (leftover < 0x40u) {
+        // Extract from free list.
+        if (cell_next != 0) {
+            store_u32be(cell_next + 0, cell_prev);
+        }
+        if (cell_prev == 0) {
+            // Removing head.
+            store_u32be(hd + 4, cell_next);
+        } else {
+            store_u32be(cell_prev + 4, cell_next);
+        }
+    } else {
+        // Split: keep 'cell' as allocated chunk, create 'newCell' as remaining free chunk.
+        store_u32be(cell + 8, req);
+
+        uint32_t new_cell = cell + req;
+        store_u32be(new_cell + 8, leftover);
+        store_u32be(new_cell + 0, cell_prev);
+        store_u32be(new_cell + 4, cell_next);
+        store_u32be(new_cell + 12, 0); // free cell has hd=NULL
+
+        if (cell_next != 0) {
+            store_u32be(cell_next + 0, new_cell);
+        }
+        if (cell_prev != 0) {
+            store_u32be(cell_prev + 4, new_cell);
+        } else {
+            // Replacing head.
+            store_u32be(hd + 4, new_cell);
+        }
+    }
+
+    // Add allocated cell to front of allocated list.
+    uint32_t alloc_head = load_u32be(hd + 8);
+    store_u32be(cell + 4, alloc_head); // next
+    store_u32be(cell + 0, 0);          // prev
+    store_u32be(cell + 12, hd);        // cell->hd = &HeapArray[heap] (emulated address)
+    if (alloc_head != 0) {
+        store_u32be(alloc_head + 0, cell);
+    }
+    store_u32be(hd + 8, cell);
+
+    return (void *)(uintptr_t)(cell + 0x20u);
 }
