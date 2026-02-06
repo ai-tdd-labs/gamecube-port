@@ -15,6 +15,12 @@ int32_t __gc_osalloc_num_heaps;
 uint32_t __gc_osalloc_arena_start;
 uint32_t __gc_osalloc_arena_end;
 
+static inline int32_t load_i32be(uint32_t addr) {
+    uint8_t *p = gc_mem_ptr(addr, 4);
+    if (!p) return 0;
+    return (int32_t)(((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | (uint32_t)p[3]);
+}
+
 static inline uint32_t round_up(uint32_t x, uint32_t a) {
     return (x + (a - 1)) & ~(a - 1);
 }
@@ -66,4 +72,40 @@ void *OSInitAlloc(void *arenaStart, void *arenaEnd, int maxHeaps) {
     __gc_osalloc_arena_end = round_down(arena_hi, ALIGNMENT);
 
     return (void *)(uintptr_t)new_lo;
+}
+
+int OSCreateHeap(void *start, void *end) {
+    uint32_t s = (uint32_t)(uintptr_t)start;
+    uint32_t e = (uint32_t)(uintptr_t)end;
+
+    s = round_up(s, ALIGNMENT);
+    e = round_down(e, ALIGNMENT);
+
+    const uint32_t heap_array = __gc_osalloc_heap_array;
+    const int32_t num_heaps = __gc_osalloc_num_heaps;
+
+    for (int32_t heap = 0; heap < num_heaps; heap++) {
+        uint32_t hd = heap_array + (uint32_t)heap * (uint32_t)HEAPDESC_SIZE;
+        int32_t hd_size = load_i32be(hd + 0);
+        if (hd_size < 0) {
+            uint32_t new_size = e - s;
+
+            // hd->size
+            store_u32be(hd + 0, new_size);
+
+            // Write the initial free list cell at start:
+            // prev=0, next=0, size=new_size
+            store_u32be(s + 0, 0);
+            store_u32be(s + 4, 0);
+            store_u32be(s + 8, new_size);
+
+            // hd->free = start, hd->allocated = 0
+            store_u32be(hd + 4, s);
+            store_u32be(hd + 8, 0);
+
+            return (int)heap;
+        }
+    }
+
+    return -1;
 }
