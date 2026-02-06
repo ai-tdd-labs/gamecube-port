@@ -32,8 +32,7 @@ This repository is the memory.
 - Iterate until bit-exact match.
 
 7) Notes
-- Write confirmed behaviors to docs/codex/<subsystem>.md.
-- Keep docs/codex/NOTES.md as an index + high-level changelog.
+- Write confirmed behaviors to docs/codex/NOTES.md (facts only, with evidence).
 
 ## Test Locations
 

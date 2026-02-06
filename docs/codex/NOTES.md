@@ -1,21 +1,21 @@
-# Codex Notes (Index)
+# Codex Notes (Facts Only)
 
 Codex has no memory. The repository is the memory.
 
 Rules:
 - Facts only. No guesses.
 - Every bullet must cite evidence (decomp path + symbol, or a test id + expected.bin).
+- Separate: API contract vs internal implementation vs side effects.
 
-Subsystem notes (write facts in these files, not here):
-- OS: docs/codex/os.md
-- DVD: docs/codex/dvd.md
-- GX: docs/codex/gx.md
-- VI: docs/codex/vi.md
-- PAD: docs/codex/pad.md
+## Confirmed Behaviors
 
-## Changelog (high level)
+### VISetNextFrameBuffer
+- Callsites enumerated across MP4/TP/WW/AC.
+  Evidence: docs/sdk/vi/VISetNextFrameBuffer.md
+- Current DOL tests in this repo are scaffolding only (marker/control-flow).
+  They do not yet validate real VI side effects (shadow regs / HorVer / HW regs).
+  Evidence: tests/sdk/vi/vi_set_next_frame_buffer/dol/*; tests/sdk/vi/vi_set_next_frame_buffer/expected/vi_set_next_frame_buffer_{min,realistic_mp4,edge_unaligned}_001.bin
 
-### 2026-02-06
-- Created repo-memory workflow skeleton: docs/codex/*, docs/sdk/*, tools/*.sh.
-- Started VISetNextFrameBuffer callsite research and scaffolded 3 DOL tests.
-  Evidence: docs/sdk/vi/VISetNextFrameBuffer.md; tests/sdk/vi/vi_set_next_frame_buffer/expected/vi_set_next_frame_buffer_{min,realistic_mp4,edge_unaligned}_001.bin
+## Known Invariants
+
+## Undocumented Quirks
