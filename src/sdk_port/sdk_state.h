@@ -56,5 +56,11 @@ enum {
   GC_SDK_OFF_MAGIC = 0x00,
   GC_SDK_OFF_OS_ARENA_LO = 0x10,
   GC_SDK_OFF_OS_ARENA_HI = 0x14,
-};
 
+  // OSAlloc / heap init metadata (host previously held these as globals).
+  GC_SDK_OFF_OS_CURR_HEAP = 0x20,         // s32 (SDK global)
+  GC_SDK_OFF_OSALLOC_HEAP_ARRAY = 0x24,   // u32
+  GC_SDK_OFF_OSALLOC_NUM_HEAPS = 0x28,    // s32
+  GC_SDK_OFF_OSALLOC_ARENA_START = 0x2C,  // u32
+  GC_SDK_OFF_OSALLOC_ARENA_END = 0x30,    // u32
+};

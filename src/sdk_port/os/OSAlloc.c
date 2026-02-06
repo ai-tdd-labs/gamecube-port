@@ -2,10 +2,19 @@
 
 #include "gc_mem.h"
 
+// RAM-backed state (big-endian in MEM1) for dump comparability.
+#include "../sdk_state.h"
+
 // Port of the minimal heap initializer needed by early game init.
 // Behavior is driven by deterministic expected-vs-actual tests.
 
-// Matches the SDK global (exposed in the header as extern volatile).
+// SDK global: __OSCurrHeap (volatile s32). We store it in RAM-backed state so
+// host and PPC runs can be compared via RAM dumps.
+//
+// In DOL tests, the oracle defines actual storage for __OSCurrHeap in a TU
+// (see tests/sdk/os/os_init_alloc/dol/oracle_os_init_alloc.h). Our sdk_port
+// implementation does not rely on that; host harnesses should treat this as
+// an accessor.
 volatile int32_t __OSCurrHeap = -1;
 
 // Internal state (not part of the SDK API). We keep these as link-visible
@@ -14,6 +23,27 @@ uint32_t __gc_osalloc_heap_array;
 int32_t __gc_osalloc_num_heaps;
 uint32_t __gc_osalloc_arena_start;
 uint32_t __gc_osalloc_arena_end;
+
+static inline int32_t state_load_i32(uint32_t off, int32_t fallback) {
+    // If state page isn't mapped, fall back to the C globals for host-only.
+    if (!gc_sdk_state_ptr(off, 4)) return fallback;
+    return (int32_t)gc_sdk_state_load_u32be(off);
+}
+
+static inline uint32_t state_load_u32(uint32_t off, uint32_t fallback) {
+    if (!gc_sdk_state_ptr(off, 4)) return fallback;
+    return gc_sdk_state_load_u32be(off);
+}
+
+static inline void state_store_i32(uint32_t off, int32_t v) {
+    if (!gc_sdk_state_ptr(off, 4)) return;
+    gc_sdk_state_store_u32be(off, (uint32_t)v);
+}
+
+static inline void state_store_u32(uint32_t off, uint32_t v) {
+    if (!gc_sdk_state_ptr(off, 4)) return;
+    gc_sdk_state_store_u32be(off, v);
+}
 
 static inline int32_t load_i32be(uint32_t addr) {
     uint8_t *p = gc_mem_ptr(addr, 4);
@@ -54,6 +84,8 @@ void *OSInitAlloc(void *arenaStart, void *arenaEnd, int maxHeaps) {
 
     __gc_osalloc_heap_array = arena_lo;
     __gc_osalloc_num_heaps = (int32_t)maxHeaps;
+    state_store_u32(GC_SDK_OFF_OSALLOC_HEAP_ARRAY, arena_lo);
+    state_store_i32(GC_SDK_OFF_OSALLOC_NUM_HEAPS, (int32_t)maxHeaps);
 
     // HeapArray lives at arena_lo (in emulated RAM).
     // Initialize every HeapDesc:
@@ -66,6 +98,7 @@ void *OSInitAlloc(void *arenaStart, void *arenaEnd, int maxHeaps) {
     }
 
     __OSCurrHeap = -1;
+    state_store_i32(GC_SDK_OFF_OS_CURR_HEAP, -1);
 
     // arenaStart becomes HeapArray + arraySize, then rounded up to 32 bytes.
     uint32_t new_lo = arena_lo + array_size;
@@ -74,6 +107,8 @@ void *OSInitAlloc(void *arenaStart, void *arenaEnd, int maxHeaps) {
     // ArenaEnd is rounded down to 32 bytes.
     __gc_osalloc_arena_start = new_lo;
     __gc_osalloc_arena_end = round_down(arena_hi, ALIGNMENT);
+    state_store_u32(GC_SDK_OFF_OSALLOC_ARENA_START, __gc_osalloc_arena_start);
+    state_store_u32(GC_SDK_OFF_OSALLOC_ARENA_END, __gc_osalloc_arena_end);
 
     return (void *)(uintptr_t)new_lo;
 }
@@ -85,8 +120,8 @@ int OSCreateHeap(void *start, void *end) {
     s = round_up(s, ALIGNMENT);
     e = round_down(e, ALIGNMENT);
 
-    const uint32_t heap_array = __gc_osalloc_heap_array;
-    const int32_t num_heaps = __gc_osalloc_num_heaps;
+    const uint32_t heap_array = state_load_u32(GC_SDK_OFF_OSALLOC_HEAP_ARRAY, __gc_osalloc_heap_array);
+    const int32_t num_heaps = state_load_i32(GC_SDK_OFF_OSALLOC_NUM_HEAPS, __gc_osalloc_num_heaps);
 
     for (int32_t heap = 0; heap < num_heaps; heap++) {
         uint32_t hd = heap_array + (uint32_t)heap * (uint32_t)HEAPDESC_SIZE;
@@ -118,8 +153,9 @@ int OSCreateHeap(void *start, void *end) {
 int OSSetCurrentHeap(int heap) {
     // SDK contract: set __OSCurrHeap and return previous.
     // Asserts in the original SDK are intentionally omitted; tests drive correctness.
-    int prev = (int)__OSCurrHeap;
+    int prev = (int)state_load_i32(GC_SDK_OFF_OS_CURR_HEAP, __OSCurrHeap);
     __OSCurrHeap = (int32_t)heap;
+    state_store_i32(GC_SDK_OFF_OS_CURR_HEAP, (int32_t)heap);
     return prev;
 }
 
@@ -128,8 +164,8 @@ void *OSAllocFromHeap(int heap, uint32_t size) {
     // We intentionally keep asserts out; expected-vs-actual tests drive correctness.
     if ((int32_t)size <= 0) return (void *)0;
 
-    const uint32_t heap_array = __gc_osalloc_heap_array;
-    const int32_t num_heaps = __gc_osalloc_num_heaps;
+    const uint32_t heap_array = state_load_u32(GC_SDK_OFF_OSALLOC_HEAP_ARRAY, __gc_osalloc_heap_array);
+    const int32_t num_heaps = state_load_i32(GC_SDK_OFF_OSALLOC_NUM_HEAPS, __gc_osalloc_num_heaps);
     if (heap_array == 0 || heap < 0 || heap >= num_heaps) return (void *)0;
 
     const uint32_t hd = heap_array + (uint32_t)heap * (uint32_t)HEAPDESC_SIZE;
@@ -201,7 +237,8 @@ void *OSAllocFromHeap(int heap, uint32_t size) {
 void *OSAlloc(uint32_t size) {
     // MP4 (and other games) calls OSAlloc(size) which allocates from the
     // current heap.
-    return OSAllocFromHeap((int)__OSCurrHeap, size);
+    int curr = (int)state_load_i32(GC_SDK_OFF_OS_CURR_HEAP, __OSCurrHeap);
+    return OSAllocFromHeap(curr, size);
 }
 
 // Minimal extras used by some init paths and debug helpers.
