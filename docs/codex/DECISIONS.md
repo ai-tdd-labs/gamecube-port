@@ -1,20 +1,17 @@
-# Codex Decisions
+# Decisions
 
-Decisions are for explaining *why* we concluded something.
-Each entry must link to evidence (decomp path, test id, expected.bin).
+This file documents decisions we made and why.
 
-## 2026-02-06: Separate SDK Port vs Game Workloads
+## Legacy test migration policy
 
 Decision:
-- Keep Nintendo SDK implementations under `src/sdk_port/`.
-- Keep unmodified game code under `src/game_workload/<game>/` as a workload / integration driver.
-- Do not copy game code into `src/sdk_port/` and do not change game logic (only minimal build glue if needed).
+- Do not blindly copy legacy DOL tests into `tests/sdk/`.
+- Only treat a legacy test as a Dolphin oracle if the DOL executes real SDK behavior, i.e. compiled from decomp SDK sources under `decomp_mario_party_4/src/dolphin/...` (or other decomp roots).
 
 Why:
-- Avoid mixing "spec/workload" (game code) with "product under test" (SDK port).
-- Keep the evidence loop clean: SDK behavior is validated by `tests/sdk/** expected.bin vs actual.bin`.
+- Several legacy tests implement "synthetic" versions of SDK functions inside the test file (mocked regs, mocked SRAM, stubbed interrupts).
+- Those tests are useful as algorithm sketches, but they do not validate against Dolphin's real behavior and therefore do not satisfy "never guess".
 
-Evidence:
-- Callsite-driven SDK tests exist and are bit-exact against Dolphin for OS arena functions.
-  Evidence: tests/sdk/os/os_set_arena_lo/expected/*.bin + tests/sdk/os/os_set_arena_lo/actual/*.bin
-  Evidence: tests/sdk/os/os_get_arena_lo/expected/*.bin + tests/sdk/os/os_get_arena_lo/actual/*.bin
+What to do instead:
+- When legacy is synthetic, rewrite the DOL test to call the decomp SDK function and dump results, then port the behavior under `src/sdk_port/` and compare expected vs actual.
+
