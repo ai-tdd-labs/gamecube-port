@@ -27,6 +27,16 @@ This repository is the memory.
 - Run host/runtime port to produce actual.bin.
 - Diff expected.bin vs actual.bin.
 
+### Host actual.bin (SDK port)
+
+After `expected/` exists, implement the minimal SDK port for the function under `src/sdk_port/`
+and add a matching host testcase under `tests/sdk/<subsystem>/<function>/host/`.
+
+Commands:
+1) Dump expected: `tools/run_tests.sh expected tests/sdk/<subsystem>/<function>`
+2) Produce actual: `tools/run_host_test.sh tests/sdk/<subsystem>/<function>/host/<case>_host.c`
+3) Diff: `tools/diff_bins.sh tests/sdk/<subsystem>/<function>/expected/<case>.bin tests/sdk/<subsystem>/<function>/actual/<case>.bin`
+
 6) Implementation
 - Minimal changes only.
 - Iterate until bit-exact match.
