@@ -104,3 +104,13 @@ PlannedBatch1,102,GXSetTevColorOp,sdk,,tests/sdk/gx/gx_set_tev_color_op,1/1,1,1,
 PlannedBatch1,103,GXPosition1x16,sdk,,tests/sdk/gx/gx_position_1x16,1/1,1,1,1,yes
 PlannedBatch1,104,GXSetTevAlphaOp,sdk,,tests/sdk/gx/gx_set_tev_alpha_op,1/1,1,1,1,yes
 PlannedBatch1,105,GXSetArray,sdk,,tests/sdk/gx/gx_set_array,1/1,1,1,1,yes
+PlannedBatch2,106,GXSetNumTexGens,sdk,,tests/sdk/gx/gx_set_num_tex_gens,1/1,1,1,1,yes
+PlannedBatch2,107,GXClearVtxDesc,sdk,,tests/sdk/gx/gx_clear_vtx_desc,1/1,1,1,1,yes
+PlannedBatch2,108,GXSetLineWidth,sdk,,tests/sdk/gx/gx_set_line_width,1/1,1,1,1,yes
+PlannedBatch2,109,GXSetPointSize,sdk,,tests/sdk/gx/gx_set_point_size,1/1,1,1,1,yes
+PlannedBatch2,110,GXEnableTexOffsets,sdk,,tests/sdk/gx/gx_enable_tex_offsets,1/1,1,1,1,yes
+PlannedBatch2,111,GXSetCoPlanar,sdk,,tests/sdk/gx/gx_set_co_planar,1/1,1,1,1,yes
+PlannedBatch2,112,GXSetCullMode,sdk,,tests/sdk/gx/gx_set_cull_mode,1/1,1,1,1,yes
+PlannedBatch2,113,GXSetClipMode,sdk,,tests/sdk/gx/gx_set_clip_mode,1/1,1,1,1,yes
+PlannedBatch2,114,GXSetScissorBoxOffset,sdk,,tests/sdk/gx/gx_set_scissor_box_offset,1/1,1,1,1,yes
+PlannedBatch2,115,GXSetNumChans,sdk,,tests/sdk/gx/gx_set_num_chans,1/1,1,1,1,yes

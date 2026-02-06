@@ -20,6 +20,10 @@ float gc_gx_vp_farz;
 
 u32 gc_gx_su_scis0;
 u32 gc_gx_su_scis1;
+u32 gc_gx_su_ts0[8];
+u32 gc_gx_lp_size;
+u32 gc_gx_scissor_box_offset_reg;
+u32 gc_gx_clip_mode;
 
 u32 gc_gx_cp_disp_src;
 u32 gc_gx_cp_disp_size;
@@ -112,21 +116,22 @@ GXFifoObj *GXInit(void *base, u32 size) {
     gc_gx_nrm_type = 0;
     gc_gx_dirty_state = 0;
     gc_gx_dirty_vat = 0;
-    for (u32 i = 0; i < 8; i++) {
+    u32 i;
+    for (i = 0; i < 8; i++) {
         gc_gx_vat_a[i] = 0;
         gc_gx_vat_b[i] = 0;
         gc_gx_vat_c[i] = 0;
     }
-    for (u32 i = 0; i < 32; i++) {
+    for (i = 0; i < 32; i++) {
         gc_gx_array_base[i] = 0;
         gc_gx_array_stride[i] = 0;
     }
-    for (u32 i = 0; i < 16; i++) {
+    for (i = 0; i < 16; i++) {
         gc_gx_tevc[i] = 0;
         gc_gx_teva[i] = 0;
         gc_gx_texmap_id[i] = 0;
     }
-    for (u32 i = 0; i < 8; i++) {
+    for (i = 0; i < 8; i++) {
         gc_gx_tref[i] = 0;
     }
     gc_gx_tev_tc_enab = 0;
@@ -134,6 +139,12 @@ GXFifoObj *GXInit(void *base, u32 size) {
     gc_gx_pos3f32_y_bits = 0;
     gc_gx_pos3f32_z_bits = 0;
     gc_gx_pos1x16_last = 0;
+    for (i = 0; i < 8; i++) {
+        gc_gx_su_ts0[i] = 0;
+    }
+    gc_gx_lp_size = 0;
+    gc_gx_scissor_box_offset_reg = 0;
+    gc_gx_clip_mode = 0;
 
     return &s_fifo_obj;
 }
@@ -202,6 +213,83 @@ void GXSetScissor(u32 left, u32 top, u32 wd, u32 ht) {
     gc_gx_su_scis1 = set_field(gc_gx_su_scis1, 11, 12, rt);
 
     gc_gx_bp_sent_not = 0;
+}
+
+void GXSetNumTexGens(u8 nTexGens) {
+    // GXAttr.c: genMode[0..3] = nTexGens; dirtyState |= 4
+    gc_gx_gen_mode = set_field(gc_gx_gen_mode, 4, 0, (u32)nTexGens);
+    gc_gx_dirty_state |= 4u;
+}
+
+void GXClearVtxDesc(void) {
+    // GXAttr.c: vcdLo=0; vcdLo[9..10]=1; vcdHi=0; hasNrms=0; hasBiNrms=0; dirtyState |= 8
+    gc_gx_vcd_lo = 0;
+    gc_gx_vcd_lo = set_field(gc_gx_vcd_lo, 2, 9, 1u);
+    gc_gx_vcd_hi = 0;
+    gc_gx_has_nrms = 0;
+    gc_gx_has_binrms = 0;
+    gc_gx_dirty_state |= 8u;
+}
+
+void GXSetLineWidth(u8 width, u32 texOffsets) {
+    // GXGeometry.c: lpSize[0..7]=width, lpSize[16..18]=texOffsets; bpSentNot=0
+    gc_gx_lp_size = set_field(gc_gx_lp_size, 8, 0, (u32)width);
+    gc_gx_lp_size = set_field(gc_gx_lp_size, 3, 16, texOffsets & 0x7u);
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXSetPointSize(u8 pointSize, u32 texOffsets) {
+    // GXGeometry.c: lpSize[8..15]=pointSize, lpSize[19..21]=texOffsets; bpSentNot=0
+    gc_gx_lp_size = set_field(gc_gx_lp_size, 8, 8, (u32)pointSize);
+    gc_gx_lp_size = set_field(gc_gx_lp_size, 3, 19, texOffsets & 0x7u);
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXEnableTexOffsets(u32 coord, u8 line_enable, u8 point_enable) {
+    // GXGeometry.c: suTs0[coord].line=bit18, point=bit19; bpSentNot=0
+    if (coord >= 8) return;
+    gc_gx_su_ts0[coord] = set_field(gc_gx_su_ts0[coord], 1, 18, (u32)(line_enable != 0));
+    gc_gx_su_ts0[coord] = set_field(gc_gx_su_ts0[coord], 1, 19, (u32)(point_enable != 0));
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXSetCoPlanar(u32 enable) {
+    // GXGeometry.c: genMode[19] = enable; writes RAS regs
+    gc_gx_gen_mode = set_field(gc_gx_gen_mode, 1, 19, (u32)(enable != 0));
+}
+
+void GXSetCullMode(u32 mode) {
+    // GXGeometry.c: front/back swap for hwMode, then genMode[14..15] = hwMode; dirtyState |= 4
+    u32 hwMode = mode;
+    // These values match GXEnum: GX_CULL_FRONT=1, GX_CULL_BACK=2.
+    if (mode == 1u) hwMode = 2u;
+    else if (mode == 2u) hwMode = 1u;
+    gc_gx_gen_mode = set_field(gc_gx_gen_mode, 2, 14, hwMode & 3u);
+    gc_gx_dirty_state |= 4u;
+}
+
+void GXSetScissorBoxOffset(int32_t x_off, int32_t y_off) {
+    // GXTransform.c: hx=(x_off+342)>>1, hy=(y_off+342)>>1, pack into reg 0x59, bpSentNot=0
+    u32 reg = 0;
+    u32 hx = (u32)(x_off + 342) >> 1;
+    u32 hy = (u32)(y_off + 342) >> 1;
+    reg = set_field(reg, 10, 0, hx);
+    reg = set_field(reg, 10, 10, hy);
+    reg = set_field(reg, 8, 24, 0x59u);
+    gc_gx_scissor_box_offset_reg = reg;
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXSetClipMode(u32 mode) {
+    // GXTransform.c: write XF reg 5; bpSentNot = 1
+    gc_gx_clip_mode = mode;
+    gc_gx_bp_sent_not = 1;
+}
+
+void GXSetNumChans(u8 nChans) {
+    // GXLight.c: genMode[4..6]=nChans; dirtyState |= 4
+    gc_gx_gen_mode = set_field(gc_gx_gen_mode, 3, 4, (u32)nChans);
+    gc_gx_dirty_state |= 4u;
 }
 
 void GXSetDispCopySrc(u16 left, u16 top, u16 wd, u16 ht) {
