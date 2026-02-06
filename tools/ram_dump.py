@@ -167,7 +167,8 @@ def start_dolphin(exec_path, dolphin_bin=DOLPHIN_BIN):
         print(f"File not found: {exec_path}")
         return None
 
-    # -b = batch (headless), -d = debugger (GDB stub), -e = execute
+    # Use --exec flow so Dolphin starts headless with GDB stub active.
+    # -b = batch (headless), -d = debugger (required for stub), -e = execute
     cmd = [dolphin_bin, "-b", "-d", "-e", exec_path]
     print(f"Starting Dolphin: {' '.join(cmd)}")
 
@@ -225,7 +226,9 @@ Examples:
 
     dolphin_proc = None
 
-    # Start Dolphin if --exec provided
+    # Start Dolphin if --exec provided.
+    # IMPORTANT: Prefer this flow over manually launching Dolphin; it reliably
+    # opens the GDB stub and avoids "connection refused".
     if args.exec_file:
         dolphin_proc = start_dolphin(args.exec_file, args.dolphin)
         if dolphin_proc is None:

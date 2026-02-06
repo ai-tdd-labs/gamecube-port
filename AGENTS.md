@@ -1,104 +1,136 @@
 # Agent Instructions
 
-This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get started.
+We are reverse-engineering and porting a Nintendo GameCube game using decompiled code and deterministic unit tests.
 
-## Task Management Rules
+Codex has no memory. The repository is the memory.
 
-**ALWAYS create tasks before starting work:**
-- Break work into small, testable tasks
-- Use `bd create "Title" --body "Description"`
-- Set dependencies with `bd dep add <blocked> <blocker>`
+=====================
+GOAL
+=====================
 
-**ONLY close tasks when CONFIRMED complete:**
-- Task must be tested and verified working
-- Never close based on "should work" - must be proven
-- If unsure, leave open and add comment
-- Use `bd close <id> --reason "why"` with clear reason
+Create a workflow where Codex:
+- learns the Nintendo SDK and game callsites by committing notes,
+- reconstructs SDK behavior via unit tests,
+- validates behavior against Dolphin,
+- becomes faster because its own prior work lives in the repo.
 
-**Task workflow:**
-```bash
-bd create "Task title" --body "Description"  # Create
-bd update <id> --status in_progress          # Start
-# ... do the work ...
-# ... TEST and VERIFY ...
-bd close <id> --reason "Tested: works"       # Only after confirmed
-```
+=====================
+REPO MEMORY LAYOUT
+=====================
 
-## Test-First Workflow (VERPLICHT)
+Always use and update these folders:
 
-Bij nieuwe SDK functie implementeren, volg ALTIJD deze volgorde:
+docs/
+  codex/
+    NOTES.md        # facts only
+    WORKFLOW.md     # repeatable procedures
+    DECISIONS.md    # why conclusions were made
+    GLOSSARY.md     # SDK terms, struct names
 
-```
-1. LEES SDK eerst
-   → src/dolphin/ in MP4 decomp bekijken
-   → Begrijp wat de functie doet, parameters, returns
+docs/
+  sdk/
+    os/
+    dvd/
+    gx/
+    vi/
+    pad/
 
-2. ONTWERP test
-   → Wat checken we? Welke RAM adressen?
-   → Schrijf test case beschrijving
+tests/
+  harness/
+  sdk/
 
-3. BOUW test DOL
-   → Mini-DOL die alleen die ene functie test
-   → Gebruik devkitPPC (zie /build-dol skill)
+tools/
+  run_tests.sh
+  dump_expected.sh
+  diff_bins.sh
+  helpers/
 
-4. RUN in Dolphin → expected.bin
-   → Draai DOL in Dolphin met GDB stub
-   → Dump RAM naar expected.bin (zie /dolphin-debug skill)
+src/
+  sdk_port/         # reimplemented SDK functions
 
-5. PAS DAN: implementeer runtime
-   → Nu mag je code schrijven
-   → Test tegen expected.bin (zie /ram-compare skill)
-```
+Everything important MUST be written to disk.
 
-**REGELS:**
-- ❌ NOOIT: task "Implement DVDInit()" zonder test
-- ✅ ALTIJD: task "Test voor DVDInit ontwerpen" eerst
-- ❌ NOOIT: code schrijven voordat expected.bin bestaat
-- ✅ ALTIJD: Dolphin output = waarheid
+=====================
+GENERAL RULES
+=====================
 
-**SDK locatie:**
-```
-/Users/chrislamark/projects/recomp/gamecube_static_recomp/decomp_mario_party_4/
-├── src/dolphin/     # SDK source code
-│   ├── dvd/         # DVD functies
-│   ├── os/          # OS functies
-│   └── gx/          # Graphics functies
-└── include/dolphin/ # Headers
-```
+1. NEVER GUESS.
+   Every claim must be backed by:
+   - decompiled code
+   - disassembly / symbols
+   - Dolphin behavior (expected.bin)
+   - memory dumps / register state
 
-## Quick Reference
+2. Always separate:
+   - SDK API contract
+   - internal implementation
+   - side effects (memory, registers, globals)
 
-```bash
-bd ready              # Find available work
-bd show <id>          # View issue details
-bd update <id> --status in_progress  # Claim work
-bd close <id>         # Complete work
-bd sync               # Sync with git
-```
+3. Tests ALWAYS come before implementation changes.
 
-## Landing the Plane (Session Completion)
+4. Each session ends with a commit.
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+=====================
+STANDARD WORKFLOW
+=====================
 
-**MANDATORY WORKFLOW:**
+For any SDK function (example: DVDInit, OSInit, GXSetCopyFilter):
 
-1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) - Tests, linters, builds
-3. **Update issue status** - Close finished work, update in-progress items
-4. **PUSH TO REMOTE** - This is MANDATORY:
-   ```bash
-   git pull --rebase
-   bd sync
-   git push
-   git status  # MUST show "up to date with origin"
-   ```
-5. **Clean up** - Clear stashes, prune remote branches
-6. **Verify** - All changes committed AND pushed
-7. **Hand off** - Provide context for next session
+STEP 1 - SCOPING
+- Pick ONE SDK function.
+- Identify subsystem (OS, DVD, GX, VI, PAD).
 
-**CRITICAL RULES:**
-- Work is NOT complete until `git push` succeeds
-- NEVER stop before pushing - that leaves work stranded locally
-- NEVER say "ready to push when you are" - YOU must push
-- If push fails, resolve and retry until it succeeds
+STEP 2 - CALLSITE RESEARCH
+- Find all callsites in each game decomp (MP4/TP/WW/AC).
+- Note:
+  - call order
+  - arguments
+  - frequency (init-only vs runtime)
 
+STEP 3 - BEHAVIOR DISCOVERY
+- Determine:
+  - memory writes
+  - register writes
+  - global state changes
+- Identify idempotency and edge cases.
+
+STEP 4 - UNIT TESTS
+- Write at least 3 deterministic tests:
+  - minimal call
+  - realistic game call
+  - edge case (double call, invalid state)
+- Tests must:
+  - initialize memory
+  - call the function
+  - dump memory/register regions
+
+STEP 5 - EXPECTED VS ACTUAL
+- Produce expected.bin via Dolphin.
+- Produce actual.bin via your SDK port.
+- Diff:
+  - first mismatch offset
+  - affected memory region
+  - likely cause
+
+STEP 6 - IMPLEMENTATION
+- Modify SDK implementation minimally.
+- No refactors.
+- Repeat until expected == actual.
+
+STEP 7 - NOTES (LEARNING)
+- Write findings to docs/codex/NOTES.md:
+  - confirmed side effects
+  - invariants
+  - undocumented behavior
+
+STEP 8 - HELPERS (OPTIONAL)
+If something repeats (dump boilerplate, diff interpretation), create helpers under tools/helpers/.
+
+=====================
+SESSION CLOSURE
+=====================
+
+At the end of EVERY session:
+1) Update docs/codex/NOTES.md
+2) Update or add tests
+3) Commit changes

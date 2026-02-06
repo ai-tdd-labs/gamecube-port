@@ -1,0 +1,72 @@
+# OS / editor
+.DS_Store
+.Trashes
+.trash/
+.claude/
+.codex/
+.beads/
+
+# Decomp/source drops (likely proprietary)
+decomp_*/
+**/decomp_*/
+
+# Build artifacts
+**/*.o
+**/*.obj
+**/*.a
+**/*.lib
+**/*.so
+**/*.dylib
+**/*.dll
+**/*.exe
+**/*.elf
+**/*.dol
+**/*.map
+**/build/
+
+# Test outputs
+tests/actual/
+tests/recomp_out/
+
+# ROMs / discs / archives / assets (do not publish)
+**/*.iso
+**/*.gcm
+**/*.wad
+**/*.wbfs
+**/*.ciso
+**/*.img
+**/*.rom
+**/*.n64
+**/*.z64
+**/*.v64
+**/*.3ds
+**/*.cia
+**/*.nds
+**/*.bin
+**/*.rel
+**/*.rso
+**/*.bti
+**/*.tpl
+**/*.bmg
+**/*.arc
+**/*.fst
+**/*.thp
+**/*.bnr
+**/*.dsp
+**/*.adx
+**/*.aif
+**/*.aiff
+**/*.wav
+**/*.mp3
+**/*.ogg
+
+# Secrets
+.env
+.env.*
+**/*.key
+**/*.pem
+**/*.p12
+**/*.pfx
+**/*.crt
+**/*.cer
+**/*.der

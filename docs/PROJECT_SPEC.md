@@ -285,6 +285,7 @@ Games reuse the same GX patterns with different data. Instead of learning every 
 - Hallucinate hardware behavior
 - Work without test validation
 - Argue with Dolphin ground truth
+ - Port game-specific functions (game code is out of scope)
 
 ### AI Workflow
 
@@ -298,6 +299,8 @@ Games reuse the same GX patterns with different data. Instead of learning every 
 7. If FAIL: AI fixes code, repeat from step 4
 8. If PASS: next function
 ```
+
+**Scope note:** We only port/verify the **Nintendo SDK layer**. Game-specific functions are **not** being ported; decomps are used only to extract **SDK call-sites and inputs** for tests.
 
 ### Test-Driven AI Development (Key Insight)
 
@@ -328,57 +331,45 @@ gamecube/
 ├── docs/
 │   ├── PROJECT_SPEC.md          # This file
 │   └── chatgpt-chats/           # Original brainstorm conversations
-├── runtime/
-│   ├── dvd/                     # DVD subsystem (START HERE)
-│   │   ├── dvd.h                # DVD API interface
-│   │   ├── dvd.cpp              # DVDInit, DVDRead, etc.
-│   │   └── disc_image.cpp       # ISO/GCM reading
-│   ├── os/                      # OS subsystem
-│   │   ├── os.h                 # OS API interface
-│   │   ├── os_init.cpp          # OSInit
-│   │   ├── os_memory.cpp        # Heap, allocation
-│   │   └── os_thread.cpp        # Threading
-│   ├── gx/                      # GX API implementation
-│   │   ├── blend.cpp            # Blending modes
-│   │   ├── tev.cpp              # TEV stages
-│   │   ├── texture.cpp          # Texture handling
-│   │   └── z_buffer.cpp         # Depth buffer
-│   ├── rhi/                     # Render Hardware Interface
-│   │   ├── rhi.h                # Abstract interface
-│   │   ├── types.h              # Common types
-│   │   └── shader_compiler.cpp  # Cross-platform shader handling
-│   └── backends/                # Platform-specific implementations
-│       ├── metal/               # macOS backend
-│       │   ├── metal_device.mm
-│       │   └── shaders/         # Metal shaders (.metal)
-│       ├── vulkan/              # Linux/Windows backend
-│       │   ├── vulkan_device.cpp
-│       │   └── shaders/         # SPIR-V shaders
-│       └── d3d12/               # Windows backend (optional)
-│           ├── d3d12_device.cpp
-│           └── shaders/         # HLSL shaders
+│   └── codex/                   # Codex "repo is memory" notes + workflow
+│       ├── NOTES.md
+│       ├── WORKFLOW.md
+│       ├── DECISIONS.md
+│       └── GLOSSARY.md
+│   └── sdk/                     # SDK facts per subsystem (OS/DVD/GX/VI/PAD)
+├── src/
+│   ├── runtime/
+│   │   ├── dvd/                 # DVD subsystem
+│   │   ├── os/                  # OS subsystem
+│   │   ├── gx/                  # GX subsystem
+│   │   ├── rhi/                 # Render Hardware Interface
+│   │   ├── vi/                  # Video interface
+│   │   ├── exi/                 # EXI subsystem
+│   │   ├── si/                  # Serial interface
+│   │   ├── pad/                 # Controller input
+│   │   ├── loader/              # Loader/runtime bootstrap
+│   │   ├── ac/                  # Animal Crossing runtime
+│   │   ├── tp/                  # Twilight Princess runtime
+│   │   ├── ww/                  # Wind Waker runtime
+│   │   └── game/                # Shared game helpers
+│   └── recomp/                  # recompiler output
+├── include/
+│   ├── runtime/                 # public headers (game-specific + shared)
+│   │   ├── ac/
+│   │   ├── tp/
+│   │   ├── ww/
+│   │   └── game/
+│   └── rhi/
 ├── tests/
-│   ├── harness/                 # Test runner code
-│   ├── sdk/                     # SDK unit tests (mini-DOLs)
-│   │   ├── dvd/                 # DVD tests
-│   │   │   ├── dvd_read_basic.c
-│   │   │   └── dvd_read_async.c
-│   │   ├── os/                  # OS tests
-│   │   │   └── os_init.c
-│   │   └── gx/                  # GX tests
-│   │       └── gx_blend_001.c
-│   └── expected/                # Dolphin reference data
-│       ├── dvd/                 # RAM dumps
-│       │   └── dvd_read_basic.bin
-│       └── gx/                  # Screenshots
-│           └── gx_blend_001.png
+│   ├── designs/                 # test designs (md)
+│   ├── dols/                    # mini-DOL tests
+│   ├── expected/                # Dolphin reference data
+│   ├── actual/                  # runtime output
+│   ├── runtime/                 # runtime-side tests
+│   ├── recomp/                  # recompiler tests
+│   └── recomp_out/              # recompiler outputs
 ├── tools/
-│   ├── dolphin_runner.py        # Headless Dolphin automation
-│   ├── ram_dump.py              # RAM extraction from Dolphin
-│   ├── ram_compare.py           # Binary diff tool
-│   ├── pixel_compare.py         # Image diff tool
-│   └── pattern_extractor.py     # GX pattern mining
-└── .beads/                      # Task tracking
+└── tools/                       # Test helpers + Dolphin dump/compare scripts
 ```
 
 ---
