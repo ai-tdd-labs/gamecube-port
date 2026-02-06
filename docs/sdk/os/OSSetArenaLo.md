@@ -34,3 +34,11 @@ Evidence (MP4 SDK source): `decomp_mario_party_4/src/dolphin/os/OSArena.c`.
 
 ## Tests
 See: `tests/sdk/os/os_set_arena_lo/`
+
+Testcases in this repo:
+- generic/min_001: minimal store+readback
+- generic/edge_double_call_001: last write wins
+- mp4/realistic_mp4_mem_alloc_hi_001: representative MP4-style "arenaLo = arenaHi" value flow (GCN_Mem_Alloc)
+- tp/realistic_tp_fixed_001: TP fixed constant (0x81280000) callsite
+- ww/realistic_ww_rounddown_hi_001: WW-style 0x20 round-down pattern (JKRHeap ram_end)
+- ac/realistic_ac_stack_round_001: AC-style stack rounding formula applied to a representative address
