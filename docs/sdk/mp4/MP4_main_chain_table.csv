@@ -27,3 +27,15 @@ index,function,origin,canonical_suite,tests_exp_act,expected_bins,actual_bins,pa
 26,GXReadVCacheMetric,sdk,tests/sdk/gx/gx_read_vcache_metric,1/1,1,1,1,yes
 27,GXReadPixMetric,sdk,tests/sdk/gx/gx_read_pix_metric,1/1,1,1,1,yes
 28,GXReadMemMetric,sdk,tests/sdk/gx/gx_read_mem_metric,1/1,1,1,1,yes
+29,GXDrawDone,sdk,tests/sdk/gx/gx_draw_done,1/1,1,1,1,yes
+30,GXSetZMode,sdk,tests/sdk/gx/gx_set_z_mode,1/1,1,1,1,yes
+31,GXSetColorUpdate,sdk,tests/sdk/gx/gx_set_color_update,1/1,1,1,1,yes
+32,GXDrawDone,sdk,tests/sdk/gx/gx_draw_done,1/1,1,1,1,yes
+33,GXCopyDisp,sdk,tests/sdk/gx/gx_copy_disp,1/1,1,1,1,yes
+34,VIGetRetraceCount,sdk,tests/sdk/vi/vi_get_retrace_count,1/1,1,1,1,yes
+35,VIWaitForRetrace,sdk,tests/sdk/vi/vi_wait_for_retrace,1/1,1,1,1,yes
+36,SwapBuffers,mp4,,,0,0,0,
+37,VISetNextFrameBuffer,sdk,tests/sdk/vi/vi_set_next_frame_buffer,1/1,1,1,1,yes
+38,VISetBlack,sdk,tests/sdk/vi/vi_set_black,1/1,1,1,1,yes
+39,VIFlush,sdk,tests/sdk/vi/vi_flush,1/1,1,1,1,yes
+40,VIWaitForRetrace,sdk,tests/sdk/vi/vi_wait_for_retrace,1/1,1,1,1,yes
