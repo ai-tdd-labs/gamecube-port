@@ -4,6 +4,8 @@
 
 #include "gc_mem.h"
 
+#include "sdk_state.h"
+
 #include <stdint.h>
 
 int main(int argc, char **argv) {
@@ -17,6 +19,7 @@ int main(int argc, char **argv) {
 
     // Make sdk_port address translation available for the scenario.
     gc_mem_set(ram.base, ram.size, ram.buf);
+    gc_sdk_state_reset();
 
     gc_scenario_run(&ram);
 

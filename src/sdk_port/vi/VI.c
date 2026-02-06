@@ -3,6 +3,9 @@
 typedef uint16_t u16;
 typedef uint32_t u32;
 
+// RAM-backed state (big-endian in MEM1) for dump comparability.
+#include "../sdk_state.h"
+
 u16 gc_vi_regs[64];
 u32 gc_vi_disable_calls;
 u32 gc_vi_restore_calls;
@@ -15,22 +18,63 @@ u32 gc_vi_next_field;
 u32 gc_vi_retrace_count;
 u32 gc_vi_black;
 
+static inline int state_mapped(uint32_t off) {
+    return gc_sdk_state_ptr(off, 4) != 0;
+}
+
+static inline u32 state_load_u32(uint32_t off, u32 fallback) {
+    if (!state_mapped(off)) return fallback;
+    return gc_sdk_state_load_u32be(off);
+}
+
+static inline void state_store_u32(uint32_t off, u32 *mirror, u32 v) {
+    if (mirror) *mirror = v;
+    if (!state_mapped(off)) return;
+    gc_sdk_state_store_u32be(off, v);
+}
+
+static inline u16 state_load_u16(uint32_t off, u16 fallback) {
+    uint8_t *p = gc_sdk_state_ptr(off, 2);
+    if (!p) return fallback;
+    return (u16)(((u16)p[0] << 8) | (u16)p[1]);
+}
+
+static inline void state_store_u16(uint32_t off, u16 *mirror, u16 v) {
+    if (mirror) *mirror = v;
+    uint8_t *p = gc_sdk_state_ptr(off, 2);
+    if (!p) return;
+    p[0] = (uint8_t)(v >> 8);
+    p[1] = (uint8_t)(v >> 0);
+}
+
 // VISetNextFrameBuffer is used very early by games (including MP4). For now our
 // deterministic tests only require that the symbol exists.
 void VISetNextFrameBuffer(void *fb) { (void)fb; }
 
-void VIFlush(void) { gc_vi_flush_calls++; }
+void VIFlush(void) {
+    u32 v = state_load_u32(GC_SDK_OFF_VI_FLUSH_CALLS, gc_vi_flush_calls);
+    v++;
+    state_store_u32(GC_SDK_OFF_VI_FLUSH_CALLS, &gc_vi_flush_calls, v);
+}
 
-void VIWaitForRetrace(void) { gc_vi_wait_retrace_calls++; }
+void VIWaitForRetrace(void) {
+    u32 v = state_load_u32(GC_SDK_OFF_VI_WAIT_RETRACE_CALLS, gc_vi_wait_retrace_calls);
+    v++;
+    state_store_u32(GC_SDK_OFF_VI_WAIT_RETRACE_CALLS, &gc_vi_wait_retrace_calls, v);
+}
 
 static int OSDisableInterrupts(void) {
-    gc_vi_disable_calls++;
+    u32 v = state_load_u32(GC_SDK_OFF_VI_DISABLE_CALLS, gc_vi_disable_calls);
+    v++;
+    state_store_u32(GC_SDK_OFF_VI_DISABLE_CALLS, &gc_vi_disable_calls, v);
     return 1;
 }
 
 static void OSRestoreInterrupts(int enabled) {
     (void)enabled;
-    gc_vi_restore_calls++;
+    u32 v = state_load_u32(GC_SDK_OFF_VI_RESTORE_CALLS, gc_vi_restore_calls);
+    v++;
+    state_store_u32(GC_SDK_OFF_VI_RESTORE_CALLS, &gc_vi_restore_calls, v);
 }
 
 #define VI_DTV_STAT 55
@@ -40,7 +84,10 @@ u32 VIGetDTVStatus(void) {
     int interrupt;
 
     interrupt = OSDisableInterrupts();
-    stat = (gc_vi_regs[VI_DTV_STAT] & 3u);
+    // regs are u16 BE in RAM-backed state.
+    u16 r = state_load_u16(GC_SDK_OFF_VI_REGS_U16BE + (VI_DTV_STAT * 2u), gc_vi_regs[VI_DTV_STAT]);
+    gc_vi_regs[VI_DTV_STAT] = r;
+    stat = ((u32)r & 3u);
     OSRestoreInterrupts(interrupt);
     return (stat & 1u);
 }
@@ -49,22 +96,37 @@ u32 VIGetDTVStatus(void) {
 static u32 s_tv_format;
 #define VI_NTSC 0
 
-void VIInit(void) { s_tv_format = VI_NTSC; }
-u32 VIGetTvFormat(void) { return s_tv_format; }
+void VIInit(void) {
+    s_tv_format = VI_NTSC;
+    state_store_u32(GC_SDK_OFF_VI_TV_FORMAT, &s_tv_format, s_tv_format);
+}
+u32 VIGetTvFormat(void) {
+    s_tv_format = state_load_u32(GC_SDK_OFF_VI_TV_FORMAT, s_tv_format);
+    return s_tv_format;
+}
 
 u32 VIGetNextField(void) {
-    gc_vi_get_next_field_calls++;
+    u32 c = state_load_u32(GC_SDK_OFF_VI_GET_NEXT_FIELD_CALLS, gc_vi_get_next_field_calls);
+    c++;
+    state_store_u32(GC_SDK_OFF_VI_GET_NEXT_FIELD_CALLS, &gc_vi_get_next_field_calls, c);
+    gc_vi_next_field = state_load_u32(GC_SDK_OFF_VI_NEXT_FIELD, gc_vi_next_field);
     return gc_vi_next_field;
 }
 
 u32 VIGetRetraceCount(void) {
-    gc_vi_get_retrace_count_calls++;
+    u32 c = state_load_u32(GC_SDK_OFF_VI_GET_RETRACE_COUNT_CALLS, gc_vi_get_retrace_count_calls);
+    c++;
+    state_store_u32(GC_SDK_OFF_VI_GET_RETRACE_COUNT_CALLS, &gc_vi_get_retrace_count_calls, c);
+    gc_vi_retrace_count = state_load_u32(GC_SDK_OFF_VI_RETRACE_COUNT, gc_vi_retrace_count);
     return gc_vi_retrace_count;
 }
 
 void VISetBlack(u32 black) {
-    gc_vi_set_black_calls++;
-    gc_vi_black = black ? 1u : 0u;
+    u32 c = state_load_u32(GC_SDK_OFF_VI_SET_BLACK_CALLS, gc_vi_set_black_calls);
+    c++;
+    state_store_u32(GC_SDK_OFF_VI_SET_BLACK_CALLS, &gc_vi_set_black_calls, c);
+    u32 v = black ? 1u : 0u;
+    state_store_u32(GC_SDK_OFF_VI_BLACK, &gc_vi_black, v);
 }
 
 // Minimal VIConfigure/VIConfigurePan:
@@ -100,21 +162,29 @@ void VIConfigure(const void *obj) {
 
     (void)OSDisableInterrupts();
 
-    u32 new_non_inter = rm->viTVmode & 3u;
-    if (gc_vi_non_inter != new_non_inter) {
-        gc_vi_change_mode = 1;
-        gc_vi_non_inter = new_non_inter;
-    }
+    u32 non_inter = state_load_u32(GC_SDK_OFF_VI_NON_INTER, gc_vi_non_inter);
+    u32 change_mode = state_load_u32(GC_SDK_OFF_VI_CHANGE_MODE, gc_vi_change_mode);
 
-    gc_vi_disp_pos_x = rm->viXOrigin;
-    gc_vi_disp_pos_y = (gc_vi_non_inter == 1u) ? (u32)(rm->viYOrigin * 2u) : (u32)rm->viYOrigin;
-    gc_vi_disp_size_x = rm->viWidth;
-    gc_vi_fb_size_x = rm->fbWidth;
-    gc_vi_fb_size_y = rm->xfbHeight;
-    gc_vi_xfb_mode = rm->xFBmode;
+    u32 new_non_inter = rm->viTVmode & 3u;
+    if (non_inter != new_non_inter) {
+        change_mode = 1;
+        non_inter = new_non_inter;
+    }
+    state_store_u32(GC_SDK_OFF_VI_CHANGE_MODE, &gc_vi_change_mode, change_mode);
+    state_store_u32(GC_SDK_OFF_VI_NON_INTER, &gc_vi_non_inter, non_inter);
+
+    state_store_u32(GC_SDK_OFF_VI_DISP_POS_X, &gc_vi_disp_pos_x, (u32)rm->viXOrigin);
+    state_store_u32(GC_SDK_OFF_VI_DISP_POS_Y, &gc_vi_disp_pos_y,
+                    (non_inter == 1u) ? (u32)(rm->viYOrigin * 2u) : (u32)rm->viYOrigin);
+    state_store_u32(GC_SDK_OFF_VI_DISP_SIZE_X, &gc_vi_disp_size_x, (u32)rm->viWidth);
+    state_store_u32(GC_SDK_OFF_VI_FB_SIZE_X, &gc_vi_fb_size_x, (u32)rm->fbWidth);
+    state_store_u32(GC_SDK_OFF_VI_FB_SIZE_Y, &gc_vi_fb_size_y, (u32)rm->xfbHeight);
+    state_store_u32(GC_SDK_OFF_VI_XFB_MODE, &gc_vi_xfb_mode, (u32)rm->xFBmode);
 
     // helper() is called 7 times in the legacy testcase.
-    for (int i = 0; i < 7; i++) gc_vi_helper_calls++;
+    u32 helpers = state_load_u32(GC_SDK_OFF_VI_HELPER_CALLS, gc_vi_helper_calls);
+    helpers += 7u;
+    state_store_u32(GC_SDK_OFF_VI_HELPER_CALLS, &gc_vi_helper_calls, helpers);
 
     OSRestoreInterrupts(1);
 }
@@ -126,22 +196,28 @@ u32 gc_vi_pan_size_y;
 
 void VIConfigurePan(u16 xOrg, u16 yOrg, u16 width, u16 height) {
     (void)OSDisableInterrupts();
-    gc_vi_pan_pos_x = xOrg;
-    gc_vi_pan_pos_y = yOrg;
-    gc_vi_pan_size_x = width;
-    gc_vi_pan_size_y = height;
+    state_store_u32(GC_SDK_OFF_VI_PAN_POS_X, &gc_vi_pan_pos_x, (u32)xOrg);
+    state_store_u32(GC_SDK_OFF_VI_PAN_POS_Y, &gc_vi_pan_pos_y, (u32)yOrg);
+    state_store_u32(GC_SDK_OFF_VI_PAN_SIZE_X, &gc_vi_pan_size_x, (u32)width);
+    state_store_u32(GC_SDK_OFF_VI_PAN_SIZE_Y, &gc_vi_pan_size_y, (u32)height);
 
     // Mirror legacy testcase formula.
     const u32 VI_PROGRESSIVE = 2u;
     const u32 VI_3D = 3u;
     const u32 VI_XFBMODE_SF = 1u;
-    if (gc_vi_non_inter == VI_PROGRESSIVE || gc_vi_non_inter == VI_3D) {
-        gc_vi_disp_size_y = gc_vi_pan_size_y;
+    u32 non_inter = state_load_u32(GC_SDK_OFF_VI_NON_INTER, gc_vi_non_inter);
+    u32 xfb_mode = state_load_u32(GC_SDK_OFF_VI_XFB_MODE, gc_vi_xfb_mode);
+    u32 pan_size_y = state_load_u32(GC_SDK_OFF_VI_PAN_SIZE_Y, gc_vi_pan_size_y);
+    if (non_inter == VI_PROGRESSIVE || non_inter == VI_3D) {
+        state_store_u32(GC_SDK_OFF_VI_DISP_SIZE_Y, &gc_vi_disp_size_y, pan_size_y);
     } else {
-        gc_vi_disp_size_y = (gc_vi_xfb_mode == VI_XFBMODE_SF) ? (gc_vi_pan_size_y * 2u) : gc_vi_pan_size_y;
+        u32 v = (xfb_mode == VI_XFBMODE_SF) ? (pan_size_y * 2u) : pan_size_y;
+        state_store_u32(GC_SDK_OFF_VI_DISP_SIZE_Y, &gc_vi_disp_size_y, v);
     }
 
     // helper() is called 5 times in the legacy testcase.
-    for (int i = 0; i < 5; i++) gc_vi_helper_calls++;
+    u32 helpers = state_load_u32(GC_SDK_OFF_VI_HELPER_CALLS, gc_vi_helper_calls);
+    helpers += 5u;
+    state_store_u32(GC_SDK_OFF_VI_HELPER_CALLS, &gc_vi_helper_calls, helpers);
     OSRestoreInterrupts(1);
 }
