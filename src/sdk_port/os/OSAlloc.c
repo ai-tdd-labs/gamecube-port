@@ -203,3 +203,18 @@ void *OSAlloc(uint32_t size) {
     // current heap.
     return OSAllocFromHeap((int)__OSCurrHeap, size);
 }
+
+// Minimal extras used by some init paths and debug helpers.
+uint32_t gc_os_alloc_fixed_calls;
+uint32_t gc_os_dump_heap_calls;
+uint32_t gc_os_alloc_fixed_last_size;
+
+void *OSAllocFixed(uint32_t size) {
+    gc_os_alloc_fixed_calls++;
+    gc_os_alloc_fixed_last_size = size;
+    return OSAlloc(size);
+}
+
+void OSDumpHeap(void) {
+    gc_os_dump_heap_calls++;
+}

@@ -37,6 +37,16 @@ u32 gc_gx_copy_disp_dest;
 u32 gc_gx_copy_disp_clear;
 u32 gc_gx_copy_gamma;
 
+u32 gc_gx_invalidate_vtx_cache_calls;
+u32 gc_gx_invalidate_tex_all_calls;
+u32 gc_gx_draw_done_calls;
+
+u32 gc_gx_zmode_enable;
+u32 gc_gx_zmode_func;
+u32 gc_gx_zmode_update_enable;
+
+u32 gc_gx_color_update_enable;
+
 typedef struct {
     uint8_t _dummy;
 } GXFifoObj;
@@ -234,4 +244,26 @@ void GXCopyDisp(void *dest, u8 clear) {
 
 void GXSetDispCopyGamma(u32 gamma) {
     gc_gx_copy_gamma = gamma;
+}
+
+void GXInvalidateVtxCache(void) {
+    gc_gx_invalidate_vtx_cache_calls++;
+}
+
+void GXInvalidateTexAll(void) {
+    gc_gx_invalidate_tex_all_calls++;
+}
+
+void GXDrawDone(void) {
+    gc_gx_draw_done_calls++;
+}
+
+void GXSetZMode(u8 enable, u32 func, u8 update_enable) {
+    gc_gx_zmode_enable = (u32)enable;
+    gc_gx_zmode_func = func;
+    gc_gx_zmode_update_enable = (u32)update_enable;
+}
+
+void GXSetColorUpdate(u8 enable) {
+    gc_gx_color_update_enable = (u32)enable;
 }

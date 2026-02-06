@@ -8,6 +8,12 @@ u32 gc_vi_disable_calls;
 u32 gc_vi_restore_calls;
 u32 gc_vi_flush_calls;
 u32 gc_vi_wait_retrace_calls;
+u32 gc_vi_get_next_field_calls;
+u32 gc_vi_get_retrace_count_calls;
+u32 gc_vi_set_black_calls;
+u32 gc_vi_next_field;
+u32 gc_vi_retrace_count;
+u32 gc_vi_black;
 
 // VISetNextFrameBuffer is used very early by games (including MP4). For now our
 // deterministic tests only require that the symbol exists.
@@ -45,6 +51,21 @@ static u32 s_tv_format;
 
 void VIInit(void) { s_tv_format = VI_NTSC; }
 u32 VIGetTvFormat(void) { return s_tv_format; }
+
+u32 VIGetNextField(void) {
+    gc_vi_get_next_field_calls++;
+    return gc_vi_next_field;
+}
+
+u32 VIGetRetraceCount(void) {
+    gc_vi_get_retrace_count_calls++;
+    return gc_vi_retrace_count;
+}
+
+void VISetBlack(u32 black) {
+    gc_vi_set_black_calls++;
+    gc_vi_black = black ? 1u : 0u;
+}
 
 // Minimal VIConfigure/VIConfigurePan:
 // Implement the observable side effects used by our deterministic tests.
