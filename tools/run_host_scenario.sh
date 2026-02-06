@@ -37,6 +37,7 @@ case "$subsystem" in
   os)
     port_srcs+=(
       "$repo_root/src/sdk_port/os/OSArena.c"
+      "$repo_root/src/sdk_port/os/OSCache.c"
       "$repo_root/src/sdk_port/os/OSAlloc.c"
       "$repo_root/src/sdk_port/os/OSInit.c"
       "$repo_root/src/sdk_port/os/OSFastCast.c"

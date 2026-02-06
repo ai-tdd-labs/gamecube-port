@@ -26,6 +26,17 @@ u32 gc_gx_cp_disp_size;
 u32 gc_gx_cp_disp_stride;
 u32 gc_gx_cp_disp;
 
+// Additional state surfaced for tests that model MP4 callsites.
+u32 gc_gx_copy_filter_aa;
+u32 gc_gx_copy_filter_vf;
+u32 gc_gx_copy_filter_sample_hash;
+u32 gc_gx_copy_filter_vfilter_hash;
+u32 gc_gx_pixel_fmt;
+u32 gc_gx_z_fmt;
+u32 gc_gx_copy_disp_dest;
+u32 gc_gx_copy_disp_clear;
+u32 gc_gx_copy_gamma;
+
 typedef struct {
     uint8_t _dummy;
 } GXFifoObj;
@@ -165,4 +176,62 @@ u32 GXSetDispCopyYScale(float vscale) {
     u32 height = ((gc_gx_cp_disp_size >> 10) & 0x3FFu) + 1u;
     gc_gx_bp_sent_not = 0;
     return __GXGetNumXfbLines(height, scale);
+}
+
+// From SDK: GXGetYScaleFactor(efbHeight, xfbHeight) -> fScale.
+float GXGetYScaleFactor(u16 efbHeight, u16 xfbHeight) {
+    u32 tgtHt = xfbHeight;
+    float yScale = (float)xfbHeight / (float)efbHeight;
+    u32 iScale = ((u32)(256.0f / yScale)) & 0x1FFu;
+    u32 realHt = __GXGetNumXfbLines(efbHeight, iScale);
+
+    while (realHt > xfbHeight) {
+        tgtHt--;
+        yScale = (float)tgtHt / (float)efbHeight;
+        iScale = ((u32)(256.0f / yScale)) & 0x1FFu;
+        realHt = __GXGetNumXfbLines(efbHeight, iScale);
+    }
+
+    float fScale = yScale;
+    while (realHt < xfbHeight) {
+        fScale = yScale;
+        tgtHt++;
+        yScale = (float)tgtHt / (float)efbHeight;
+        iScale = ((u32)(256.0f / yScale)) & 0x1FFu;
+        realHt = __GXGetNumXfbLines(efbHeight, iScale);
+    }
+
+    return fScale;
+}
+
+static u32 hash_bytes(const void *p, u32 n) {
+    const u8 *b = (const u8 *)p;
+    // Simple, stable checksum (not crypto): FNV-1a 32-bit.
+    u32 h = 2166136261u;
+    for (u32 i = 0; i < n; i++) {
+        h ^= (u32)b[i];
+        h *= 16777619u;
+    }
+    return h;
+}
+
+void GXSetCopyFilter(u8 aa, const u8 sample_pattern[12][2], u8 vf, const u8 vfilter[7]) {
+    gc_gx_copy_filter_aa = (u32)aa;
+    gc_gx_copy_filter_vf = (u32)vf;
+    gc_gx_copy_filter_sample_hash = hash_bytes(sample_pattern, 12u * 2u);
+    gc_gx_copy_filter_vfilter_hash = hash_bytes(vfilter, 7u);
+}
+
+void GXSetPixelFmt(u32 pix_fmt, u32 z_fmt) {
+    gc_gx_pixel_fmt = pix_fmt;
+    gc_gx_z_fmt = z_fmt;
+}
+
+void GXCopyDisp(void *dest, u8 clear) {
+    gc_gx_copy_disp_dest = (u32)(uintptr_t)dest;
+    gc_gx_copy_disp_clear = (u32)clear;
+}
+
+void GXSetDispCopyGamma(u32 gamma) {
+    gc_gx_copy_gamma = gamma;
 }

@@ -22,3 +22,12 @@ void OSSetArenaHi(void *addr) {
     g_os_arena_hi = addr;
 }
 
+// Common align helpers used throughout the SDK.
+// The "32B" variants align to 32 bytes.
+uint32_t OSRoundUp32B(uint32_t x) {
+    return (x + 31u) & ~31u;
+}
+
+uint32_t OSRoundDown32B(uint32_t x) {
+    return x & ~31u;
+}
