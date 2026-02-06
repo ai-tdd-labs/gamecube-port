@@ -67,3 +67,23 @@ tests/sdk/<subsystem>/<function>/
 Naming:
 - Prefer `<function>_<case_id>` for the built `.dol` base name so expected bins do not collide.
 - Use `generic/` for synthetic (minimal/edge) tests. Use per-game folders for realistic callsite tests.
+
+## Notes Format (Facts Only)
+
+When adding facts to `docs/codex/NOTES.md`, prefer this shape so future Codex runs can grep quickly:
+
+```
+### <FunctionName>
+- Contract: <one sentence>
+  Evidence: <header or decomp path>
+- Side effects: <bullets, memory/globals/regs>
+  Evidence: <decomp path or expected/actual bins>
+- Callsites: <MP4/TP/WW/AC pointers>
+  Evidence: docs/sdk/<subsystem>/<FunctionName>.md
+- Testcases:
+  - <case_id>: <what it represents>
+    Evidence: tests/sdk/<subsystem>/<function>/expected/<case>.bin (+ actual if available)
+```
+
+For repeated runs, log PASS/FAIL outcomes via:
+- `tools/helpers/record_test_result.py` (appends an evidence line to `docs/codex/NOTES.md`)

@@ -31,3 +31,8 @@ Rules:
 ## Known Invariants
 
 ## Undocumented Quirks
+
+## Test Runs (auto)
+
+- Format: `[PASS|FAIL] <label> expected=<path> actual=<path> (first_mismatch=0x........)`
+- [PASS] 2026-02-06T09:54:20Z OSSetArenaLo/min_001 expected=tests/sdk/os/os_set_arena_lo/expected/os_set_arena_lo_min_001.bin actual=tests/sdk/os/os_set_arena_lo/actual/os_set_arena_lo_min_001.bin
