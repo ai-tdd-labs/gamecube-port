@@ -22,6 +22,8 @@ if [[ "$OUT_BIN" != /* ]]; then
   OUT_BIN="$repo_root/$OUT_BIN"
 fi
 
+mkdir -p "$(dirname "$OUT_BIN")"
+
 # Occasional transient failures can happen while Dolphin is starting up.
 # Retry a few times to keep the workflow deterministic and low-friction.
 for attempt in 1 2 3; do
