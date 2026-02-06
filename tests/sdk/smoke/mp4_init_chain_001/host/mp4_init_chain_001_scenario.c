@@ -6,6 +6,8 @@
 #include "gc_host_ram.h"
 #include "gc_mem.h"
 
+#include "sdk_state.h"
+
 static inline void store_u32be(uint8_t *p, uint32_t v) {
   p[0] = (uint8_t)(v >> 24);
   p[1] = (uint8_t)(v >> 16);
@@ -292,6 +294,7 @@ int main(void) {
 
   // Provide address translation for sdk_port.
   gc_mem_set(ram.base, ram.size, ram.buf);
+  gc_sdk_state_reset();
 
   init_dummy_rmode();
   run_chain();

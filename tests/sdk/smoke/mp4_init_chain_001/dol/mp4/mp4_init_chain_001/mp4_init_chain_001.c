@@ -7,6 +7,8 @@
 
 #include "src/sdk_port/gc_mem.c"
 
+#include "sdk_state.h"
+
 #include "src/sdk_port/os/OSArena.c"
 #include "src/sdk_port/os/OSAlloc.c"
 #include "src/sdk_port/os/OSInit.c"
@@ -115,6 +117,7 @@ int main(void) {
 
   // Wire sdk_port virtual RAM to MEM1.
   gc_mem_set(0x80000000u, 0x01800000u, (uint8_t *)0x80000000u);
+  gc_sdk_state_reset();
 
   // First 20 MP4 HuSysInit SDK calls (from docs/sdk/mp4/MP4_chain_all.csv).
   OSInit();

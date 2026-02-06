@@ -3,23 +3,42 @@
 // Minimal SDK port for Arena pointers.
 // Kept intentionally small: tests drive behavior, no refactors.
 
-static void *g_os_arena_lo = (void *)(uintptr_t)-1;
-static void *g_os_arena_hi = 0;
+#include "../sdk_state.h"
+
+// Fallback storage when gc_mem isn't mapped (should be rare in our harnesses).
+static void *g_os_arena_lo_fallback = (void *)(uintptr_t)-1;
+static void *g_os_arena_hi_fallback = 0;
 
 void *OSGetArenaLo(void) {
-    return g_os_arena_lo;
+    // Prefer RAM-backed state.
+    uint32_t v = gc_sdk_state_load_u32be(GC_SDK_OFF_OS_ARENA_LO);
+    if (v != 0) return (void *)(uintptr_t)v;
+    return g_os_arena_lo_fallback;
 }
 
 void *OSGetArenaHi(void) {
-    return g_os_arena_hi;
+    uint32_t v = gc_sdk_state_load_u32be(GC_SDK_OFF_OS_ARENA_HI);
+    if (v != 0) return (void *)(uintptr_t)v;
+    return g_os_arena_hi_fallback;
 }
 
 void OSSetArenaLo(void *addr) {
-    g_os_arena_lo = addr;
+    uint32_t v = (uint32_t)(uintptr_t)addr;
+    // If state page isn't mapped, keep a fallback so host code doesn't break.
+    if (!gc_sdk_state_ptr(GC_SDK_OFF_OS_ARENA_LO, 4)) {
+        g_os_arena_lo_fallback = addr;
+        return;
+    }
+    gc_sdk_state_store_u32be(GC_SDK_OFF_OS_ARENA_LO, v);
 }
 
 void OSSetArenaHi(void *addr) {
-    g_os_arena_hi = addr;
+    uint32_t v = (uint32_t)(uintptr_t)addr;
+    if (!gc_sdk_state_ptr(GC_SDK_OFF_OS_ARENA_HI, 4)) {
+        g_os_arena_hi_fallback = addr;
+        return;
+    }
+    gc_sdk_state_store_u32be(GC_SDK_OFF_OS_ARENA_HI, v);
 }
 
 // Common align helpers used throughout the SDK.
