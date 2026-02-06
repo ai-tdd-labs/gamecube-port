@@ -40,6 +40,7 @@ def main() -> int:
         suite = (row.get("canonical_suite") or "").strip()
         exp_count = act_count = pass_count = 0
         covered = ""
+        tests_exp_act = (row.get("tests_exp_act") or "").strip()
 
         if suite:
             suite_path = root / suite
@@ -71,9 +72,12 @@ def main() -> int:
                     pass_count += 1
 
             if mp4_cases:
+                # Keep legacy/manual column in sync: "pass/total" (MP4-only cases).
+                tests_exp_act = f"{pass_count}/{len(mp4_cases)}"
                 covered = "yes" if pass_count == len(mp4_cases) else "no"
 
         out = dict(row)
+        out["tests_exp_act"] = tests_exp_act if tests_exp_act else ("0/0" if suite else "")
         out["expected_bins"] = str(exp_count)
         out["actual_bins"] = str(act_count)
         out["pass_bins"] = str(pass_count)
