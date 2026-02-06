@@ -33,6 +33,7 @@ class DolphinGDB:
         self.host = host
         self.port = port
         self.sock = None
+        self._rxbuf = b""
 
     def connect(self):
         """Connect to Dolphin GDB stub."""
@@ -53,81 +54,131 @@ class DolphinGDB:
         packet = f"${cmd}#{checksum:02x}"
         self.sock.send(packet.encode())
 
-    def _recv(self, timeout=5):
-        """Receive GDB response."""
+    def _recv_packet_payload(self, timeout=5):
+        """Receive exactly one GDB remote protocol packet payload.
+
+        IMPORTANT: The TCP stream may contain multiple packets back-to-back.
+        We must not conflate them, or large dumps can become misaligned.
+        """
         self.sock.settimeout(timeout)
-        data = b""
         start = time.time()
 
         while time.time() - start < timeout:
+            # Try to parse a packet from the buffered data.
+            dollar = self._rxbuf.find(b"$")
+            if dollar >= 0:
+                # Drop leading noise like '+' ACKs.
+                if dollar > 0:
+                    self._rxbuf = self._rxbuf[dollar:]
+                    dollar = 0
+
+                hash_idx = self._rxbuf.find(b"#", dollar + 1)
+                if hash_idx >= 0 and len(self._rxbuf) >= hash_idx + 3:
+                    pkt = self._rxbuf[:hash_idx + 3]
+                    self._rxbuf = self._rxbuf[hash_idx + 3:]
+
+                    # ACK the packet.
+                    try:
+                        self.sock.send(b"+")
+                    except Exception:
+                        pass
+
+                    payload = pkt[1:hash_idx]
+                    return payload
+
+            # Need more bytes.
             try:
                 chunk = self.sock.recv(4096)
                 if not chunk:
                     break
-                data += chunk
-
-                # Check for complete packet: $<data>#XX
-                if b'$' in data and b'#' in data:
-                    start_idx = data.find(b'$')
-                    hash_idx = data.find(b'#', start_idx)
-                    if hash_idx >= 0 and len(data) >= hash_idx + 3:
-                        # Send ACK
-                        self.sock.send(b'+')
-                        return data
+                self._rxbuf += chunk
             except socket.timeout:
-                if data:
-                    continue
-                break
+                continue
 
-        return data
+        return None
 
     def read_memory(self, addr, size):
         """Read memory from Dolphin. Returns hex string or None."""
         self._send(f'm{addr:x},{size:x}')
-        resp = self._recv()
+        # Dolphin may interleave async packets (console output 'O', stop reply
+        # 'S'/'T'). Drain until we get the memory response.
+        for _ in range(256):
+            payload = self._recv_packet_payload()
+            if payload is None:
+                return None
 
-        if resp and b'+$' in resp:
-            # Extract hex data between $ and #
-            start = resp.find(b'$') + 1
-            end = resp.find(b'#')
-            hex_data = resp[start:end].decode(errors="replace").strip()
+            payload = payload.strip()
+            if not payload:
+                continue
 
-            # Check for error response
+            # Async console output (hex-encoded) - ignore.
+            if payload.startswith(b"O"):
+                continue
+
+            # Stop replies - ignore (can occur after Ctrl-C).
+            if payload.startswith(b"S") or payload.startswith(b"T"):
+                continue
+
+            # Other benign replies.
+            if payload == b"OK":
+                continue
+
+            hex_data = payload.decode(errors="replace").strip()
             if hex_data.startswith('E'):
                 return None
-            # Defensive: ignore malformed replies (we rely on bytes.fromhex later).
-            # This happens rarely when the TCP stream contains interleaved/non-hex data.
             for ch in hex_data:
                 if ch not in "0123456789abcdefABCDEF":
                     return None
             return hex_data
+
+        return None
         return None
 
-    def read_memory_bytes(self, addr, size, chunk_size=0x1000):
-        """Read memory and return as bytes. Handles chunked reads."""
+    def read_memory_bytes(self, addr, size, chunk_size=0x10000, chunk_retries=3):
+        """Read memory and return as bytes.
+
+        We prefer larger chunk sizes for big dumps (e.g. MEM1) to reduce GDB
+        stub overhead, and we retry per-chunk because Dolphin startup can be
+        transiently flaky.
+        """
         data = bytearray()
         remaining = size
         cursor = addr
 
         while remaining > 0:
             chunk = min(remaining, chunk_size)
-            hex_data = self.read_memory(cursor, chunk)
+            hex_data = None
+            for attempt in range(chunk_retries):
+                hex_data = self.read_memory(cursor, chunk)
+                if hex_data:
+                    break
+                time.sleep(0.05)
 
             if not hex_data:
-                # Try smaller chunks
-                if chunk_size > 0x100:
+                # Try smaller chunks.
+                if chunk_size > 0x200:
                     chunk_size = chunk_size // 2
                     continue
                 print(f"Failed to read at 0x{cursor:08X}")
                 return None
 
-            data.extend(bytes.fromhex(hex_data))
+            b = bytes.fromhex(hex_data)
+            if len(b) != chunk:
+                # If the stub returns a malformed size, do not accept it (it would
+                # desync the whole dump). Retry or fall back to smaller chunks.
+                if chunk_size > 0x200:
+                    chunk_size = chunk_size // 2
+                    continue
+                print(f"Malformed read at 0x{cursor:08X}: got {len(b)} bytes, expected {chunk}")
+                return None
+
+            data.extend(b)
             remaining -= chunk
             cursor += chunk
 
             # Progress indicator
             pct = ((size - remaining) / size) * 100
-            print(f"\rReading: {pct:.1f}%", end="", flush=True)
+            print(f"\rReading: {pct:.1f}% (0x{cursor:08X})", end="", flush=True)
 
         print()  # newline after progress
         return bytes(data)
@@ -135,7 +186,15 @@ class DolphinGDB:
     def halt(self):
         """Halt CPU execution."""
         self.sock.send(b'\x03')
-        self._recv(timeout=2)
+        # Dolphin replies with a stop packet (e.g. "Sxx" / "Txx"), but it can
+        # interleave async console output packets ('O'). Drain until stop.
+        for _ in range(64):
+            payload = self._recv_packet_payload(timeout=2)
+            if payload is None:
+                break
+            payload = payload.strip()
+            if payload.startswith(b"S") or payload.startswith(b"T"):
+                break
         time.sleep(0.1)
 
     def cont(self):
@@ -225,6 +284,11 @@ Examples:
     parser.add_argument('--continue', dest='cont', action='store_true',
                         help='Continue CPU after reading')
 
+    # Dolphin's GDB stub appears to return incorrect data for larger reads that
+    # span multiple pages. 4 KiB is slower but reliable for big MEM1 dumps.
+    parser.add_argument('--chunk', type=parse_int, default=0x1000,
+                        help='Read chunk size (default: 0x1000). Increase if stable on your setup.')
+
     args = parser.parse_args()
 
     print(f"RAM Dump: 0x{args.addr:08X} - 0x{args.addr + args.size:08X} ({args.size} bytes)")
@@ -261,14 +325,18 @@ Examples:
 
     try:
         if args.run > 0:
+            # In debugger mode Dolphin can start paused; explicitly continue.
+            # (If it was already running, 'c' is harmless.)
             print(f"Running emulation for {args.run}s then halting...")
-            gdb.run_and_halt(args.run)
+            gdb.cont()
+            time.sleep(args.run)
+            gdb.halt()
         elif args.halt:
             print("Halting CPU...")
             gdb.halt()
 
         print(f"Reading {args.size} bytes from 0x{args.addr:08X}...")
-        data = gdb.read_memory_bytes(args.addr, args.size)
+        data = gdb.read_memory_bytes(args.addr, args.size, chunk_size=args.chunk)
 
         if data is None:
             print("Failed to read memory")
@@ -276,6 +344,13 @@ Examples:
 
         if len(data) != args.size:
             print(f"Warning: Got {len(data)} bytes, expected {args.size}")
+            # Dolphin's GDB stub can rarely return a slightly larger payload.
+            # Keep dumps stable by truncating to the requested size.
+            if len(data) > args.size:
+                data = data[:args.size]
+            else:
+                print("Short read; refusing to write incomplete dump")
+                sys.exit(1)
 
         with open(args.out, 'wb') as f:
             f.write(data)
@@ -291,7 +366,11 @@ Examples:
         if dolphin_proc:
             print("Terminating Dolphin...")
             dolphin_proc.terminate()
-            dolphin_proc.wait(timeout=5)
+            try:
+                dolphin_proc.wait(timeout=5)
+            except Exception:
+                dolphin_proc.kill()
+                dolphin_proc.wait()
 
 
 if __name__ == '__main__':

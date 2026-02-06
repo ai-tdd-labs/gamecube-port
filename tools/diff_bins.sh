@@ -8,4 +8,6 @@ set -euo pipefail
 EXP=${1:?expected bin required}
 ACT=${2:?actual bin required}
 
-python3 tools/ram_compare.py "$EXP" "$ACT"
+# Ignore low-memory prefix where Dolphin/loader can differ (exception vectors, bootinfo, misc).
+# For MEM1 dumps at 0x80000000, 0x00004000 covers 0x00000000-0x00003FFF.
+python3 tools/ram_compare.py "$EXP" "$ACT" --ignore-prefix 0x4000

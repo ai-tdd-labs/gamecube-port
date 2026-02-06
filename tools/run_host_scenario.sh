@@ -32,9 +32,14 @@ if [[ -z "$subsystem" ]]; then
   exit 2
 fi
 
+# Smoke suites may span multiple subsystems; compile the union.
+if [[ "$subsystem" == "smoke" ]]; then
+  subsystem="os+dvd+vi+pad+gx"
+fi
+
 port_srcs=()
 case "$subsystem" in
-  os)
+  os|os+dvd+vi+pad+gx)
     port_srcs+=(
       "$repo_root/src/sdk_port/os/OSArena.c"
       "$repo_root/src/sdk_port/os/OSCache.c"
@@ -46,31 +51,44 @@ case "$subsystem" in
       "$repo_root/src/sdk_port/os/OSRtc.c"
     )
     ;;
-  vi)
+esac
+
+case "$subsystem" in
+  vi|os+dvd+vi+pad+gx)
     port_srcs+=(
       "$repo_root/src/sdk_port/vi/VI.c"
     )
     ;;
-  pad)
+esac
+
+case "$subsystem" in
+  pad|os+dvd+vi+pad+gx)
     port_srcs+=(
       "$repo_root/src/sdk_port/pad/PAD.c"
     )
     ;;
-  gx)
+esac
+
+case "$subsystem" in
+  gx|os+dvd+vi+pad+gx)
     port_srcs+=(
       "$repo_root/src/sdk_port/gx/GX.c"
     )
     ;;
-  dvd)
+esac
+
+case "$subsystem" in
+  dvd|os+dvd+vi+pad+gx)
     port_srcs+=(
       "$repo_root/src/sdk_port/dvd/DVD.c"
     )
     ;;
-  *)
-    echo "fatal: no sdk_port sources configured for subsystem: $subsystem" >&2
-    exit 2
-    ;;
 esac
+
+if [[ ${#port_srcs[@]} -eq 0 ]]; then
+  echo "fatal: no sdk_port sources configured for subsystem: $subsystem" >&2
+  exit 2
+fi
 
 echo "[host-build] $SCENARIO_SRC"
 cc -O2 -g \
