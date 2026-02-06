@@ -18,4 +18,4 @@ Subsystem notes (write facts in these files, not here):
 ### 2026-02-06
 - Created repo-memory workflow skeleton: docs/codex/*, docs/sdk/*, tools/*.sh.
 - Started VISetNextFrameBuffer callsite research and scaffolded 3 DOL tests.
-  Evidence: docs/sdk/vi/VISetNextFrameBuffer.md; tests/expected/vi_set_next_frame_buffer_{min,realistic_mp4,edge_unaligned}_001.bin
+  Evidence: docs/sdk/vi/VISetNextFrameBuffer.md; tests/sdk/vi/vi_set_next_frame_buffer/expected/vi_set_next_frame_buffer_{min,realistic_mp4,edge_unaligned}_001.bin

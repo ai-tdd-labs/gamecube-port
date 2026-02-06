@@ -5,8 +5,13 @@
 .claude/
 .codex/
 
+# Archive area (not part of canonical layout)
+docs/_legacy/
+
 # Decomp/source drops (likely proprietary)
+decomp_*
 decomp_*/
+**/decomp_*
 **/decomp_*/
 
 # Build artifacts
@@ -41,7 +46,6 @@ tests/recomp_out/
 **/*.3ds
 **/*.cia
 **/*.nds
-**/*.bin
 **/*.rel
 **/*.rso
 **/*.bti
