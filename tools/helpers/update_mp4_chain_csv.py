@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import csv
-import os
 from pathlib import Path
 import subprocess
+import sys
 
 
 def repo_root() -> Path:
@@ -25,7 +25,17 @@ def files_identical(a: Path, b: Path) -> bool:
 
 def main() -> int:
     root = repo_root()
-    csv_path = root / "docs/sdk/os/MP4_HuSysInit_chain_table.csv"
+    # Usage:
+    #   tools/helpers/update_mp4_chain_csv.py
+    #   tools/helpers/update_mp4_chain_csv.py docs/sdk/mp4/MP4_main_chain_table.csv
+    #
+    # This helper counts only MP4 callsite testcases (dol/mp4/*) for each canonical suite.
+    default_csv = root / "docs/sdk/os/MP4_HuSysInit_chain_table.csv"
+    csv_path = default_csv
+    if len(sys.argv) >= 2:
+        csv_path = Path(sys.argv[1])
+        if not csv_path.is_absolute():
+            csv_path = root / csv_path
     if not csv_path.exists():
         raise SystemExit(f"missing: {csv_path}")
 
@@ -47,7 +57,6 @@ def main() -> int:
             exp_dir = suite_path / "expected"
             act_dir = suite_path / "actual"
 
-            # This CSV is specifically the MP4 HuSysInit chain.
             # Only count MP4 callsite testcases (dol/mp4/*), not generic or other-game variants.
             mp4_dol_root = suite_path / "dol" / "mp4"
             mp4_cases: list[str] = []

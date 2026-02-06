@@ -41,6 +41,14 @@ u32 gc_gx_invalidate_vtx_cache_calls;
 u32 gc_gx_invalidate_tex_all_calls;
 u32 gc_gx_draw_done_calls;
 
+// GX metric state (software mirror). Real hardware accumulates counters; for now we model
+// only what our deterministic tests assert and what MP4 callsites depend on.
+u32 gc_gx_gp_perf0;
+u32 gc_gx_gp_perf1;
+u32 gc_gx_vcache_sel;
+u32 gc_gx_pix_metrics[6];
+u32 gc_gx_mem_metrics[10];
+
 u32 gc_gx_zmode_enable;
 u32 gc_gx_zmode_func;
 u32 gc_gx_zmode_update_enable;
@@ -266,4 +274,64 @@ void GXSetZMode(u8 enable, u32 func, u8 update_enable) {
 
 void GXSetColorUpdate(u8 enable) {
     gc_gx_color_update_enable = (u32)enable;
+}
+
+void GXSetGPMetric(u32 perf0, u32 perf1) {
+    gc_gx_gp_perf0 = perf0;
+    gc_gx_gp_perf1 = perf1;
+}
+
+void GXClearGPMetric(void) {
+    gc_gx_gp_perf0 = 0;
+    gc_gx_gp_perf1 = 0;
+}
+
+void GXReadGPMetric(u32 *met0, u32 *met1) {
+    if (met0) *met0 = gc_gx_gp_perf0;
+    if (met1) *met1 = gc_gx_gp_perf1;
+}
+
+void GXSetVCacheMetric(u32 attr) {
+    gc_gx_vcache_sel = attr;
+}
+
+void GXClearVCacheMetric(void) {
+    gc_gx_vcache_sel = 0;
+}
+
+void GXReadVCacheMetric(u32 *check, u32 *miss, u32 *stall) {
+    if (check) *check = gc_gx_vcache_sel;
+    if (miss) *miss = 0;
+    if (stall) *stall = 0;
+}
+
+void GXClearPixMetric(void) {
+    for (u32 i = 0; i < 6; i++) gc_gx_pix_metrics[i] = 0;
+}
+
+void GXReadPixMetric(u32 *top_in, u32 *top_out, u32 *bot_in, u32 *bot_out, u32 *clr_in, u32 *copy_clks) {
+    if (top_in) *top_in = gc_gx_pix_metrics[0];
+    if (top_out) *top_out = gc_gx_pix_metrics[1];
+    if (bot_in) *bot_in = gc_gx_pix_metrics[2];
+    if (bot_out) *bot_out = gc_gx_pix_metrics[3];
+    if (clr_in) *clr_in = gc_gx_pix_metrics[4];
+    if (copy_clks) *copy_clks = gc_gx_pix_metrics[5];
+}
+
+void GXClearMemMetric(void) {
+    for (u32 i = 0; i < 10; i++) gc_gx_mem_metrics[i] = 0;
+}
+
+void GXReadMemMetric(u32 *cp_req, u32 *tc_req, u32 *cpu_rd_req, u32 *cpu_wr_req,
+                     u32 *dsp_req, u32 *io_req, u32 *vi_req, u32 *pe_req, u32 *rf_req, u32 *fi_req) {
+    if (cp_req) *cp_req = gc_gx_mem_metrics[0];
+    if (tc_req) *tc_req = gc_gx_mem_metrics[1];
+    if (cpu_rd_req) *cpu_rd_req = gc_gx_mem_metrics[2];
+    if (cpu_wr_req) *cpu_wr_req = gc_gx_mem_metrics[3];
+    if (dsp_req) *dsp_req = gc_gx_mem_metrics[4];
+    if (io_req) *io_req = gc_gx_mem_metrics[5];
+    if (vi_req) *vi_req = gc_gx_mem_metrics[6];
+    if (pe_req) *pe_req = gc_gx_mem_metrics[7];
+    if (rf_req) *rf_req = gc_gx_mem_metrics[8];
+    if (fi_req) *fi_req = gc_gx_mem_metrics[9];
 }
