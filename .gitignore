@@ -73,3 +73,7 @@ tests/recomp_out/
 **/*.crt
 **/*.cer
 **/*.der
+
+# Host test build artifacts
+**/*.dSYM/
+**/*_host
