@@ -75,7 +75,7 @@ Naming:
 ## MP4 Chain Tracking
 
 MP4 init chain status is tracked in:
-- `docs/sdk/os/MP4_HuSysInit_chain_table.csv`
+- `docs/sdk/mp4/MP4_chain_all.csv`
 
 Update the `expected_bins/actual_bins/pass_bins/covered` columns by scanning MP4-only cases (`dol/mp4/*`) with:
 - `python3 tools/helpers/update_mp4_chain_csv.py`

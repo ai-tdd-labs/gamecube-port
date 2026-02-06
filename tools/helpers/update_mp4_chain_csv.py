@@ -27,10 +27,11 @@ def main() -> int:
     root = repo_root()
     # Usage:
     #   tools/helpers/update_mp4_chain_csv.py
-    #   tools/helpers/update_mp4_chain_csv.py docs/sdk/mp4/MP4_main_chain_table.csv
+    #   tools/helpers/update_mp4_chain_csv.py docs/sdk/mp4/MP4_chain_all.csv
     #
     # This helper counts only MP4 callsite testcases (dol/mp4/*) for each canonical suite.
-    default_csv = root / "docs/sdk/os/MP4_HuSysInit_chain_table.csv"
+    # The canonical MP4 chain tracker is a single combined CSV (HuSysInit + main-loop + planned batches).
+    default_csv = root / "docs/sdk/mp4/MP4_chain_all.csv"
     csv_path = default_csv
     if len(sys.argv) >= 2:
         csv_path = Path(sys.argv[1])
