@@ -197,3 +197,9 @@ void *OSAllocFromHeap(int heap, uint32_t size) {
 
     return (void *)(uintptr_t)(cell + 0x20u);
 }
+
+void *OSAlloc(uint32_t size) {
+    // MP4 (and other games) calls OSAlloc(size) which allocates from the
+    // current heap.
+    return OSAllocFromHeap((int)__OSCurrHeap, size);
+}

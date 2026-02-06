@@ -90,11 +90,16 @@ class DolphinGDB:
             # Extract hex data between $ and #
             start = resp.find(b'$') + 1
             end = resp.find(b'#')
-            hex_data = resp[start:end].decode()
+            hex_data = resp[start:end].decode(errors="replace").strip()
 
             # Check for error response
             if hex_data.startswith('E'):
                 return None
+            # Defensive: ignore malformed replies (we rely on bytes.fromhex later).
+            # This happens rarely when the TCP stream contains interleaved/non-hex data.
+            for ch in hex_data:
+                if ch not in "0123456789abcdefABCDEF":
+                    return None
             return hex_data
         return None
 
