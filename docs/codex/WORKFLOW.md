@@ -34,7 +34,7 @@ and add a matching host testcase under `tests/sdk/<subsystem>/<function>/host/`.
 
 Commands:
 1) Dump expected: `tools/run_tests.sh expected tests/sdk/<subsystem>/<function>`
-2) Produce actual: `tools/run_host_test.sh tests/sdk/<subsystem>/<function>/host/<case>_host.c`
+2) Produce actual: `tools/run_host_scenario.sh tests/sdk/<subsystem>/<function>/host/<case>_scenario.c`
 3) Diff: `tools/diff_bins.sh tests/sdk/<subsystem>/<function>/expected/<case>.bin tests/sdk/<subsystem>/<function>/actual/<case>.bin`
 
 6) Implementation
