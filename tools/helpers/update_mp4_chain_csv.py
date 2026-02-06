@@ -46,18 +46,32 @@ def main() -> int:
             exp_dir = suite_path / "expected"
             act_dir = suite_path / "actual"
 
-            exp_bins = sorted(exp_dir.glob("*.bin")) if exp_dir.exists() else []
-            act_bins = sorted(act_dir.glob("*.bin")) if act_dir.exists() else []
+            # This CSV is specifically the MP4 HuSysInit chain.
+            # Only count MP4 callsite testcases (dol/mp4/*), not generic or other-game variants.
+            mp4_dol_root = suite_path / "dol" / "mp4"
+            mp4_cases: list[str] = []
+            if mp4_dol_root.exists():
+                for dol in sorted(mp4_dol_root.glob("**/*.dol")):
+                    mp4_cases.append(dol.stem)
+
+            exp_bins = []
+            act_bins = []
+            if mp4_cases and exp_dir.exists():
+                exp_bins = [exp_dir / f"{name}.bin" for name in mp4_cases if (exp_dir / f"{name}.bin").exists()]
+            if mp4_cases and act_dir.exists():
+                act_bins = [act_dir / f"{name}.bin" for name in mp4_cases if (act_dir / f"{name}.bin").exists()]
 
             exp_count = len(exp_bins)
             act_count = len(act_bins)
 
-            for e in exp_bins:
-                a = act_dir / e.name
+            for name in mp4_cases:
+                e = exp_dir / f"{name}.bin"
+                a = act_dir / f"{name}.bin"
                 if files_identical(e, a):
                     pass_count += 1
 
-            covered = "yes" if pass_count > 0 else "no"
+            if mp4_cases:
+                covered = "yes" if pass_count == len(mp4_cases) else "no"
 
         out = dict(row)
         out["expected_bins"] = str(exp_count)
@@ -86,4 +100,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

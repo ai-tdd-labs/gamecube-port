@@ -17,12 +17,15 @@ set -euo pipefail
 #
 # Environment:
 #   ADDR, SIZE, RUN_SECONDS override Dolphin RAM dump region.
+#   GAME limits to a specific per-game bucket under dol/<game>/ (e.g. mp4, tp, ww, ac).
+#     Example: GAME=mp4 tools/run_tests.sh all tests/sdk/os/os_get_arena_lo
 
 MODE=${1:-all}
 FILTER_ROOT=${2:-}
 ADDR=${ADDR:-0x80300000}
 SIZE=${SIZE:-0x40}
 RUN_SECONDS=${RUN_SECONDS:-0.5}
+GAME=${GAME:-}
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 
@@ -38,7 +41,11 @@ fi
 build_all() {
   # Build every DOL testcase we can find.
   # Support either dol/<case>/Makefile or dol/<game>/<case>/Makefile.
-  find "$tests_root" -type f -name Makefile \( -path "*/dol/*/Makefile" -o -path "*/dol/*/*/Makefile" \) -print0 |
+  if [[ -n "$GAME" ]]; then
+    find "$tests_root" -type f -name Makefile -path "*/dol/$GAME/*/Makefile" -print0
+  else
+    find "$tests_root" -type f -name Makefile \( -path "*/dol/*/Makefile" -o -path "*/dol/*/*/Makefile" \) -print0
+  fi |
     while IFS= read -r -d '' mk; do
       d="$(dirname "$mk")"
       echo "[build] $d"
@@ -48,7 +55,11 @@ build_all() {
 
 dump_expected_all() {
   # Find every produced .dol under dol/ and dump expected into expected/<name>.bin.
-  find "$tests_root" -type f -name "*.dol" -path "*/dol/*" -print0 |
+  if [[ -n "$GAME" ]]; then
+    find "$tests_root" -type f -name "*.dol" -path "*/dol/$GAME/*/*.dol" -print0
+  else
+    find "$tests_root" -type f -name "*.dol" -path "*/dol/*" -print0
+  fi |
     while IFS= read -r -d '' dol; do
       case_dir="$(dirname "$dol")"
 

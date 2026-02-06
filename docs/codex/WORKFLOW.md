@@ -22,6 +22,7 @@ This repository is the memory.
   - realistic game call
   - edge case
 - Each test must produce an expected.bin from Dolphin.
+  - Current policy: prioritize per-game callsite tests first (start with `mp4/`), and only add `generic/` when we have no realistic callsite yet or when we need an explicit edge-case that the game does not exercise.
 
 5) Expected vs actual
 - Run host/runtime port to produce actual.bin.
@@ -36,6 +37,9 @@ Commands:
 1) Dump expected: `tools/run_tests.sh expected tests/sdk/<subsystem>/<function>`
 2) Produce actual: `tools/run_host_scenario.sh tests/sdk/<subsystem>/<function>/host/<case>_scenario.c`
 3) Diff: `tools/diff_bins.sh tests/sdk/<subsystem>/<function>/expected/<case>.bin tests/sdk/<subsystem>/<function>/actual/<case>.bin`
+
+Tip (per-game only):
+- Dump/build only MP4 cases: `GAME=mp4 tools/run_tests.sh all tests/sdk/<subsystem>/<function>`
 
 6) Implementation
 - Minimal changes only.
@@ -54,19 +58,27 @@ Commands:
 ```
 tests/sdk/<subsystem>/<function>/
   dol/
-    generic/<case_id>/            # minimal + edge cases (not tied to a specific game)
+    generic/<case_id>/            # optional: synthetic minimal + edge cases (not tied to a specific game)
     mp4/<case_id>/                # realistic calls (mirrors MP4 callsites/args)
     tp/<case_id>/                 # realistic calls (mirrors TP callsites/args)
     ww/<case_id>/                 # realistic calls (mirrors WW callsites/args)
     ac/<case_id>/                 # realistic calls (mirrors AC callsites/args)
   expected/<test_name>.bin        # Dolphin oracle dumps (bit-exact)
   actual/<test_name>.bin          # Host/sdk_port dumps (bit-exact)
-  README.md                       # optional: what the cases represent
+  README.md                       # optional: what the cases represent (keep short)
 ```
 
 Naming:
 - Prefer `<function>_<case_id>` for the built `.dol` base name so expected bins do not collide.
-- Use `generic/` for synthetic (minimal/edge) tests. Use per-game folders for realistic callsite tests.
+- Use per-game folders for realistic callsite tests. Add `generic/` only when needed.
+
+## MP4 Chain Tracking
+
+MP4 init chain status is tracked in:
+- `docs/sdk/os/MP4_HuSysInit_chain_table.csv`
+
+Update the `expected_bins/actual_bins/pass_bins/covered` columns by scanning MP4-only cases (`dol/mp4/*`) with:
+- `python3 tools/helpers/update_mp4_chain_csv.py`
 
 ## Notes Format (Facts Only)
 
