@@ -10,6 +10,9 @@ typedef int BOOL;
 #define FALSE 0
 #endif
 
+// RAM-backed state (big-endian in MEM1) for dump comparability.
+#include "../sdk_state.h"
+
 u32 gc_pad_initialized;
 u32 gc_pad_si_refresh_calls;
 u32 gc_pad_register_reset_calls;
@@ -35,6 +38,7 @@ static BOOL PADReset(u32 mask) { gc_pad_reset_mask = mask; return TRUE; }
 
 BOOL PADInit(void) {
     s32 chan;
+    gc_pad_initialized = gc_sdk_state_load_u32_or(GC_SDK_OFF_PAD_INITIALIZED, gc_pad_initialized);
     if (gc_pad_initialized) {
         return TRUE;
     }
@@ -43,7 +47,7 @@ BOOL PADInit(void) {
         PADSetSpec(gc_pad_spec);
     }
 
-    gc_pad_initialized = 1;
+    gc_sdk_state_store_u32_mirror(GC_SDK_OFF_PAD_INITIALIZED, &gc_pad_initialized, 1u);
 
     if (gc_pad_fix_bits != 0) {
         u64 time = OSGetTime();
@@ -61,4 +65,3 @@ BOOL PADInit(void) {
 
     return PADReset(PAD_CHAN0_BIT | PAD_CHAN1_BIT | PAD_CHAN2_BIT | PAD_CHAN3_BIT);
 }
-

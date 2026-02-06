@@ -4,6 +4,9 @@ typedef uint32_t u32;
 typedef uint16_t u16;
 typedef uint8_t u8;
 
+// RAM-backed state (big-endian in MEM1) for dump comparability.
+#include "../sdk_state.h"
+
 // Minimal GX state mirror. We only model fields asserted by our deterministic tests.
 u32 gc_gx_in_disp_list;
 u32 gc_gx_dl_save_context;
@@ -331,13 +334,13 @@ void GXSetDispCopySrc(u16 left, u16 top, u16 wd, u16 ht) {
     reg = set_field(reg, 10, 0, left);
     reg = set_field(reg, 10, 10, top);
     reg = set_field(reg, 8, 24, 0x49);
-    gc_gx_cp_disp_src = reg;
+    gc_sdk_state_store_u32_mirror(GC_SDK_OFF_GX_CP_DISP_SRC, &gc_gx_cp_disp_src, reg);
 
     reg = 0;
     reg = set_field(reg, 10, 0, (u32)(wd - 1u));
     reg = set_field(reg, 10, 10, (u32)(ht - 1u));
     reg = set_field(reg, 8, 24, 0x4A);
-    gc_gx_cp_disp_size = reg;
+    gc_sdk_state_store_u32_mirror(GC_SDK_OFF_GX_CP_DISP_SIZE, &gc_gx_cp_disp_size, reg);
 
     // Mirror gx->cpDispSize usage by GXSetDispCopyYScale.
     gc_gx_bp_sent_not = 0;
@@ -429,7 +432,7 @@ void GXSetPixelFmt(u32 pix_fmt, u32 z_fmt) {
 }
 
 void GXCopyDisp(void *dest, u8 clear) {
-    gc_gx_copy_disp_dest = (u32)(uintptr_t)dest;
+    gc_sdk_state_store_u32_mirror(GC_SDK_OFF_GX_COPY_DISP_DEST, &gc_gx_copy_disp_dest, (u32)(uintptr_t)dest);
     gc_gx_copy_disp_clear = (u32)clear;
 }
 

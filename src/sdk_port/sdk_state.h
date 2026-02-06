@@ -28,6 +28,10 @@ static inline uint8_t *gc_sdk_state_ptr(uint32_t off, uint32_t len) {
   return gc_mem_ptr(GC_SDK_STATE_BASE + off, len);
 }
 
+static inline int gc_sdk_state_mapped(uint32_t off, uint32_t len) {
+  return gc_sdk_state_ptr(off, len) != 0;
+}
+
 static inline void gc_sdk_state_store_u32be(uint32_t off, uint32_t v) {
   uint8_t *p = gc_sdk_state_ptr(off, 4);
   if (!p) return;
@@ -41,6 +45,30 @@ static inline uint32_t gc_sdk_state_load_u32be(uint32_t off) {
   uint8_t *p = gc_sdk_state_ptr(off, 4);
   if (!p) return 0;
   return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | (uint32_t)p[3];
+}
+
+static inline uint32_t gc_sdk_state_load_u32_or(uint32_t off, uint32_t fallback) {
+  return gc_sdk_state_mapped(off, 4) ? gc_sdk_state_load_u32be(off) : fallback;
+}
+
+static inline void gc_sdk_state_store_u32_mirror(uint32_t off, uint32_t *mirror, uint32_t v) {
+  if (mirror) *mirror = v;
+  if (!gc_sdk_state_mapped(off, 4)) return;
+  gc_sdk_state_store_u32be(off, v);
+}
+
+static inline uint16_t gc_sdk_state_load_u16be_or(uint32_t off, uint16_t fallback) {
+  uint8_t *p = gc_sdk_state_ptr(off, 2);
+  if (!p) return fallback;
+  return (uint16_t)(((uint16_t)p[0] << 8) | (uint16_t)p[1]);
+}
+
+static inline void gc_sdk_state_store_u16be_mirror(uint32_t off, uint16_t *mirror, uint16_t v) {
+  if (mirror) *mirror = v;
+  uint8_t *p = gc_sdk_state_ptr(off, 2);
+  if (!p) return;
+  p[0] = (uint8_t)(v >> 8);
+  p[1] = (uint8_t)(v >> 0);
 }
 
 static inline void gc_sdk_state_reset(void) {
@@ -93,4 +121,16 @@ enum {
   GC_SDK_OFF_VI_PAN_POS_Y = 0x1F4,
   GC_SDK_OFF_VI_PAN_SIZE_X = 0x1F8,
   GC_SDK_OFF_VI_PAN_SIZE_Y = 0x1FC,
+
+  // DVD (minimal subset)
+  GC_SDK_OFF_DVD_INITIALIZED = 0x300,
+  GC_SDK_OFF_DVD_DRIVE_STATUS = 0x304,
+
+  // PAD (minimal subset)
+  GC_SDK_OFF_PAD_INITIALIZED = 0x320,
+
+  // GX (minimal subset for MP4 init chain snapshot)
+  GC_SDK_OFF_GX_CP_DISP_SRC = 0x340,
+  GC_SDK_OFF_GX_CP_DISP_SIZE = 0x344,
+  GC_SDK_OFF_GX_COPY_DISP_DEST = 0x348,
 };
