@@ -11,6 +11,7 @@ u32 gc_gx_gen_mode;
 u32 gc_gx_bp_mask;
 
 u32 gc_gx_bp_sent_not;
+u32 gc_gx_last_ras_reg;
 float gc_gx_vp_left;
 float gc_gx_vp_top;
 float gc_gx_vp_wd;
@@ -24,6 +25,17 @@ u32 gc_gx_su_ts0[8];
 u32 gc_gx_lp_size;
 u32 gc_gx_scissor_box_offset_reg;
 u32 gc_gx_clip_mode;
+
+// XF register mirror (only indices asserted by tests are meaningful).
+u32 gc_gx_xf_regs[32];
+
+// Light/channel color mirrors.
+u32 gc_gx_amb_color[2];
+u32 gc_gx_mat_color[2];
+
+// Pixel engine control mirrors (subset).
+u32 gc_gx_cmode0;
+u32 gc_gx_pe_ctrl;
 
 u32 gc_gx_cp_disp_src;
 u32 gc_gx_cp_disp_size;
@@ -100,6 +112,17 @@ static inline u32 set_field(u32 reg, u32 size, u32 shift, u32 v) {
     return (reg & ~mask) | ((v << shift) & mask);
 }
 
+static inline void gx_write_ras_reg(u32 v) {
+    // Deterministic mirror of "last written" BP/RAS register value.
+    gc_gx_last_ras_reg = v;
+}
+
+static inline void gx_write_xf_reg(u32 idx, u32 v) {
+    if (idx < (sizeof(gc_gx_xf_regs) / sizeof(gc_gx_xf_regs[0]))) {
+        gc_gx_xf_regs[idx] = v;
+    }
+}
+
 GXFifoObj *GXInit(void *base, u32 size) {
     (void)base;
     (void)size;
@@ -109,6 +132,8 @@ GXFifoObj *GXInit(void *base, u32 size) {
     gc_gx_bp_mask = 0xFF;
 
     // Keep deterministic defaults for higher-level GX state tracked by our tests.
+    gc_gx_bp_sent_not = 0;
+    gc_gx_last_ras_reg = 0;
     gc_gx_vcd_lo = 0;
     gc_gx_vcd_hi = 0;
     gc_gx_has_nrms = 0;
@@ -145,6 +170,15 @@ GXFifoObj *GXInit(void *base, u32 size) {
     gc_gx_lp_size = 0;
     gc_gx_scissor_box_offset_reg = 0;
     gc_gx_clip_mode = 0;
+    for (i = 0; i < 32; i++) {
+        gc_gx_xf_regs[i] = 0;
+    }
+    gc_gx_amb_color[0] = 0;
+    gc_gx_amb_color[1] = 0;
+    gc_gx_mat_color[0] = 0;
+    gc_gx_mat_color[1] = 0;
+    gc_gx_cmode0 = 0;
+    gc_gx_pe_ctrl = 0;
 
     return &s_fifo_obj;
 }
@@ -423,6 +457,282 @@ void GXSetZMode(u8 enable, u32 func, u8 update_enable) {
 
 void GXSetColorUpdate(u8 enable) {
     gc_gx_color_update_enable = (u32)enable;
+    // Mirror GXPixel.c: cmode0 bit 3.
+    gc_gx_cmode0 = set_field(gc_gx_cmode0, 1, 3, (u32)enable);
+    gx_write_ras_reg(gc_gx_cmode0);
+    gc_gx_bp_sent_not = 0;
+}
+
+// ---- Batch 3 (GX light/tev/pixel setters used by GXInit) ----
+
+typedef struct {
+    u8 r, g, b, a;
+} GXColor;
+
+enum {
+    GX_COLOR0 = 0,
+    GX_COLOR1 = 1,
+    GX_ALPHA0 = 2,
+    GX_ALPHA1 = 3,
+    GX_COLOR0A0 = 4,
+    GX_COLOR1A1 = 5,
+};
+
+enum {
+    GX_LIGHT0 = 1u << 0,
+    GX_LIGHT1 = 1u << 1,
+    GX_LIGHT2 = 1u << 2,
+    GX_LIGHT3 = 1u << 3,
+    GX_LIGHT4 = 1u << 4,
+    GX_LIGHT5 = 1u << 5,
+    GX_LIGHT6 = 1u << 6,
+    GX_LIGHT7 = 1u << 7,
+};
+
+void GXSetChanCtrl(u32 chan, u8 enable, u32 amb_src, u32 mat_src, u32 light_mask, u32 diff_fn, u32 attn_fn) {
+    u32 reg;
+    u32 idx;
+
+    if (chan == GX_COLOR0A0) idx = 0;
+    else if (chan == GX_COLOR1A1) idx = 1;
+    else idx = chan;
+
+    reg = 0;
+    reg = set_field(reg, 1, 1, (u32)(enable != 0));
+    reg = set_field(reg, 1, 0, (u32)(mat_src != 0));
+    reg = set_field(reg, 1, 6, (u32)(amb_src != 0));
+    reg = set_field(reg, 1, 2, (light_mask & GX_LIGHT0) ? 1u : 0u);
+    reg = set_field(reg, 1, 3, (light_mask & GX_LIGHT1) ? 1u : 0u);
+    reg = set_field(reg, 1, 4, (light_mask & GX_LIGHT2) ? 1u : 0u);
+    reg = set_field(reg, 1, 5, (light_mask & GX_LIGHT3) ? 1u : 0u);
+    reg = set_field(reg, 1, 11, (light_mask & GX_LIGHT4) ? 1u : 0u);
+    reg = set_field(reg, 1, 12, (light_mask & GX_LIGHT5) ? 1u : 0u);
+    reg = set_field(reg, 1, 13, (light_mask & GX_LIGHT6) ? 1u : 0u);
+    reg = set_field(reg, 1, 14, (light_mask & GX_LIGHT7) ? 1u : 0u);
+    reg = set_field(reg, 2, 7, (attn_fn == 0) ? 0u : (diff_fn & 3u));
+    reg = set_field(reg, 1, 9, (attn_fn != 2) ? 1u : 0u);
+    reg = set_field(reg, 1, 10, (attn_fn != 0) ? 1u : 0u);
+
+    gx_write_xf_reg(idx + 14, reg);
+    gc_gx_bp_sent_not = 1;
+    if (chan == GX_COLOR0A0) {
+        gx_write_xf_reg(16, reg);
+    } else if (chan == GX_COLOR1A1) {
+        gx_write_xf_reg(17, reg);
+    }
+}
+
+void GXSetChanAmbColor(u32 chan, GXColor amb_color) {
+    u32 reg = 0;
+    u32 colIdx = 0;
+    u32 alpha;
+
+    switch (chan) {
+    case GX_COLOR0:
+        alpha = gc_gx_amb_color[0] & 0xFFu;
+        reg = set_field(reg, 8, 0, alpha);
+        reg = set_field(reg, 8, 8, amb_color.b);
+        reg = set_field(reg, 8, 16, amb_color.g);
+        reg = set_field(reg, 8, 24, amb_color.r);
+        colIdx = 0;
+        break;
+    case GX_COLOR1:
+        alpha = gc_gx_amb_color[1] & 0xFFu;
+        reg = set_field(reg, 8, 0, alpha);
+        reg = set_field(reg, 8, 8, amb_color.b);
+        reg = set_field(reg, 8, 16, amb_color.g);
+        reg = set_field(reg, 8, 24, amb_color.r);
+        colIdx = 1;
+        break;
+    case GX_ALPHA0:
+        reg = gc_gx_amb_color[0];
+        reg = set_field(reg, 8, 0, amb_color.a);
+        colIdx = 0;
+        break;
+    case GX_ALPHA1:
+        reg = gc_gx_amb_color[1];
+        reg = set_field(reg, 8, 0, amb_color.a);
+        colIdx = 1;
+        break;
+    case GX_COLOR0A0:
+        reg = set_field(reg, 8, 0, amb_color.a);
+        reg = set_field(reg, 8, 8, amb_color.b);
+        reg = set_field(reg, 8, 16, amb_color.g);
+        reg = set_field(reg, 8, 24, amb_color.r);
+        colIdx = 0;
+        break;
+    case GX_COLOR1A1:
+        reg = set_field(reg, 8, 0, amb_color.a);
+        reg = set_field(reg, 8, 8, amb_color.b);
+        reg = set_field(reg, 8, 16, amb_color.g);
+        reg = set_field(reg, 8, 24, amb_color.r);
+        colIdx = 1;
+        break;
+    default:
+        return;
+    }
+
+    gx_write_xf_reg(colIdx + 10, reg);
+    gc_gx_bp_sent_not = 1;
+    gc_gx_amb_color[colIdx] = reg;
+}
+
+void GXSetChanMatColor(u32 chan, GXColor mat_color) {
+    u32 reg = 0;
+    u32 colIdx = 0;
+    u32 alpha;
+
+    switch (chan) {
+    case GX_COLOR0:
+        alpha = gc_gx_mat_color[0] & 0xFFu;
+        reg = set_field(reg, 8, 0, alpha);
+        reg = set_field(reg, 8, 8, mat_color.b);
+        reg = set_field(reg, 8, 16, mat_color.g);
+        reg = set_field(reg, 8, 24, mat_color.r);
+        colIdx = 0;
+        break;
+    case GX_COLOR1:
+        alpha = gc_gx_mat_color[1] & 0xFFu;
+        reg = set_field(reg, 8, 0, alpha);
+        reg = set_field(reg, 8, 8, mat_color.b);
+        reg = set_field(reg, 8, 16, mat_color.g);
+        reg = set_field(reg, 8, 24, mat_color.r);
+        colIdx = 1;
+        break;
+    case GX_ALPHA0:
+        reg = gc_gx_mat_color[0];
+        reg = set_field(reg, 8, 0, mat_color.a);
+        colIdx = 0;
+        break;
+    case GX_ALPHA1:
+        reg = gc_gx_mat_color[1];
+        reg = set_field(reg, 8, 0, mat_color.a);
+        colIdx = 1;
+        break;
+    case GX_COLOR0A0:
+        reg = set_field(reg, 8, 0, mat_color.a);
+        reg = set_field(reg, 8, 8, mat_color.b);
+        reg = set_field(reg, 8, 16, mat_color.g);
+        reg = set_field(reg, 8, 24, mat_color.r);
+        colIdx = 0;
+        break;
+    case GX_COLOR1A1:
+        reg = set_field(reg, 8, 0, mat_color.a);
+        reg = set_field(reg, 8, 8, mat_color.b);
+        reg = set_field(reg, 8, 16, mat_color.g);
+        reg = set_field(reg, 8, 24, mat_color.r);
+        colIdx = 1;
+        break;
+    default:
+        return;
+    }
+
+    gx_write_xf_reg(colIdx + 12, reg);
+    gc_gx_bp_sent_not = 1;
+    gc_gx_mat_color[colIdx] = reg;
+}
+
+void GXSetNumTevStages(u8 nStages) {
+    // GXTev.c: genMode[10..13] = nStages-1; dirtyState |= 4
+    if (nStages == 0 || nStages > 16) return;
+    gc_gx_gen_mode = set_field(gc_gx_gen_mode, 4, 10, (u32)(nStages - 1u));
+    gc_gx_dirty_state |= 4u;
+}
+
+// Forward declarations (implemented later in this file).
+void GXSetTevColorIn(u32 stage, u32 a, u32 b, u32 c, u32 d);
+void GXSetTevAlphaIn(u32 stage, u32 a, u32 b, u32 c, u32 d);
+void GXSetTevColorOp(u32 stage, u32 op, u32 bias, u32 scale, u32 clamp, u32 out_reg);
+void GXSetTevAlphaOp(u32 stage, u32 op, u32 bias, u32 scale, u32 clamp, u32 out_reg);
+
+void GXSetTevOp(u32 id, u32 mode) {
+    // Mirror GXTev.c behavior for the modes our tests exercise.
+    u32 carg = 10u; // GX_CC_RASC
+    u32 aarg = 5u;  // GX_CA_RASA
+    if (id != 0) {
+        carg = 12u; // GX_CC_CPREV
+        aarg = 6u;  // GX_CA_APREV
+    }
+
+    switch (mode) {
+    case 0: // GX_MODULATE
+        GXSetTevColorIn(id, 0u, 8u, carg, 0u);
+        GXSetTevAlphaIn(id, 0u, 4u, aarg, 0u);
+        break;
+    case 1: // GX_DECAL
+        GXSetTevColorIn(id, carg, 8u, 9u, 0u);
+        GXSetTevAlphaIn(id, 0u, 0u, 0u, aarg);
+        break;
+    case 2: // GX_BLEND
+        GXSetTevColorIn(id, carg, 1u, 8u, 0u);
+        GXSetTevAlphaIn(id, 0u, 4u, aarg, 0u);
+        break;
+    case 3: // GX_REPLACE
+        GXSetTevColorIn(id, 0u, 0u, 0u, 8u);
+        GXSetTevAlphaIn(id, 0u, 0u, 0u, 4u);
+        break;
+    case 4: // GX_PASSCLR
+        GXSetTevColorIn(id, 0u, 0u, 0u, carg);
+        GXSetTevAlphaIn(id, 0u, 0u, 0u, aarg);
+        break;
+    default:
+        break;
+    }
+
+    // GX_TEV_ADD, GX_TB_ZERO, GX_CS_SCALE_1, clamp=true, out=GX_TEVPREV
+    GXSetTevColorOp(id, 0u, 0u, 0u, 1u, 0u);
+    GXSetTevAlphaOp(id, 0u, 0u, 0u, 1u, 0u);
+}
+
+void GXSetAlphaCompare(u32 comp0, u8 ref0, u32 op, u32 comp1, u8 ref1) {
+    // GXTev.c: pack into a RAS reg with high byte 0xF3.
+    u32 reg = 0;
+    reg = set_field(reg, 8, 0, (u32)ref0);
+    reg = set_field(reg, 8, 8, (u32)ref1);
+    reg = set_field(reg, 3, 16, comp0 & 7u);
+    reg = set_field(reg, 3, 19, comp1 & 7u);
+    reg = set_field(reg, 2, 22, op & 3u);
+    reg = set_field(reg, 8, 24, 0xF3u);
+    gx_write_ras_reg(reg);
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXSetBlendMode(u32 type, u32 src_factor, u32 dst_factor, u32 op) {
+    // GXPixel.c: writes cmode0 with high byte 0x41.
+    const u32 blend_enable = (type == 1u || type == 3u) ? 1u : 0u; // BLEND or SUBTRACT
+    const u32 subtract = (type == 3u) ? 1u : 0u;
+    const u32 logic = (type == 2u) ? 1u : 0u;
+
+    gc_gx_cmode0 = set_field(gc_gx_cmode0, 1, 0, blend_enable);
+    gc_gx_cmode0 = set_field(gc_gx_cmode0, 1, 11, subtract);
+    gc_gx_cmode0 = set_field(gc_gx_cmode0, 1, 1, logic);
+    gc_gx_cmode0 = set_field(gc_gx_cmode0, 4, 12, op & 0xFu);
+    gc_gx_cmode0 = set_field(gc_gx_cmode0, 3, 8, src_factor & 7u);
+    gc_gx_cmode0 = set_field(gc_gx_cmode0, 3, 5, dst_factor & 7u);
+    gc_gx_cmode0 = set_field(gc_gx_cmode0, 8, 24, 0x41u);
+    gx_write_ras_reg(gc_gx_cmode0);
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXSetAlphaUpdate(u8 update_enable) {
+    // GXPixel.c: cmode0 bit 4.
+    gc_gx_cmode0 = set_field(gc_gx_cmode0, 1, 4, (u32)(update_enable != 0));
+    gx_write_ras_reg(gc_gx_cmode0);
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXSetZCompLoc(u8 before_tex) {
+    // GXPixel.c: peCtrl bit 6.
+    gc_gx_pe_ctrl = set_field(gc_gx_pe_ctrl, 1, 6, (u32)(before_tex != 0));
+    gx_write_ras_reg(gc_gx_pe_ctrl);
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXSetDither(u8 dither) {
+    // GXPixel.c: cmode0 bit 2.
+    gc_gx_cmode0 = set_field(gc_gx_cmode0, 1, 2, (u32)(dither != 0));
+    gx_write_ras_reg(gc_gx_cmode0);
+    gc_gx_bp_sent_not = 0;
 }
 
 void GXSetGPMetric(u32 perf0, u32 perf1) {
@@ -673,6 +983,7 @@ void GXSetTevColorIn(u32 stage, u32 a, u32 b, u32 c, u32 d) {
     reg = set_field(reg, 4, 4, c);
     reg = set_field(reg, 4, 0, d);
     gc_gx_tevc[stage] = reg;
+    gx_write_ras_reg(reg);
     gc_gx_bp_sent_not = 0;
 }
 
@@ -684,6 +995,7 @@ void GXSetTevAlphaIn(u32 stage, u32 a, u32 b, u32 c, u32 d) {
     reg = set_field(reg, 3, 7, c);
     reg = set_field(reg, 3, 4, d);
     gc_gx_teva[stage] = reg;
+    gx_write_ras_reg(reg);
     gc_gx_bp_sent_not = 0;
 }
 
@@ -701,6 +1013,7 @@ void GXSetTevColorOp(u32 stage, u32 op, u32 bias, u32 scale, u32 clamp, u32 out_
     reg = set_field(reg, 1, 19, clamp & 0xFFu);
     reg = set_field(reg, 2, 22, out_reg);
     gc_gx_tevc[stage] = reg;
+    gx_write_ras_reg(reg);
     gc_gx_bp_sent_not = 0;
 }
 
@@ -718,6 +1031,7 @@ void GXSetTevAlphaOp(u32 stage, u32 op, u32 bias, u32 scale, u32 clamp, u32 out_
     reg = set_field(reg, 1, 19, clamp & 0xFFu);
     reg = set_field(reg, 2, 22, out_reg);
     gc_gx_teva[stage] = reg;
+    gx_write_ras_reg(reg);
     gc_gx_bp_sent_not = 0;
 }
 
