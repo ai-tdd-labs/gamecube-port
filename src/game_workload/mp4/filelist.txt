@@ -1,0 +1,3 @@
+src/game/main.c
+src/game/init.c
+include/game/init.h

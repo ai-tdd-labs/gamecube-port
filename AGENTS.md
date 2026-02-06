@@ -47,6 +47,7 @@ tools/
 
 src/
   sdk_port/         # reimplemented SDK functions
+  game_workload/    # unmodified game code used as workload/integration driver (do not change logic)
 
 Everything important MUST be written to disk.
 
