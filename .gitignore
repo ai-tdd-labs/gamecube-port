@@ -80,3 +80,9 @@ tests/recomp_out/
 # Host test build artifacts
 **/*.dSYM/
 **/*_host
+
+# Large binary dumps (generated)
+/tests/sdk/smoke/**/expected/*.bin
+/tests/sdk/smoke/**/actual/*.bin
+/tests/expected/*.bin
+/tests/actual/*.bin
