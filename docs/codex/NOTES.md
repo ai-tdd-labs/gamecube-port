@@ -64,6 +64,66 @@ Rules:
 - Double-call edge case: last write wins.
   Evidence: tests/sdk/os/os_set_arena_hi/expected/os_set_arena_hi_generic_edge_double_call_001.bin
 
+### GXSetChanCtrl
+- Contract: packs a channel control bitfield and writes it to XF regs (`idx+14`, and also 16/17 for `GX_COLOR0A0`/`GX_COLOR1A1`).
+  Evidence: decomp_mario_party_4/src/dolphin/gx/GXLight.c (`GXSetChanCtrl`).
+- MP4 callsite-style testcase (expected.bin only for now; host port pending).
+  Evidence: tests/sdk/gx/gx_set_chan_ctrl/expected/gx_set_chan_ctrl_mp4_init_gx_001.bin
+
+### GXSetChanAmbColor
+- Contract: packs RGBA into a 32-bit XF reg (`colIdx+10`) and updates `ambColor[colIdx]`.
+  Evidence: decomp_mario_party_4/src/dolphin/gx/GXLight.c (`GXSetChanAmbColor`).
+- MP4 callsite-style testcase (expected.bin only for now; host port pending).
+  Evidence: tests/sdk/gx/gx_set_chan_amb_color/expected/gx_set_chan_amb_color_mp4_init_gx_001.bin
+
+### GXSetChanMatColor
+- Contract: packs RGBA into a 32-bit XF reg (`colIdx+12`) and updates `matColor[colIdx]`.
+  Evidence: decomp_mario_party_4/src/dolphin/gx/GXLight.c (`GXSetChanMatColor`).
+- MP4 callsite-style testcase (expected.bin only for now; host port pending).
+  Evidence: tests/sdk/gx/gx_set_chan_mat_color/expected/gx_set_chan_mat_color_mp4_init_gx_001.bin
+
+### GXSetNumTevStages
+- Contract: sets `genMode` field (shift 10, size 4) to `nStages-1` and marks `dirtyState |= 4`.
+  Evidence: decomp_mario_party_4/src/dolphin/gx/GXTev.c (`GXSetNumTevStages`).
+- MP4 callsite-style testcase (expected.bin only for now; host port pending).
+  Evidence: tests/sdk/gx/gx_set_num_tev_stages/expected/gx_set_num_tev_stages_mp4_init_gx_001.bin
+
+### GXSetTevOp
+- Contract: expands a "mode" into calls to `GXSetTevColorIn/AlphaIn` and then sets `GXSetTevColorOp/AlphaOp` (stage 0: `GX_REPLACE` uses TEX).
+  Evidence: decomp_mario_party_4/src/dolphin/gx/GXTev.c (`GXSetTevOp`).
+- MP4 callsite-style testcase (expected.bin only for now; host port pending).
+  Evidence: tests/sdk/gx/gx_set_tev_op/expected/gx_set_tev_op_mp4_init_gx_001.bin
+
+### GXSetAlphaCompare
+- Contract: packs refs/comps/op into a RAS reg with high byte `0xF3` and writes it.
+  Evidence: decomp_mario_party_4/src/dolphin/gx/GXTev.c (`GXSetAlphaCompare`).
+- MP4 callsite-style testcase (expected.bin only for now; host port pending).
+  Evidence: tests/sdk/gx/gx_set_alpha_compare/expected/gx_set_alpha_compare_mp4_init_gx_001.bin
+
+### GXSetBlendMode
+- Contract: updates `cmode0` fields for blend/logical/subtract, sets opcode and factors, sets high byte `0x41`, writes RAS reg.
+  Evidence: decomp_mario_party_4/src/dolphin/gx/GXPixel.c (`GXSetBlendMode`).
+- MP4 callsite-style testcase (expected.bin only for now; host port pending).
+  Evidence: tests/sdk/gx/gx_set_blend_mode/expected/gx_set_blend_mode_mp4_init_gx_001.bin
+
+### GXSetAlphaUpdate
+- Contract: updates `cmode0` bit 4, writes RAS reg.
+  Evidence: decomp_mario_party_4/src/dolphin/gx/GXPixel.c (`GXSetAlphaUpdate`).
+- MP4 callsite-style testcase (expected.bin only for now; host port pending).
+  Evidence: tests/sdk/gx/gx_set_alpha_update/expected/gx_set_alpha_update_mp4_init_gx_001.bin
+
+### GXSetZCompLoc
+- Contract: updates `peCtrl` bit 6, writes RAS reg.
+  Evidence: decomp_mario_party_4/src/dolphin/gx/GXPixel.c (`GXSetZCompLoc`).
+- MP4 callsite-style testcase (expected.bin only for now; host port pending).
+  Evidence: tests/sdk/gx/gx_set_z_comp_loc/expected/gx_set_z_comp_loc_mp4_init_gx_001.bin
+
+### GXSetDither
+- Contract: updates `cmode0` bit 2, writes RAS reg.
+  Evidence: decomp_mario_party_4/src/dolphin/gx/GXPixel.c (`GXSetDither`).
+- MP4 callsite-style testcase (expected.bin only for now; host port pending).
+  Evidence: tests/sdk/gx/gx_set_dither/expected/gx_set_dither_mp4_init_gx_001.bin
+
 ## Known Invariants
 
 ## Undocumented Quirks
