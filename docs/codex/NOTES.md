@@ -16,6 +16,18 @@ Rules:
   They do not yet validate real VI side effects (shadow regs / HorVer / HW regs).
   Evidence: tests/sdk/vi/vi_set_next_frame_buffer/dol/*; tests/sdk/vi/vi_set_next_frame_buffer/expected/vi_set_next_frame_buffer_{min,realistic_mp4,edge_unaligned}_001.bin
 
+### VIConfigure
+- The deterministic oracle for VIConfigure in this repo records: `changeMode`, `dispPosX`, `dispPosY`, `dispSizeX`, `fbSizeX`, `fbSizeY`, `xfbMode`, and `helper_calls`.
+  Evidence: tests/sdk/vi/vi_configure/expected/vi_configure_001.bin; tests/sdk/vi/vi_configure/dol/generic/legacy_001/vi_configure_001.c
+- Host sdk_port implementation mirrors the legacy testcase's observable behavior (not a full SDK port yet).
+  Evidence: src/sdk_port/vi/VI.c; tests/sdk/vi/vi_configure/actual/vi_configure_001.bin
+
+### VIConfigurePan
+- The deterministic oracle for VIConfigurePan records: `panPosX`, `panPosY`, `panSizeX`, `panSizeY`, `dispSizeY`, and `helper_calls` for a VI_NON_INTERLACE + VI_XFBMODE_SF configuration.
+  Evidence: tests/sdk/vi/vi_configure_pan/expected/vi_configure_pan_001.bin; tests/sdk/vi/vi_configure_pan/dol/generic/legacy_001/vi_configure_pan_001.c
+- Host sdk_port implementation mirrors the legacy testcase's observable behavior (not a full SDK port yet).
+  Evidence: src/sdk_port/vi/VI.c; tests/sdk/vi/vi_configure_pan/actual/vi_configure_pan_001.bin
+
 ### OSSetArenaLo
 - MP4 decomp implementation is a single store: `__OSArenaLo = addr;`.
   Evidence: decomp_mario_party_4/src/dolphin/os/OSArena.c

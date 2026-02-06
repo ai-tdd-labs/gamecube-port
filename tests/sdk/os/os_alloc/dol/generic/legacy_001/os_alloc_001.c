@@ -36,14 +36,16 @@ static int OSCreateHeap(void *lo, void *hi) {
 static void OSSetCurrentHeap(int heap) { (void)heap; }
 
 static void *OSAlloc(u32 size) {
-    // Align to 32B like most OS alloc paths, keep deterministic.
-    u32 aligned = (size + 31u) & ~31u;
-    if (s_heap_cur + aligned > s_heap_end) {
+    // This legacy DOL testcase wants to mirror the SDK's "cell header" behavior:
+    // OSAlloc returns (cell + 0x20). We model that by bumping a cell pointer and
+    // returning cell+0x20, where cell size is (size+0x20) rounded to 32B.
+    u32 req = (size + 0x20u + 31u) & ~31u;
+    if (s_heap_cur + req > s_heap_end) {
         return (void *)0;
     }
-    void *p = s_heap_cur;
-    s_heap_cur += aligned;
-    return p;
+    u8 *cell = s_heap_cur;
+    s_heap_cur += req;
+    return (void *)(cell + 0x20u);
 }
 #endif
 

@@ -36,9 +36,30 @@ port_srcs=()
 case "$subsystem" in
   os)
     port_srcs+=(
-      "$repo_root/src/sdk_port/gc_mem.c"
       "$repo_root/src/sdk_port/os/OSArena.c"
       "$repo_root/src/sdk_port/os/OSAlloc.c"
+      "$repo_root/src/sdk_port/os/OSInit.c"
+      "$repo_root/src/sdk_port/os/OSRtc.c"
+    )
+    ;;
+  vi)
+    port_srcs+=(
+      "$repo_root/src/sdk_port/vi/VI.c"
+    )
+    ;;
+  pad)
+    port_srcs+=(
+      "$repo_root/src/sdk_port/pad/PAD.c"
+    )
+    ;;
+  gx)
+    port_srcs+=(
+      "$repo_root/src/sdk_port/gx/GX.c"
+    )
+    ;;
+  dvd)
+    port_srcs+=(
+      "$repo_root/src/sdk_port/dvd/DVD.c"
     )
     ;;
   *)
@@ -55,6 +76,7 @@ cc -O2 -g \
   -I"$repo_root/src/sdk_port" \
   "$repo_root/tests/harness/gc_host_ram.c" \
   "$repo_root/tests/harness/gc_host_runner.c" \
+  "$repo_root/src/sdk_port/gc_mem.c" \
   "${port_srcs[@]}" \
   "$SCENARIO_SRC" \
   -o "$exe"
