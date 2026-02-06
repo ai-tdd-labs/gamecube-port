@@ -11,9 +11,17 @@ static inline void store_be32(volatile uint8_t *p, uint32_t v) {
     p[3] = (uint8_t)(v & 0xFF);
 }
 #else
-#include <dolphin/os.h>
-#include <dolphin/types.h>
+#include <stdint.h>
+typedef uint32_t u32;
 #define RESULT_PTR() ((volatile u32 *)0x80300000)
+
+// Legacy synthetic stubs. This testcase is a scaffold only (not an SDK oracle).
+static uintptr_t s_arena_lo = 0x80002000u;
+static uintptr_t s_arena_hi = 0x81700000u;
+
+void OSInit(void) {}
+void *OSGetArenaLo(void) { return (void *)s_arena_lo; }
+void *OSGetArenaHi(void) { return (void *)s_arena_hi; }
 #endif
 
 int main(void) {

@@ -30,6 +30,8 @@ static inline void store_be32(volatile uint8_t *p, uint32_t v) {
 }
 #else
 #include <stdint.h>
+typedef uint8_t u8;
+typedef uint32_t u32;
 #define RESULT_PTR() ((volatile u32 *)0x80300000)
 
 typedef struct {

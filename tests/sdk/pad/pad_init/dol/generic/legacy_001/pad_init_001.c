@@ -20,9 +20,12 @@ static inline void store_be32(volatile uint8_t *p, uint32_t v) {
 }
 #else
 #include <stdint.h>
+#include <stddef.h>
 typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
+typedef uint64_t u64;
+typedef int32_t s32;
 typedef int BOOL;
 #ifndef TRUE
 #define TRUE 1

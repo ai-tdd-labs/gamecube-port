@@ -11,7 +11,7 @@ include $(DEVKITPRO)/devkitPPC/gamecube_rules
 
 TARGET := os_alloc_001
 BUILD := build
-SOURCES := . ../../../decomp_mario_party_4/src/dolphin/os
+SOURCES := .
 
 INCLUDE := -I$(LIBOGC_INC)
 CFLAGS = -g -O2 -Wall -std=gnu89 $(MACHDEP) $(INCLUDE)
@@ -28,7 +28,6 @@ export VPATH := $(foreach dir,$(SOURCES),$(TOPDIR)/$(dir))
 export DEPSDIR := $(TOPDIR)/$(BUILD)
 
 CFILES := $(notdir $(wildcard $(TOPDIR)/*.c))
-CFILES += OSAlloc.c
 
 export LD := $(CC)
 export OFILES := $(CFILES:.c=.o)
