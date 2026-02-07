@@ -5,6 +5,11 @@ evidence-based. Mark items DONE with a commit hash.
 
 ## Now (priority order)
 
+0. Real-game breakpoint dump tooling (secondary oracle)
+   - [ ] Harden `tools/ram_dump.py` for large MEM1 dumps (chunked streaming, retries). (uncommitted)
+   - [ ] Add RVZ MEM1 dump helper at PC checkpoint (`tools/dump_expected_rvz_mem1_at_pc.sh`). (uncommitted)
+   - [ ] Validate RVZ checkpoint dump on MP4: stop at `OSDisableInterrupts` PC `0x800B723C`, dump MEM1, archive under `tests/oracles/mp4_rvz/`. (pending)
+
 1. RAM-backed SDK state infrastructure (big-endian in MEM1)
    - [x] Add minimal state page helpers (`src/sdk_port/sdk_state.h`). (68ac0f7)
    - [x] Migrate OS arena pointers to RAM-backed state (OSGet/SetArenaLo/Hi). (68ac0f7)

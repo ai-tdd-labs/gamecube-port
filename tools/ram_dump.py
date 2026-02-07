@@ -24,6 +24,7 @@ import time
 import subprocess
 import os
 import signal
+import tempfile
 
 
 class DolphinGDB:
@@ -48,8 +49,29 @@ class DolphinGDB:
             print("Make sure Dolphin is running with GDB stub enabled.")
             return False
 
+    def reset_connection(self, retries=5, delay=0.2):
+        """Reconnect to the GDB stub.
+
+        Large/failed memory reads can leave the TCP stream in a bad state.
+        Reconnecting is cheap and makes large dumps far more reliable.
+        """
+        try:
+            if self.sock:
+                self.sock.close()
+        except Exception:
+            pass
+        self.sock = None
+        self._rxbuf = b""
+        for i in range(retries):
+            if self.connect():
+                return True
+            time.sleep(delay)
+        return False
+
     def _send(self, cmd):
         """Send GDB command with checksum."""
+        if not self.sock:
+            raise RuntimeError("GDB socket is not connected")
         checksum = sum(cmd.encode()) % 256
         packet = f"${cmd}#{checksum:02x}"
         self.sock.send(packet.encode())
@@ -185,6 +207,68 @@ class DolphinGDB:
         print()  # newline after progress
         return bytes(data)
 
+    def read_memory_to_file(self, addr, size, out_f, chunk_size=0x10000, chunk_retries=3):
+        """Stream a memory dump directly to a file.
+
+        This is safer for large dumps (e.g. MEM1 24 MiB) because we don't keep
+        the whole dump in memory.
+        """
+        remaining = size
+        cursor = addr
+        initial_chunk = chunk_size
+
+        while remaining > 0:
+            chunk = min(remaining, chunk_size)
+            hex_data = None
+            for attempt in range(chunk_retries):
+                hex_data = self.read_memory(cursor, chunk)
+                if hex_data:
+                    break
+                time.sleep(0.05)
+
+            if not hex_data:
+                # A failed read can desync the TCP stream. Reconnect before we
+                # start shrinking chunks, otherwise subsequent reads may fail
+                # even at small sizes.
+                if not self.reset_connection():
+                    print("Failed to reconnect to Dolphin GDB stub.")
+                    return False
+                if chunk_size > 0x200:
+                    chunk_size = chunk_size // 2
+                    continue
+                print(f"Failed to read at 0x{cursor:08X}")
+                return False
+
+            try:
+                b = bytes.fromhex(hex_data)
+            except Exception:
+                b = b""
+
+            if len(b) != chunk:
+                if not self.reset_connection():
+                    print("Failed to reconnect to Dolphin GDB stub.")
+                    return False
+                if chunk_size > 0x200:
+                    chunk_size = chunk_size // 2
+                    continue
+                print(f"Malformed read at 0x{cursor:08X}: got {len(b)} bytes, expected {chunk}")
+                return False
+
+            out_f.write(b)
+            remaining -= chunk
+            cursor += chunk
+
+            pct = ((size - remaining) / size) * 100
+            print(f"\rReading: {pct:.1f}% (0x{cursor:08X}, chunk=0x{chunk_size:X})", end="", flush=True)
+
+            # If we had to fall back to smaller chunks, opportunistically try
+            # to increase again (bounded by the initial value).
+            if chunk_size < initial_chunk and remaining > 0 and (cursor & 0xFFFFF) == 0:
+                chunk_size = min(initial_chunk, chunk_size * 2)
+
+        print()
+        return True
+
     def halt(self):
         """Halt CPU execution.
 
@@ -318,7 +402,7 @@ def parse_int(s):
 DOLPHIN_BIN = "/Applications/Dolphin.app/Contents/MacOS/Dolphin"
 
 
-def start_dolphin(exec_path, dolphin_bin=DOLPHIN_BIN):
+def start_dolphin(exec_path, dolphin_bin=DOLPHIN_BIN, user_dir=None, config_overrides=None):
     """Start Dolphin in headless mode with GDB stub enabled."""
     if not os.path.isfile(dolphin_bin):
         print(f"Dolphin not found at {dolphin_bin}")
@@ -330,7 +414,13 @@ def start_dolphin(exec_path, dolphin_bin=DOLPHIN_BIN):
 
     # Use --exec flow so Dolphin starts headless with GDB stub active.
     # -b = batch (headless), -d = debugger (required for stub), -e = execute
-    cmd = [dolphin_bin, "-b", "-d", "-e", exec_path]
+    cmd = [dolphin_bin, "-b", "-d"]
+    if user_dir:
+        cmd += ["-u", user_dir]
+    if config_overrides:
+        for ov in config_overrides:
+            cmd += ["-C", ov]
+    cmd += ["-e", exec_path]
     print(f"Starting Dolphin: {' '.join(cmd)}")
 
     proc = subprocess.Popen(
@@ -368,6 +458,12 @@ Examples:
                         help='DOL/ISO to run in Dolphin (auto-starts Dolphin)')
     parser.add_argument('--dolphin', default=DOLPHIN_BIN,
                         help=f'Path to Dolphin binary (default: {DOLPHIN_BIN})')
+    parser.add_argument('--dolphin-userdir', default=None,
+                        help='Optional Dolphin user dir (passed as -u). Use to keep per-test configs isolated.')
+    parser.add_argument('--dolphin-config', action='append', default=[],
+                        help='Optional Dolphin config override (repeatable). Format: System.Section.Key=Value (passed as -C).')
+    parser.add_argument('--enable-mmu', action='store_true',
+                        help='Convenience: attempt to enable MMU via Dolphin -C overrides (best-effort).')
     parser.add_argument('--delay', type=float, default=2.0,
                         help='Seconds to wait after starting Dolphin (default: 2)')
     parser.add_argument('--host', default='127.0.0.1',
@@ -406,7 +502,18 @@ Examples:
     # IMPORTANT: Prefer this flow over manually launching Dolphin; it reliably
     # opens the GDB stub and avoids "connection refused".
     if args.exec_file:
-        dolphin_proc = start_dolphin(args.exec_file, args.dolphin)
+        config_overrides = list(args.dolphin_config or [])
+        if args.enable_mmu:
+            # Dolphin's exact key naming can vary by version; we set the
+            # commonly used one and rely on the user's Dolphin build to accept it.
+            config_overrides.append("Core.Core.MMU=True")
+
+        dolphin_proc = start_dolphin(
+            args.exec_file,
+            args.dolphin,
+            user_dir=args.dolphin_userdir,
+            config_overrides=config_overrides,
+        )
         if dolphin_proc is None:
             sys.exit(1)
         print(f"Waiting {args.delay}s for Dolphin to initialize...")
@@ -487,26 +594,27 @@ Examples:
             gdb.halt()
 
         print(f"Reading {args.size} bytes from 0x{args.addr:08X}...")
-        data = gdb.read_memory_bytes(args.addr, args.size, chunk_size=args.chunk)
 
-        if data is None:
-            print("Failed to read memory")
-            sys.exit(1)
-
-        if len(data) != args.size:
-            print(f"Warning: Got {len(data)} bytes, expected {args.size}")
-            # Dolphin's GDB stub can rarely return a slightly larger payload.
-            # Keep dumps stable by truncating to the requested size.
-            if len(data) > args.size:
-                data = data[:args.size]
-            else:
-                print("Short read; refusing to write incomplete dump")
+        out_dir = os.path.dirname(os.path.abspath(args.out)) or "."
+        os.makedirs(out_dir, exist_ok=True)
+        tmp_path = None
+        try:
+            fd, tmp_path = tempfile.mkstemp(prefix=".ram_dump.", dir=out_dir)
+            with os.fdopen(fd, "wb") as f:
+                ok = gdb.read_memory_to_file(args.addr, args.size, f, chunk_size=args.chunk)
+            if not ok:
+                print("Failed to read memory")
                 sys.exit(1)
+            os.replace(tmp_path, args.out)
+            tmp_path = None
+        finally:
+            if tmp_path and os.path.exists(tmp_path):
+                try:
+                    os.unlink(tmp_path)
+                except Exception:
+                    pass
 
-        with open(args.out, 'wb') as f:
-            f.write(data)
-
-        print(f"Wrote {len(data)} bytes to {args.out}")
+        print(f"Wrote {args.size} bytes to {args.out}")
 
         if args.cont:
             print("Continuing CPU...")

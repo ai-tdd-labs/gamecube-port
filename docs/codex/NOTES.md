@@ -175,6 +175,9 @@ Rules:
 ### Real MP4 RVZ breakpoint sanity check
 - Fact: Dolphin GDB stub accepts `Z0/Z1` software breakpoints on this machine.
   Evidence: `tools/ram_dump.py --exec "...Mario Party 4 (USA).rvz" --breakpoint 0x800B723C ...` stops at `T0540:800b723c;...`.
+- Fact: RVZ MEM1 dump at PC checkpoint works reliably via polling.
+  Evidence: `tools/dump_expected_rvz_mem1_at_pc.sh "...Mario Party 4 (USA).rvz" 0x800B723C tests/oracles/mp4_rvz/mp4_rvz_pc_800B723C_mem1_24m.bin`
+  - SHA256: `98316b556ec8c60ad775cba9a1d6048e15347a8cbd9fe1422147091f94a637db`
 
 ## Test Runs (auto)
 
