@@ -18,12 +18,13 @@ evidence-based. Mark items DONE with a commit hash.
    - [x] Update smoke oracle to include sdk_state page in MEM1 compares. (pending commit)
 
 3. MP4 chain progress (tests from real callsites)
-   - [ ] Keep `docs/sdk/mp4/MP4_chain_all.csv` as the source of SDK call order.
+   - [x] Keep `docs/sdk/mp4/MP4_chain_all.csv` as the source of SDK call order. (7ddf625)
    - [ ] For each SDK function encountered: add one test per *unique call
          variant* seen in MP4 (and later other games), not synthetic scenarios.
+   - [ ] MP4 HuPadInit next blockers: add/confirm MP4 cases for `SISetSamplingRate`, `VISetPostRetraceCallback`, `PADControlMotor` and extend with `PADSetSpec` if MP4 uses it.
 
 ## Later
 
 1. Real-game checkpoint dumps (secondary oracle)
-   - [ ] Find MP4 RVZ/ISO location and record in docs.
-   - [ ] Add Dolphin GDB breakpoint-based dump (or timed fallback with warning).
+   - [x] Find MP4 RVZ/ISO location and record in docs. (MP4_assets.md; hash recorded)
+   - [ ] Pick a real RVZ checkpoint address (symbol) and dump MEM1 at that point to compare against a smoke checkpoint dump.
