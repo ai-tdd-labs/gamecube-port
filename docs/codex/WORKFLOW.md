@@ -99,3 +99,37 @@ When adding facts to `docs/codex/NOTES.md`, prefer this shape so future Codex ru
 
 For repeated runs, log PASS/FAIL outcomes via:
 - `tools/helpers/record_test_result.py` (appends an evidence line to `docs/codex/NOTES.md`)
+
+## Checkpoint Dumps (Smoke Chains + Real RVZ)
+
+There are two different "oracles" we use:
+
+1) **Primary oracle (deterministic):** `sdk_port` running on PPC (Dolphin) vs `sdk_port` running on host.
+   This is what the `tests/sdk/smoke/*` suites are for.
+
+2) **Secondary oracle (best effort):** real game (`.rvz` / `.iso`) running in Dolphin, dump at a checkpoint.
+   This is useful to sanity-check that the smoke-chain isn't a "toy", but it is more fragile.
+
+### Real-game checkpoint dumping
+
+Dolphin's GDB stub on this machine does **not** accept `Z0/Z1` packets (GDB remote breakpoints),
+so `tools/ram_dump.py --breakpoint <addr>` is not reliable.
+
+Instead, use **PC/NIP polling**:
+
+- Run for a small step, halt, read stop packet, decode PC (reg `0x40`), repeat until PC==target.
+- Then dump RAM.
+
+Command pattern:
+
+```bash
+python3 tools/ram_dump.py \
+  --exec "/path/to/game.rvz" --delay 3 \
+  --pc-breakpoint 0x80001234 --pc-timeout 20 --pc-step 0.02 \
+  --addr 0x80000000 --size 0x01800000 --chunk 0x1000 \
+  --out /tmp/game_checkpoint_mem1.bin
+```
+
+Notes:
+- Use `--chunk 0x1000` for large MEM1 dumps; it's slower but more reliable on Dolphin's stub.
+- If you don't know the target PC yet: do a short `--run 0.2 --halt` and log the observed stop packet in `docs/codex/NOTES.md`.

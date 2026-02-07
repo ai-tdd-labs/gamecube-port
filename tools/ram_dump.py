@@ -184,18 +184,24 @@ class DolphinGDB:
         return bytes(data)
 
     def halt(self):
-        """Halt CPU execution."""
+        """Halt CPU execution.
+
+        Returns the first stop-reply packet payload (b"S.." or b"T..") if seen.
+        """
         self.sock.send(b'\x03')
         # Dolphin replies with a stop packet (e.g. "Sxx" / "Txx"), but it can
         # interleave async console output packets ('O'). Drain until stop.
+        stop = None
         for _ in range(64):
             payload = self._recv_packet_payload(timeout=2)
             if payload is None:
                 break
             payload = payload.strip()
             if payload.startswith(b"S") or payload.startswith(b"T"):
+                stop = payload
                 break
         time.sleep(0.1)
+        return stop
 
     def cont(self):
         """Continue CPU execution."""
@@ -259,11 +265,42 @@ class DolphinGDB:
         """Continue execution for a duration then halt."""
         self.cont()
         time.sleep(duration)
-        self.halt()
+        return self.halt()
 
     def close(self):
         if self.sock:
             self.sock.close()
+
+
+def parse_stop_pc(stop_payload):
+    """Extract PC from a Dolphin stop-reply packet.
+
+    Example: b'T0540:800ba2f0;01:8019d798;'
+    In Dolphin's GDB stub, reg 0x40 is typically NIP/PC.
+    """
+    if not stop_payload:
+        return None
+    try:
+        s = stop_payload.decode("ascii", errors="ignore")
+    except Exception:
+        return None
+
+    # Prefer reg 0x40 (PC/NIP).
+    for key in ("40", "41"):
+        needle = f"{key}:"
+        idx = s.find(needle)
+        if idx >= 0:
+            j = idx + len(needle)
+            k = s.find(";", j)
+            if k < 0:
+                k = len(s)
+            val = s[j:k]
+            try:
+                return int(val, 16)
+            except Exception:
+                pass
+
+    return None
 
 
 def parse_int(s):
@@ -346,6 +383,12 @@ Examples:
                         help='Optional software breakpoint address (e.g. 0x800057C0). If set, continue until hit, then dump.')
     parser.add_argument('--bp-timeout', type=float, default=15.0,
                         help='Seconds to wait for breakpoint hit (default: 15).')
+    parser.add_argument('--pc-breakpoint', type=parse_int, default=None,
+                        help='Optional PC/NIP checkpoint address. If set, poll-run/halts until PC==addr, then dump (works even when Z0/Z1 are unsupported).')
+    parser.add_argument('--pc-timeout', type=float, default=15.0,
+                        help='Seconds to wait for PC checkpoint (default: 15).')
+    parser.add_argument('--pc-step', type=float, default=0.02,
+                        help='Seconds to run between halt polls while waiting for --pc-breakpoint (default: 0.02).')
 
     args = parser.parse_args()
 
@@ -382,6 +425,10 @@ Examples:
         sys.exit(1)
 
     try:
+        if args.breakpoint is not None and args.pc_breakpoint is not None:
+            print("Choose either --breakpoint (Z0/Z1) or --pc-breakpoint (polling), not both.")
+            sys.exit(2)
+
         if args.breakpoint is not None:
             bp = args.breakpoint
             print(f"Setting breakpoint @ 0x{bp:08X} ...")
@@ -399,6 +446,28 @@ Examples:
                 print("Breakpoint not hit before timeout.")
                 sys.exit(4)
             print(f"Stopped: {stop.decode(errors='replace')}")
+
+        elif args.pc_breakpoint is not None:
+            target = args.pc_breakpoint
+            print(f"Polling until PC==0x{target:08X} (timeout {args.pc_timeout}s, step {args.pc_step}s) ...")
+            end = time.time() + args.pc_timeout
+            last_pc = None
+            hit = False
+            while time.time() < end:
+                stop = gdb.run_and_halt(duration=args.pc_step)
+                pc = parse_stop_pc(stop)
+                if pc is not None:
+                    last_pc = pc
+                    if pc == target:
+                        hit = True
+                        break
+            if not hit:
+                if last_pc is None:
+                    print("PC checkpoint not hit (no PC decoded from stop packets).")
+                else:
+                    print(f"PC checkpoint not hit. Last observed PC=0x{last_pc:08X}")
+                sys.exit(4)
+            print("PC checkpoint hit; dumping.")
 
         elif args.run > 0:
             # In debugger mode Dolphin can start paused; explicitly continue.

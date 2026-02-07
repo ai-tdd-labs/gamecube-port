@@ -9,6 +9,12 @@ Rules:
 
 ## Confirmed Behaviors
 
+### Dolphin GDB Stub (macOS build on this machine)
+- Stop packets include PC/NIP in reg `0x40` (usable for PC-polling checkpoints).
+  Evidence: `tools/ram_dump.py` `parse_stop_pc()`; observed stop example `T0540:800ba2f0;01:8019d798;` from real MP4 RVZ.
+- GDB remote breakpoint packets (`Z0`/`Z1`) are not accepted by the stub (cannot rely on `--breakpoint`).
+  Evidence: `tools/ram_dump.py` `set_sw_breakpoint()` attempts; see commit `f3a50df`.
+
 ### VISetNextFrameBuffer
 - Callsites enumerated across MP4/TP/WW/AC.
   Evidence: docs/sdk/vi/VISetNextFrameBuffer.md
