@@ -33,6 +33,7 @@ pkill -f "Dolphin -b -d -e" >/dev/null 2>&1 || true
 for attempt in 1 2 3; do
   if PYTHONUNBUFFERED=1 python3 -u tools/ram_dump.py \
       --exec "$DOL_PATH" \
+      --enable-mmu \
       --addr "$ADDR" \
       --size "$SIZE" \
       --out "$OUT_BIN" \

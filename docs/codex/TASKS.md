@@ -6,9 +6,12 @@ evidence-based. Mark items DONE with a commit hash.
 ## Now (priority order)
 
 0. Real-game breakpoint dump tooling (secondary oracle)
-   - [ ] Harden `tools/ram_dump.py` for large MEM1 dumps (chunked streaming, retries). (uncommitted)
-   - [ ] Add RVZ MEM1 dump helper at PC checkpoint (`tools/dump_expected_rvz_mem1_at_pc.sh`). (uncommitted)
-   - [ ] Validate RVZ checkpoint dump on MP4: stop at `OSDisableInterrupts` PC `0x800B723C`, dump MEM1, archive under `tests/oracles/mp4_rvz/`. (pending)
+   - [x] Large MEM1 dumps work reliably with conservative chunking (`--chunk 0x1000`) and reconnect/retry logic in `tools/ram_dump.py`.
+     Evidence: `tools/dump_expected_mem1.sh`, `tests/sdk/smoke/mp4_pad_init_chain_001/expected/mp4_pad_init_chain_001_mem1.bin`
+   - [x] Add RVZ MEM1 dump helper at PC checkpoint (`tools/dump_expected_rvz_mem1_at_pc.sh`).
+     Note: now prefers Z0/Z1 breakpoint; falls back to PC polling if unsupported.
+   - [x] Validate RVZ checkpoint dump on MP4: stop at `OSDisableInterrupts` PC `0x800B723C`, dump MEM1, archive under `tests/oracles/mp4_rvz/`.
+     Evidence: `tests/oracles/mp4_rvz/mp4_rvz_pc_800B723C_mem1_24m.bin`
 
 1. RAM-backed SDK state infrastructure (big-endian in MEM1)
    - [x] Add minimal state page helpers (`src/sdk_port/sdk_state.h`). (68ac0f7)
@@ -30,7 +33,8 @@ evidence-based. Mark items DONE with a commit hash.
    - [x] Extend MP4 chain with remaining GXInit tail calls after `GXSetDither` and add missing GX setters/pokes. (0706f15)
    - [x] Append HuPadInit SDK call order into `MP4_chain_all.csv` (PAD/SI/OS/VI sequence) and keep coverage in-sync. (cf9b190)
    - [x] Add HuPerfInit/HuPerfBegin SDK calls (OSStopwatch init + GX draw sync callback/token). (d7245e5)
-   - [x] Fix+cover `OSDisableInterrupts/OSRestoreInterrupts` MP4-realistic test (DOL expected + host actual). (uncommitted)
+   - [x] Fix+cover `OSDisableInterrupts/OSRestoreInterrupts` MP4-realistic test (DOL expected + host actual).
+     Evidence: `tests/sdk/smoke/mp4_pad_init_chain_001/`
    - [ ] Next MP4 init blocker: HuDataInit (DVDConvertPathToEntrynum / OSPanic on missing paths).
 
 ## Later
