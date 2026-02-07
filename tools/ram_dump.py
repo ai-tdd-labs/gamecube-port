@@ -201,6 +201,60 @@ class DolphinGDB:
         """Continue CPU execution."""
         self._send('c')
 
+    def set_sw_breakpoint(self, addr, kind=4):
+        """Set a breakpoint via GDB remote protocol.
+
+        Dolphin's stub doesn't always implement Z0 (software breakpoints).
+        We'll try Z0 first, then Z1 (hardware breakpoint) as a fallback.
+        """
+        for z in ("Z0", "Z1"):
+            self._send(f"{z},{addr:x},{kind:x}")
+            for _ in range(64):
+                payload = self._recv_packet_payload(timeout=2)
+                if payload is None:
+                    break
+                payload = payload.strip()
+                if payload.startswith(b"O"):
+                    continue
+                if payload == b"OK":
+                    return True
+                if payload.startswith(b"E"):
+                    break
+        return False
+
+    def clear_sw_breakpoint(self, addr, kind=4):
+        """Clear a breakpoint via GDB remote protocol (z0/z1)."""
+        ok = False
+        for z in ("z0", "z1"):
+            self._send(f"{z},{addr:x},{kind:x}")
+            for _ in range(64):
+                payload = self._recv_packet_payload(timeout=2)
+                if payload is None:
+                    break
+                payload = payload.strip()
+                if payload.startswith(b"O"):
+                    continue
+                if payload == b"OK":
+                    ok = True
+                    break
+                if payload.startswith(b"E"):
+                    break
+        return ok
+
+    def wait_stop(self, timeout=10.0):
+        """Wait until the target stops (breakpoint/signal). Returns stop packet payload or None."""
+        end = time.time() + timeout
+        while time.time() < end:
+            payload = self._recv_packet_payload(timeout=1)
+            if payload is None:
+                continue
+            payload = payload.strip()
+            if payload.startswith(b"O"):
+                continue
+            if payload.startswith(b"S") or payload.startswith(b"T"):
+                return payload
+        return None
+
     def run_and_halt(self, duration=0.5):
         """Continue execution for a duration then halt."""
         self.cont()
@@ -288,6 +342,10 @@ Examples:
     # span multiple pages. 4 KiB is slower but reliable for big MEM1 dumps.
     parser.add_argument('--chunk', type=parse_int, default=0x1000,
                         help='Read chunk size (default: 0x1000). Increase if stable on your setup.')
+    parser.add_argument('--breakpoint', type=parse_int, default=None,
+                        help='Optional software breakpoint address (e.g. 0x800057C0). If set, continue until hit, then dump.')
+    parser.add_argument('--bp-timeout', type=float, default=15.0,
+                        help='Seconds to wait for breakpoint hit (default: 15).')
 
     args = parser.parse_args()
 
@@ -324,7 +382,25 @@ Examples:
         sys.exit(1)
 
     try:
-        if args.run > 0:
+        if args.breakpoint is not None:
+            bp = args.breakpoint
+            print(f"Setting breakpoint @ 0x{bp:08X} ...")
+            if not gdb.set_sw_breakpoint(bp):
+                print("Failed to set breakpoint (stub may not support Z0).")
+                sys.exit(3)
+            print(f"Continuing until breakpoint (timeout {args.bp_timeout}s) ...")
+            gdb.cont()
+            stop = gdb.wait_stop(timeout=args.bp_timeout)
+            # Ensure we're halted/stable for the dump.
+            gdb.halt()
+            # Best-effort cleanup.
+            gdb.clear_sw_breakpoint(bp)
+            if stop is None:
+                print("Breakpoint not hit before timeout.")
+                sys.exit(4)
+            print(f"Stopped: {stop.decode(errors='replace')}")
+
+        elif args.run > 0:
             # In debugger mode Dolphin can start paused; explicitly continue.
             # (If it was already running, 'c' is harmless.)
             print(f"Running emulation for {args.run}s then halting...")
