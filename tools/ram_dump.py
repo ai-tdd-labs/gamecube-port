@@ -124,7 +124,9 @@ class DolphinGDB:
                 continue
 
             hex_data = payload.decode(errors="replace").strip()
-            if hex_data.startswith('E'):
+            # GDB remote protocol error replies are "E" + 2 hex digits (length 3).
+            # Memory data itself is hex bytes and may validly start with 'E' (e.g. 0xEC...).
+            if len(hex_data) == 3 and hex_data[0] == "E":
                 return None
             for ch in hex_data:
                 if ch not in "0123456789abcdefABCDEF":
