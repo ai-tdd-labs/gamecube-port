@@ -220,10 +220,12 @@ class DolphinGDB:
                 if payload is None:
                     break
                 payload = payload.strip()
-                if payload.startswith(b"O"):
-                    continue
                 if payload == b"OK":
                     return True
+                # Async console output (hex-encoded) - ignore.
+                # NOTE: must check OK first; it also starts with 'O'.
+                if payload.startswith(b"O"):
+                    continue
                 if payload.startswith(b"E"):
                     break
         return False
@@ -238,11 +240,13 @@ class DolphinGDB:
                 if payload is None:
                     break
                 payload = payload.strip()
-                if payload.startswith(b"O"):
-                    continue
                 if payload == b"OK":
                     ok = True
                     break
+                # Async console output (hex-encoded) - ignore.
+                # NOTE: must check OK first; it also starts with 'O'.
+                if payload.startswith(b"O"):
+                    continue
                 if payload.startswith(b"E"):
                     break
         return ok

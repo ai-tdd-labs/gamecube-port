@@ -9,5 +9,6 @@ This repo treats real-game assets as **secondary oracle** only (best effort). Th
 
 ### Real-game dump tooling
 
-Use `tools/ram_dump.py` with `--pc-breakpoint` (PC polling) because this Dolphin build does not accept GDB remote breakpoint packets (`Z0/Z1`).
+Preferred: use `tools/ram_dump.py` with `--breakpoint` (GDB remote `Z0/Z1`) to stop at an exact checkpoint and dump RAM.
 
+Fallback: use `--pc-breakpoint` polling if needed.

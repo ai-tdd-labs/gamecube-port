@@ -112,10 +112,10 @@ There are two different "oracles" we use:
 
 ### Real-game checkpoint dumping
 
-Dolphin's GDB stub on this machine does **not** accept `Z0/Z1` packets (GDB remote breakpoints),
-so `tools/ram_dump.py --breakpoint <addr>` is not reliable.
+On this machine, Dolphin's GDB stub **does** accept `Z0/Z1` packets (GDB remote breakpoints),
+so `tools/ram_dump.py --breakpoint <addr>` is the preferred way to reach an exact checkpoint.
 
-Instead, use **PC/NIP polling**:
+If you cannot rely on breakpoints for a particular run (e.g. address not hit / timing issues), use **PC/NIP polling**:
 
 - Run for a small step, halt, read stop packet, decode PC (reg `0x40`), repeat until PC==target.
 - Then dump RAM.
@@ -125,7 +125,7 @@ Command pattern:
 ```bash
 python3 tools/ram_dump.py \
   --exec "/path/to/game.rvz" --delay 3 \
-  --pc-breakpoint 0x80001234 --pc-timeout 20 --pc-step 0.02 \
+  --breakpoint 0x80001234 --bp-timeout 20 \
   --addr 0x80000000 --size 0x01800000 --chunk 0x1000 \
   --out /tmp/game_checkpoint_mem1.bin
 ```
@@ -133,3 +133,13 @@ python3 tools/ram_dump.py \
 Notes:
 - Use `--chunk 0x1000` for large MEM1 dumps; it's slower but more reliable on Dolphin's stub.
 - If you don't know the target PC yet: do a short `--run 0.2 --halt` and log the observed stop packet in `docs/codex/NOTES.md`.
+
+PC polling fallback:
+
+```bash
+python3 tools/ram_dump.py \
+  --exec "/path/to/game.rvz" --delay 3 \
+  --pc-breakpoint 0x80001234 --pc-timeout 20 --pc-step 0.02 \
+  --addr 0x80000000 --size 0x01800000 --chunk 0x1000 \
+  --out /tmp/game_checkpoint_mem1.bin
+```
