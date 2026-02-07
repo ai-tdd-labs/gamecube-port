@@ -146,3 +146,12 @@ PlannedBatch4,144,GXPokeDstAlpha,sdk,,tests/sdk/gx/gx_poke_dst_alpha,1/1,1,1,1,y
 PlannedBatch4,145,GXPokeZMode,sdk,,tests/sdk/gx/gx_poke_z_mode,1/1,1,1,1,y
 PlannedBatch4,146,GXSetGPMetric,sdk,,tests/sdk/gx/gx_set_gp_metric,1/1,1,1,1,y
 PlannedBatch4,147,GXClearGPMetric,sdk,,tests/sdk/gx/gx_clear_gp_metric,1/1,1,1,1,y
+HuPadInit,1,PADSetSpec,sdk,,tests/sdk/pad/pad_set_spec,1/1,1,1,1,y
+HuPadInit,2,PADInit,sdk,v,tests/sdk/pad/pad_init,1/1,1,1,1,y
+HuPadInit,3,SISetSamplingRate,sdk,,tests/sdk/si/si_set_sampling_rate,1/1,1,1,1,y
+HuPadInit,4,OSDisableInterrupts,sdk,,tests/sdk/os/os_disable_interrupts,0/1,0,0,0,
+HuPadInit,5,VISetPostRetraceCallback,sdk,,tests/sdk/vi/vi_set_post_retrace_callback,1/1,1,1,1,y
+HuPadInit,6,OSRestoreInterrupts,sdk,,tests/sdk/os/os_disable_interrupts,0/1,0,0,0,
+HuPadInit,7,VIWaitForRetrace,sdk,v,tests/sdk/vi/vi_wait_for_retrace,1/1,1,1,1,y
+HuPadInit,8,VIWaitForRetrace,sdk,v,tests/sdk/vi/vi_wait_for_retrace,1/1,1,1,1,y
+HuPadInit,9,PADControlMotor,sdk,,tests/sdk/pad/pad_control_motor,1/1,1,1,1,y
