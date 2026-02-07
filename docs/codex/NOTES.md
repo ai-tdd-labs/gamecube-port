@@ -16,6 +16,8 @@ Rules:
   Evidence: `tools/ram_dump.py --breakpoint 0x800057c0` hit and returned stop `T0540:800057c0;...` during real MP4 RVZ run.
 - Previous "Z0/Z1 not supported" conclusion was a bug in our client: it ignored the `OK` reply because it starts with `O`.
   Evidence: `tools/ram_dump.py` fix after commit `c19d1f5`.
+- Real MP4 RVZ breakpoint test (USA): breakpoint at `OSDisableInterrupts` address `0x800B723C` hits and stops (`T0540:800b723c;...`).
+  Evidence: `/tmp/mp4_rvz_osdisable_bp_0x80300000.bin` produced by `tools/ram_dump.py --breakpoint 0x800B723C` on `/Users/chrislamark/projects/recomp/gamecube_static_recomp/game_files/Mario Party 4 (USA).rvz`
 
 ### MP4 checkpoint smoke chain: mp4_pad_init_chain_001
 - Purpose: validate combined SDK effects for the HuPadInit-related subset (SI/VI/PAD + OS interrupt gating) as a checkpoint dump.
