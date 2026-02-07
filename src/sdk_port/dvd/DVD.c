@@ -1,6 +1,8 @@
 #include <stdint.h>
+#include <string.h>
 
 typedef uint32_t u32;
+typedef int32_t s32;
 
 // RAM-backed state (big-endian in MEM1) for dump comparability.
 #include "../sdk_state.h"
@@ -55,4 +57,55 @@ int DVDClose(DVDFileInfo *file) {
     gc_dvd_close_calls = gc_sdk_state_load_u32_or(0x360, gc_dvd_close_calls) + 1u;
     gc_sdk_state_store_u32be(0x360, gc_dvd_close_calls);
     return 1;
+}
+
+// -----------------------------------------------------------------------------
+// DVD filesystem path -> entrynum
+//
+// In the real SDK this walks the disc FST. We do not have a full disc model yet.
+//
+// For now we provide a tiny injectable map so we can write deterministic tests
+// for MP4 callsites (e.g. HuDataInit validates that its data/*.bin paths exist).
+// -----------------------------------------------------------------------------
+
+static const char *g_dvd_test_paths[512];
+static s32 g_dvd_test_path_count;
+
+void gc_dvd_test_reset_paths(void) {
+    for (u32 i = 0; i < (u32)g_dvd_test_path_count; i++) {
+        g_dvd_test_paths[i] = 0;
+    }
+    g_dvd_test_path_count = 0;
+}
+
+void gc_dvd_test_set_paths(const char **paths, s32 count) {
+    gc_dvd_test_reset_paths();
+    if (!paths || count <= 0) {
+        return;
+    }
+    if (count > (s32)(sizeof(g_dvd_test_paths) / sizeof(g_dvd_test_paths[0]))) {
+        count = (s32)(sizeof(g_dvd_test_paths) / sizeof(g_dvd_test_paths[0]));
+    }
+    for (s32 i = 0; i < count; i++) {
+        g_dvd_test_paths[i] = paths[i];
+    }
+    g_dvd_test_path_count = count;
+}
+
+// SDK signature (from decomp): s32 DVDConvertPathToEntrynum(char* pathPtr)
+s32 DVDConvertPathToEntrynum(char *pathPtr) {
+    if (!pathPtr) {
+        return -1;
+    }
+    // Deterministic test backend: return the index for known paths.
+    for (s32 i = 0; i < g_dvd_test_path_count; i++) {
+        const char *p = g_dvd_test_paths[i];
+        if (!p) {
+            continue;
+        }
+        if (strcmp(p, pathPtr) == 0) {
+            return i;
+        }
+    }
+    return -1;
 }

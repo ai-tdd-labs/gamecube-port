@@ -179,6 +179,16 @@ Rules:
   Evidence: `tools/dump_expected_rvz_mem1_at_pc.sh "...Mario Party 4 (USA).rvz" 0x800B723C tests/oracles/mp4_rvz/mp4_rvz_pc_800B723C_mem1_24m.bin`
   - SHA256: `98316b556ec8c60ad775cba9a1d6048e15347a8cbd9fe1422147091f94a637db`
 
+### DVDConvertPathToEntrynum
+
+- Callsite (MP4): `HuDataInit` validates that a list of `data/*.bin` paths exist, and panics if any returns `-1`.
+  Evidence: `decomp_mario_party_4/src/game/data.c`
+- Current port status: deterministic test backend only (injectable path table), not a full disc FST model yet.
+  Evidence: `src/sdk_port/dvd/DVD.c`
+- Testcase:
+  - `dvd_convert_path_to_entrynum_mp4_hu_data_init_001`: returns stable indices for known MP4 `data/*.bin` paths; returns `-1` for a missing path.
+    Evidence: `tests/sdk/dvd/dvd_convert_path_to_entrynum/expected/dvd_convert_path_to_entrynum_mp4_hu_data_init_001.bin` and `tests/sdk/dvd/dvd_convert_path_to_entrynum/actual/dvd_convert_path_to_entrynum_mp4_hu_data_init_001.bin`
+
 ## Test Runs (auto)
 
 - Format: `[PASS|FAIL] <label> expected=<path> actual=<path> (first_mismatch=0x........)`

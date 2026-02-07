@@ -35,7 +35,9 @@ evidence-based. Mark items DONE with a commit hash.
    - [x] Add HuPerfInit/HuPerfBegin SDK calls (OSStopwatch init + GX draw sync callback/token). (d7245e5)
    - [x] Fix+cover `OSDisableInterrupts/OSRestoreInterrupts` MP4-realistic test (DOL expected + host actual).
      Evidence: `tests/sdk/smoke/mp4_pad_init_chain_001/`
-   - [ ] Next MP4 init blocker: HuDataInit (DVDConvertPathToEntrynum / OSPanic on missing paths).
+   - [x] HuDataInit: cover `DVDConvertPathToEntrynum` MP4 callsite behavior (minimal deterministic backend).
+     Evidence: `tests/sdk/dvd/dvd_convert_path_to_entrynum/`
+   - [ ] Next MP4 init step: extract SDK calls (and add MP4 callsite tests) for `GWInit`, `pfInit`, `HuSprInit`, `Hu3DInit`, `WipeInit`.
 
 ## Later
 
