@@ -10,3 +10,6 @@ ADDR=0x80000000
 SIZE=0x01800000
 
 exec tools/dump_expected.sh "$DOL_PATH" "$OUT_BIN" "$ADDR" "$SIZE" "$RUN" 0x1000
+#
+# Use a larger chunk size for MEM1 dumps: 24 MiB / 0x10000 = 384 reads.
+# 0x1000 would require 6144 reads and is much more brittle/slow over GDB.

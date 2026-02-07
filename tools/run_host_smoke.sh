@@ -32,11 +32,13 @@ cc -O2 -g \
   "$repo_root/src/sdk_port/os/OSArena.c" \
   "$repo_root/src/sdk_port/os/OSCache.c" \
   "$repo_root/src/sdk_port/os/OSAlloc.c" \
+  "$repo_root/src/sdk_port/os/OSInterrupts.c" \
   "$repo_root/src/sdk_port/os/OSInit.c" \
   "$repo_root/src/sdk_port/os/OSFastCast.c" \
   "$repo_root/src/sdk_port/os/OSError.c" \
   "$repo_root/src/sdk_port/os/OSSystem.c" \
   "$repo_root/src/sdk_port/os/OSRtc.c" \
+  "$repo_root/src/sdk_port/si/SI.c" \
   "$repo_root/src/sdk_port/vi/VI.c" \
   "$repo_root/src/sdk_port/pad/PAD.c" \
   "$repo_root/src/sdk_port/gx/GX.c" \

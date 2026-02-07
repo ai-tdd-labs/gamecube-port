@@ -44,6 +44,7 @@ case "$subsystem" in
       "$repo_root/src/sdk_port/os/OSArena.c"
       "$repo_root/src/sdk_port/os/OSCache.c"
       "$repo_root/src/sdk_port/os/OSAlloc.c"
+      "$repo_root/src/sdk_port/os/OSInterrupts.c"
       "$repo_root/src/sdk_port/os/OSInit.c"
       "$repo_root/src/sdk_port/os/OSFastCast.c"
       "$repo_root/src/sdk_port/os/OSError.c"
@@ -54,8 +55,20 @@ case "$subsystem" in
 esac
 
 case "$subsystem" in
+  si|os+dvd+vi+pad+gx)
+    port_srcs+=(
+      "$repo_root/src/sdk_port/os/OSInterrupts.c"
+      "$repo_root/src/sdk_port/os/OSError.c"
+      "$repo_root/src/sdk_port/vi/VI.c"
+      "$repo_root/src/sdk_port/si/SI.c"
+    )
+    ;;
+esac
+
+case "$subsystem" in
   vi|os+dvd+vi+pad+gx)
     port_srcs+=(
+      "$repo_root/src/sdk_port/os/OSInterrupts.c"
       "$repo_root/src/sdk_port/vi/VI.c"
     )
     ;;
@@ -64,6 +77,10 @@ esac
 case "$subsystem" in
   pad|os+dvd+vi+pad+gx)
     port_srcs+=(
+      "$repo_root/src/sdk_port/os/OSInterrupts.c"
+      "$repo_root/src/sdk_port/os/OSError.c"
+      "$repo_root/src/sdk_port/vi/VI.c"
+      "$repo_root/src/sdk_port/si/SI.c"
       "$repo_root/src/sdk_port/pad/PAD.c"
     )
     ;;

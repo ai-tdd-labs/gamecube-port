@@ -6,6 +6,10 @@ typedef uint32_t u32;
 // RAM-backed state (big-endian in MEM1) for dump comparability.
 #include "../sdk_state.h"
 
+// OS interrupt primitives (sdk_port model).
+int OSDisableInterrupts(void);
+int OSRestoreInterrupts(int level);
+
 u16 gc_vi_regs[64];
 u32 gc_vi_disable_calls;
 u32 gc_vi_restore_calls;
@@ -22,6 +26,39 @@ u32 gc_vi_black;
 // deterministic tests only require that the symbol exists.
 void VISetNextFrameBuffer(void *fb) { (void)fb; }
 
+typedef void (*VIRetraceCallback)(u32 retraceCount);
+
+static u32 gc_vi_post_cb_ptr;
+
+static int VI_DisableInterrupts(void) {
+    u32 v = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_DISABLE_CALLS, gc_vi_disable_calls);
+    v++;
+    gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_DISABLE_CALLS, &gc_vi_disable_calls, v);
+    return OSDisableInterrupts();
+}
+
+static void VI_RestoreInterrupts(int level) {
+    u32 v = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_RESTORE_CALLS, gc_vi_restore_calls);
+    v++;
+    gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_RESTORE_CALLS, &gc_vi_restore_calls, v);
+    (void)OSRestoreInterrupts(level);
+}
+
+VIRetraceCallback VISetPostRetraceCallback(VIRetraceCallback callback) {
+    u32 old = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_POST_CB_PTR, gc_vi_post_cb_ptr);
+
+    // Match SDK pattern: protect callback swap with interrupts disabled.
+    int lvl = VI_DisableInterrupts();
+    gc_vi_post_cb_ptr = (u32)(uintptr_t)callback;
+    gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_POST_CB_PTR, &gc_vi_post_cb_ptr, gc_vi_post_cb_ptr);
+    u32 calls = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_POST_CB_SET_CALLS, 0);
+    calls++;
+    gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_POST_CB_SET_CALLS, 0, calls);
+    VI_RestoreInterrupts(lvl);
+
+    return (VIRetraceCallback)(uintptr_t)old;
+}
+
 void VIFlush(void) {
     u32 v = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_FLUSH_CALLS, gc_vi_flush_calls);
     v++;
@@ -34,38 +71,24 @@ void VIWaitForRetrace(void) {
     gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_WAIT_RETRACE_CALLS, &gc_vi_wait_retrace_calls, v);
 }
 
-static int OSDisableInterrupts(void) {
-    u32 v = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_DISABLE_CALLS, gc_vi_disable_calls);
-    v++;
-    gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_DISABLE_CALLS, &gc_vi_disable_calls, v);
-    return 1;
-}
-
-static void OSRestoreInterrupts(int enabled) {
-    (void)enabled;
-    u32 v = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_RESTORE_CALLS, gc_vi_restore_calls);
-    v++;
-    gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_RESTORE_CALLS, &gc_vi_restore_calls, v);
-}
-
 #define VI_DTV_STAT 55
 
 u32 VIGetDTVStatus(void) {
     u32 stat;
     int interrupt;
 
-    interrupt = OSDisableInterrupts();
+    interrupt = VI_DisableInterrupts();
     // regs are u16 BE in RAM-backed state.
     u16 r = gc_sdk_state_load_u16be_or(GC_SDK_OFF_VI_REGS_U16BE + (VI_DTV_STAT * 2u), gc_vi_regs[VI_DTV_STAT]);
     gc_vi_regs[VI_DTV_STAT] = r;
     stat = ((u32)r & 3u);
-    OSRestoreInterrupts(interrupt);
+    VI_RestoreInterrupts(interrupt);
     return (stat & 1u);
 }
 
 // Minimal VIInit/VIGetTvFormat for deterministic tests.
 static u32 s_tv_format;
-#define VI_NTSC 0
+enum { VI_NTSC = 0 };
 
 void VIInit(void) {
     s_tv_format = VI_NTSC;

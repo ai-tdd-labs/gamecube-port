@@ -21,6 +21,7 @@ u32 gc_pad_cmd_probe_device[4];
 u32 gc_pad_spec;
 u32 gc_pad_fix_bits;
 u16 gc_os_wireless_pad_fix_mode;
+u32 gc_pad_motor_cmd[4];
 
 static u32 RecalibrateBits;
 
@@ -30,11 +31,20 @@ static u32 RecalibrateBits;
 #define PAD_CHAN2_BIT 0x20000000u
 #define PAD_CHAN3_BIT 0x10000000u
 
-static void PADSetSpec(u32 spec) { (void)spec; }
+// Exposed in the SDK. For now we only persist the chosen spec for callsite coverage.
+void PADSetSpec(u32 spec) { gc_pad_spec = spec; }
 static u64 OSGetTime(void) { return 0; }
-static void SIRefreshSamplingRate(void) { gc_pad_si_refresh_calls++; }
+// SI module (sdk_port). PADInit calls this during init.
+void SIRefreshSamplingRate(void);
+static void PAD_SIRefreshSamplingRate(void) { gc_pad_si_refresh_calls++; SIRefreshSamplingRate(); }
 static void OSRegisterResetFunction(void *info) { (void)info; gc_pad_register_reset_calls++; }
 static BOOL PADReset(u32 mask) { gc_pad_reset_mask = mask; return TRUE; }
+
+void PADControlMotor(s32 chan, u32 command) {
+    if (chan < 0 || chan >= 4) return;
+    gc_pad_motor_cmd[chan] = command;
+    gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_MOTOR_CMD_BASE + (uint32_t)chan * 4u, command);
+}
 
 BOOL PADInit(void) {
     s32 chan;
@@ -60,7 +70,7 @@ BOOL PADInit(void) {
         gc_pad_cmd_probe_device[chan] = (0x4D << 24) | (chan << 22) | ((gc_os_wireless_pad_fix_mode & 0x3fffu) << 8);
     }
 
-    SIRefreshSamplingRate();
+    PAD_SIRefreshSamplingRate();
     OSRegisterResetFunction(0);
 
     return PADReset(PAD_CHAN0_BIT | PAD_CHAN1_BIT | PAD_CHAN2_BIT | PAD_CHAN3_BIT);

@@ -92,6 +92,11 @@ enum {
   GC_SDK_OFF_OSALLOC_ARENA_START = 0x2C,  // u32
   GC_SDK_OFF_OSALLOC_ARENA_END = 0x30,    // u32
 
+  // OS interrupt state (minimal; enough for HuPadInit/SISetSamplingRate critical sections).
+  GC_SDK_OFF_OS_INTS_ENABLED = 0x40,       // u32 (0/1)
+  GC_SDK_OFF_OS_DISABLE_CALLS = 0x44,      // u32
+  GC_SDK_OFF_OS_RESTORE_CALLS = 0x48,      // u32
+
   // VI state (subset sufficient for current deterministic tests + smoke snapshot).
   GC_SDK_OFF_VI_REGS_U16BE = 0x100,         // 64 * u16 = 0x80 bytes
   GC_SDK_OFF_VI_DISABLE_CALLS = 0x180,
@@ -122,6 +127,10 @@ enum {
   GC_SDK_OFF_VI_PAN_SIZE_X = 0x1F8,
   GC_SDK_OFF_VI_PAN_SIZE_Y = 0x1FC,
 
+  // VI retrace callbacks (used by MP4 HuPadInit).
+  GC_SDK_OFF_VI_POST_CB_PTR = 0x200,        // u32 (function pointer)
+  GC_SDK_OFF_VI_POST_CB_SET_CALLS = 0x204,  // u32
+
   // DVD (minimal subset)
   GC_SDK_OFF_DVD_INITIALIZED = 0x300,
   GC_SDK_OFF_DVD_DRIVE_STATUS = 0x304,
@@ -133,4 +142,13 @@ enum {
   GC_SDK_OFF_GX_CP_DISP_SRC = 0x340,
   GC_SDK_OFF_GX_CP_DISP_SIZE = 0x344,
   GC_SDK_OFF_GX_COPY_DISP_DEST = 0x348,
+
+  // SI (minimal subset for HuPadInit callsite coverage)
+  GC_SDK_OFF_SI_SAMPLING_RATE = 0x360,      // u32 (0..11)
+  GC_SDK_OFF_SI_SETXY_LINE = 0x364,         // u32
+  GC_SDK_OFF_SI_SETXY_COUNT = 0x368,        // u32 (low byte)
+  GC_SDK_OFF_SI_SETXY_CALLS = 0x36C,        // u32
+
+  // PAD motor commands (minimal subset for HuPadInit)
+  GC_SDK_OFF_PAD_MOTOR_CMD_BASE = 0x3A0,    // 4 * u32
 };
