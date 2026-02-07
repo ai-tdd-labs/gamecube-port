@@ -13,7 +13,9 @@ TARGET := os_disable_interrupts_realistic_hupadinit_001
 BUILD := build
 SOURCES := .
 
-INCLUDE := -I$(REPO_ROOT) -I$(REPO_ROOT)/decomp_mario_party_4/include -I$(LIBOGC_INC)
+# NOTE: Do NOT include decomp_* headers in DOL tests.
+# Some decomps ship a nonstandard <stdint.h> that breaks typedefs like uint32_t.
+INCLUDE := -I$(REPO_ROOT) -I$(LIBOGC_INC)
 CFLAGS = -g -O2 -Wall -std=gnu99 $(MACHDEP) $(INCLUDE)
 LDFLAGS = -g $(MACHDEP) -Wl,-Map,$(notdir $@).map
 
@@ -52,4 +54,3 @@ $(OUTPUT).elf: $(OFILES)
 -include $(DEPENDS)
 
 endif
-

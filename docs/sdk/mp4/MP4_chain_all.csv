@@ -149,9 +149,9 @@ PlannedBatch4,147,GXClearGPMetric,sdk,,tests/sdk/gx/gx_clear_gp_metric,1/1,1,1,1
 HuPadInit,1,PADSetSpec,sdk,,tests/sdk/pad/pad_set_spec,1/1,1,1,1,y
 HuPadInit,2,PADInit,sdk,v,tests/sdk/pad/pad_init,1/1,1,1,1,y
 HuPadInit,3,SISetSamplingRate,sdk,,tests/sdk/si/si_set_sampling_rate,1/1,1,1,1,y
-HuPadInit,4,OSDisableInterrupts,sdk,,tests/sdk/os/os_disable_interrupts,0/1,0,0,0,
+HuPadInit,4,OSDisableInterrupts,sdk,,tests/sdk/os/os_disable_interrupts,1/1,1,1,1,y
 HuPadInit,5,VISetPostRetraceCallback,sdk,,tests/sdk/vi/vi_set_post_retrace_callback,1/1,1,1,1,y
-HuPadInit,6,OSRestoreInterrupts,sdk,,tests/sdk/os/os_disable_interrupts,0/1,0,0,0,
+HuPadInit,6,OSRestoreInterrupts,sdk,,tests/sdk/os/os_disable_interrupts,1/1,1,1,1,y
 HuPadInit,7,VIWaitForRetrace,sdk,v,tests/sdk/vi/vi_wait_for_retrace,1/1,1,1,1,y
 HuPadInit,8,VIWaitForRetrace,sdk,v,tests/sdk/vi/vi_wait_for_retrace,1/1,1,1,1,y
 HuPadInit,9,PADControlMotor,sdk,,tests/sdk/pad/pad_control_motor,1/1,1,1,1,y

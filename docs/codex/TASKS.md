@@ -24,7 +24,8 @@ evidence-based. Mark items DONE with a commit hash.
    - [x] MP4 HuPadInit blockers: MP4 cases for `SISetSamplingRate`, `VISetPostRetraceCallback`, `PADControlMotor`, plus `PADSetSpec(PAD_SPEC_5)` and update smoke chain. (9ad732e)
    - [x] Extend MP4 chain with remaining GXInit tail calls after `GXSetDither` and add missing GX setters/pokes. (0706f15)
    - [x] Append HuPadInit SDK call order into `MP4_chain_all.csv` (PAD/SI/OS/VI sequence) and keep coverage in-sync. (cf9b190)
-   - [x] Add HuPerfInit/HuPerfBegin SDK calls (OSStopwatch init + GX draw sync callback/token). (pending commit)
+   - [x] Add HuPerfInit/HuPerfBegin SDK calls (OSStopwatch init + GX draw sync callback/token). (d7245e5)
+   - [x] Fix+cover `OSDisableInterrupts/OSRestoreInterrupts` MP4-realistic test (DOL expected + host actual). (uncommitted)
    - [ ] Next MP4 init blocker: HuDataInit (DVDConvertPathToEntrynum / OSPanic on missing paths).
 
 ## Later

@@ -25,6 +25,8 @@ Rules:
 
 ### MP4 checkpoint smoke chain: mp4_pad_init_chain_001
 - Purpose: validate combined SDK effects for the HuPadInit-related subset (SI/VI/PAD + OS interrupt gating) as a checkpoint dump.
+- OSDisableInterrupts MP4-realistic test suite: `tests/sdk/os/os_disable_interrupts` now PASSes expected vs actual.
+  - Fix applied: DOL Makefile must not include decomp headers, because some decomps ship a nonstandard `<stdint.h>` that breaks `uint32_t` etc.
   Evidence: `tests/sdk/smoke/mp4_pad_init_chain_001/README.md`
 - Determinism scope:
   - Primary oracle: `sdk_port` on PPC (Dolphin DOL) vs `sdk_port` on host (virtual RAM) should be bit-exact for the dumped ranges.
