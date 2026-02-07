@@ -21,7 +21,7 @@ evidence-based. Mark items DONE with a commit hash.
    - [x] Keep `docs/sdk/mp4/MP4_chain_all.csv` as the source of SDK call order. (7ddf625)
    - [ ] For each SDK function encountered: add one test per *unique call
          variant* seen in MP4 (and later other games), not synthetic scenarios.
-   - [ ] MP4 HuPadInit next blockers: add/confirm MP4 cases for `SISetSamplingRate`, `VISetPostRetraceCallback`, `PADControlMotor` and extend with `PADSetSpec` if MP4 uses it.
+   - [x] MP4 HuPadInit blockers: MP4 cases for `SISetSamplingRate`, `VISetPostRetraceCallback`, `PADControlMotor`, plus `PADSetSpec(PAD_SPEC_5)` and update smoke chain. (pending commit)
 
 ## Later
 

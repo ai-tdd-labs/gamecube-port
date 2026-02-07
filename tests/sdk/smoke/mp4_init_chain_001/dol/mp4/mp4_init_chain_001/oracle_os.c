@@ -1,0 +1,9 @@
+#include "src/sdk_port/os/OSArena.c"
+#include "src/sdk_port/os/OSAlloc.c"
+#include "src/sdk_port/os/OSInit.c"
+#include "src/sdk_port/os/OSFastCast.c"
+#include "src/sdk_port/os/OSError.c"
+#include "src/sdk_port/os/OSSystem.c"
+#include "src/sdk_port/os/OSInterrupts.c"
+#include "src/sdk_port/os/OSRtc.c"
+

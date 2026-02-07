@@ -5,23 +5,58 @@
 //
 // This does NOT prove correctness vs the retail MP4 DOL. Phase B is for that.
 
-#include "src/sdk_port/gc_mem.c"
-
 #include "sdk_state.h"
 
-#include "src/sdk_port/os/OSArena.c"
-#include "src/sdk_port/os/OSAlloc.c"
-#include "src/sdk_port/os/OSInit.c"
-#include "src/sdk_port/os/OSFastCast.c"
-#include "src/sdk_port/os/OSError.c"
-#include "src/sdk_port/os/OSSystem.c"
-#include "src/sdk_port/os/OSRtc.c"
-#include "src/sdk_port/os/OSCache.c"
+// Important: compile sdk_port modules as separate translation units (oracle_*.c)
+// to avoid macro/enum clashes when including decompiled-style sources.
 
-#include "src/sdk_port/dvd/DVD.c"
-#include "src/sdk_port/vi/VI.c"
-#include "src/sdk_port/pad/PAD.c"
-#include "src/sdk_port/gx/GX.c"
+void gc_mem_set(uint32_t base, uint32_t size, uint8_t *host_ptr);
+
+void OSInit(void);
+void *OSGetArenaLo(void);
+void *OSGetArenaHi(void);
+uint32_t OSGetProgressiveMode(void);
+void *OSAlloc(uint32_t size);
+void OSInitFastCast(void);
+void OSReport(const char *fmt, ...);
+void OSSetArenaLo(void *addr);
+uint32_t OSGetConsoleType(void);
+uint32_t OSGetPhysicalMemSize(void);
+uint32_t OSGetConsoleSimulatedMemSize(void);
+void *OSInitAlloc(void *arenaStart, void *arenaEnd, int maxHeaps);
+int OSCreateHeap(void *start, void *end);
+int OSSetCurrentHeap(int heap);
+uint32_t OSRoundUp32B(uint32_t x);
+uint32_t OSRoundDown32B(uint32_t x);
+
+void DCStoreRangeNoSync(void *addr, uint32_t nbytes);
+
+void DVDInit(void);
+
+void VIInit(void);
+uint32_t VIGetDTVStatus(void);
+uint32_t VIGetTvFormat(void);
+void VIConfigure(const void *obj);
+void VIConfigurePan(uint16_t xOrg, uint16_t yOrg, uint16_t width, uint16_t height);
+void VISetNextFrameBuffer(void *fb);
+void VIFlush(void);
+void VIWaitForRetrace(void);
+
+int PADInit(void);
+
+typedef struct GXRenderModeObj GXRenderModeObj;
+void GXInit(void *base, uint32_t size);
+void GXAdjustForOverscan(GXRenderModeObj *rmin, GXRenderModeObj *rmout, uint16_t hor, uint16_t ver);
+void GXSetViewport(float left, float top, float wd, float ht, float nearz, float farz);
+void GXSetScissor(uint32_t left, uint32_t top, uint32_t wd, uint32_t ht);
+void GXSetDispCopySrc(uint16_t left, uint16_t top, uint16_t wd, uint16_t ht);
+void GXSetDispCopyDst(uint16_t wd, uint16_t ht);
+float GXSetDispCopyYScale(float yscale);
+float GXGetYScaleFactor(uint16_t efbHeight, uint16_t xfbHeight);
+void GXSetCopyFilter(uint8_t aa, const uint8_t sample_pattern[12][2], uint8_t vf, const uint8_t vfilter[7]);
+void GXSetPixelFmt(uint32_t pix_fmt, uint32_t z_fmt);
+void GXCopyDisp(void *dest, uint8_t clear);
+void GXSetDispCopyGamma(uint32_t gamma);
 
 // Snapshot region inside MEM1 that we *do* compare bit-exact between
 // Dolphin (PPC) and host. Full MEM1 dumps will also include lots of unrelated

@@ -150,6 +150,20 @@ Rules:
 
 ## Undocumented Quirks
 
+## Smoke Chains (PPC-vs-Host)
+
+### mp4_init_chain_001 / mp4_init_chain_002
+- Fact: Smoke DOLs must compile `sdk_port` modules as separate translation units (`oracle_*.c`) to avoid enum/macro clashes (example: `VI_NTSC` in `VI.c` vs `SI.c`).
+  Evidence: `tests/sdk/smoke/mp4_init_chain_001/dol/mp4/mp4_init_chain_001/oracle_*.c`.
+- Result: Deterministic compare window passes (marker + snapshot + sdk_state page) for both chain suites.
+  Evidence:
+  - `tests/sdk/smoke/mp4_init_chain_001/expected/mp4_init_chain_001_mem1.bin` vs `tests/sdk/smoke/mp4_init_chain_001/actual/mp4_init_chain_001_mem1.bin`
+  - `tests/sdk/smoke/mp4_init_chain_002/expected/mp4_init_chain_002_mem1.bin` vs `tests/sdk/smoke/mp4_init_chain_002/actual/mp4_init_chain_002_mem1.bin`
+
+### Real MP4 RVZ breakpoint sanity check
+- Fact: Dolphin GDB stub accepts `Z0/Z1` software breakpoints on this machine.
+  Evidence: `tools/ram_dump.py --exec "...Mario Party 4 (USA).rvz" --breakpoint 0x800B723C ...` stops at `T0540:800b723c;...`.
+
 ## Test Runs (auto)
 
 - Format: `[PASS|FAIL] <label> expected=<path> actual=<path> (first_mismatch=0x........)`

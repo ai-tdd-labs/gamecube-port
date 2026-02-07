@@ -115,6 +115,10 @@ There are two different "oracles" we use:
 2) **Secondary oracle (best effort):** real game (`.rvz` / `.iso`) running in Dolphin, dump at a checkpoint.
    This is useful to sanity-check that the smoke-chain isn't a "toy", but it is more fragile.
 
+Smoke DOL build rule:
+- Do not `#include` multiple `src/sdk_port/*/*.c` files into a *single* DOL translation unit. Some modules define overlapping enums/macros (example: `VI_NTSC` in `VI.c` vs `SI.c`).
+- Instead, add `oracle_*.c` files next to the smoke DOL and include exactly one module per file (see `tests/sdk/smoke/mp4_init_chain_001/dol/mp4/mp4_init_chain_001/oracle_*.c`).
+
 ### Real-game checkpoint dumping
 
 On this machine, Dolphin's GDB stub **does** accept `Z0/Z1` packets (GDB remote breakpoints),

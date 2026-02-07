@@ -17,6 +17,7 @@ int OSDisableInterrupts(void);
 int OSRestoreInterrupts(int level);
 
 int PADInit(void);
+void PADSetSpec(uint32_t spec);
 void PADControlMotor(int32_t chan, uint32_t cmd);
 
 enum { SNAPSHOT_ADDR = 0x80300100u };
@@ -83,6 +84,7 @@ static void emit_snapshot(void) {
 }
 
 enum { PAD_MOTOR_STOP_HARD = 2 };
+enum { PAD_SPEC_5 = 5 };
 
 int main(void) {
   gc_safepoint();
@@ -91,6 +93,8 @@ int main(void) {
   gc_sdk_state_reset();
 
   VIInit();
+  gc_safepoint();
+  PADSetSpec(PAD_SPEC_5);
   gc_safepoint();
   PADInit();
   gc_safepoint();

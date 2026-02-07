@@ -23,6 +23,7 @@ void SISetSamplingRate(uint32_t msec);
 
 // PAD
 int PADInit(void);
+void PADSetSpec(uint32_t spec);
 void PADControlMotor(int32_t chan, uint32_t cmd);
 
 static inline void store_u32be(uint8_t *p, uint32_t v) {
@@ -64,6 +65,7 @@ static void emit_snapshot(GcRam *ram) {
 }
 
 enum { PAD_MOTOR_STOP_HARD = 2 };
+enum { PAD_SPEC_5 = 5 };
 
 int main(void) {
   GcRam ram;
@@ -73,6 +75,7 @@ int main(void) {
 
   // Run the same SDK-only chain as the DOL smoke.
   VIInit();
+  PADSetSpec(PAD_SPEC_5);
   PADInit();
 
   gc_sdk_state_store_u16be_mirror(GC_SDK_OFF_VI_REGS_U16BE + (54u * 2u), 0, 0);

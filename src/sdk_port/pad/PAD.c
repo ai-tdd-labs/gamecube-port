@@ -31,8 +31,38 @@ static u32 RecalibrateBits;
 #define PAD_CHAN2_BIT 0x20000000u
 #define PAD_CHAN3_BIT 0x10000000u
 
-// Exposed in the SDK. For now we only persist the chosen spec for callsite coverage.
-void PADSetSpec(u32 spec) { gc_pad_spec = spec; }
+enum {
+    GC_PAD_MAKE_STATUS_SPEC0 = 0,
+    GC_PAD_MAKE_STATUS_SPEC1 = 1,
+    GC_PAD_MAKE_STATUS_SPEC2 = 2,
+};
+
+static u32 gc_pad_make_status_kind;
+
+// Exposed in the SDK.
+// Decomp behavior: set a MakeStatus function pointer based on spec (we persist a
+// stable "kind" token for deterministic dumps) and store Spec.
+void PADSetSpec(u32 spec) {
+    u32 kind = GC_PAD_MAKE_STATUS_SPEC2;
+    switch (spec) {
+        case 0: /* PAD_SPEC_0 */
+            kind = GC_PAD_MAKE_STATUS_SPEC0;
+            break;
+        case 1: /* PAD_SPEC_1 */
+            kind = GC_PAD_MAKE_STATUS_SPEC1;
+            break;
+        default: /* PAD_SPEC_2..5 */
+            kind = GC_PAD_MAKE_STATUS_SPEC2;
+            break;
+    }
+
+    gc_pad_spec = spec;
+    gc_pad_make_status_kind = kind;
+    gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_SPEC, spec);
+    gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_MAKE_STATUS_KIND, kind);
+}
+
+u32 PADGetSpec(void) { return gc_pad_spec; }
 static u64 OSGetTime(void) { return 0; }
 // SI module (sdk_port). PADInit calls this during init.
 void SIRefreshSamplingRate(void);

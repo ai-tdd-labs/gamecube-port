@@ -4,23 +4,40 @@
 // The oracle for phase A is "PPC build of sdk_port" vs "host build of sdk_port".
 //
 // This does NOT prove correctness vs the retail MP4 DOL. Phase B is for that.
-
-#include "src/sdk_port/gc_mem.c"
+//
+// Important: compile sdk_port modules as separate translation units (oracle_*.c)
+// to avoid macro/enum clashes when including decompiled-style sources.
 
 #include "sdk_state.h"
 
-#include "src/sdk_port/os/OSArena.c"
-#include "src/sdk_port/os/OSAlloc.c"
-#include "src/sdk_port/os/OSInit.c"
-#include "src/sdk_port/os/OSFastCast.c"
-#include "src/sdk_port/os/OSError.c"
-#include "src/sdk_port/os/OSSystem.c"
-#include "src/sdk_port/os/OSRtc.c"
+void gc_mem_set(uint32_t base, uint32_t size, uint8_t *host_ptr);
 
-#include "src/sdk_port/dvd/DVD.c"
-#include "src/sdk_port/vi/VI.c"
-#include "src/sdk_port/pad/PAD.c"
-#include "src/sdk_port/gx/GX.c"
+void OSInit(void);
+void *OSGetArenaLo(void);
+void *OSGetArenaHi(void);
+uint32_t OSGetProgressiveMode(void);
+void *OSAlloc(uint32_t size);
+void OSInitFastCast(void);
+void OSReport(const char *fmt, ...);
+
+void DVDInit(void);
+
+void VIInit(void);
+uint32_t VIGetDTVStatus(void);
+uint32_t VIGetTvFormat(void);
+void VIConfigure(const void *obj);
+void VIConfigurePan(uint16_t xOrg, uint16_t yOrg, uint16_t width, uint16_t height);
+
+int PADInit(void);
+
+typedef struct GXRenderModeObj GXRenderModeObj;
+void GXInit(void *base, uint32_t size);
+void GXAdjustForOverscan(GXRenderModeObj *rmin, GXRenderModeObj *rmout, uint16_t hor, uint16_t ver);
+void GXSetViewport(float left, float top, float wd, float ht, float nearz, float farz);
+void GXSetScissor(uint32_t left, uint32_t top, uint32_t wd, uint32_t ht);
+void GXSetDispCopySrc(uint16_t left, uint16_t top, uint16_t wd, uint16_t ht);
+void GXSetDispCopyDst(uint16_t wd, uint16_t ht);
+float GXSetDispCopyYScale(float yscale);
 
 // Snapshot region inside MEM1 that we *do* compare bit-exact between
 // Dolphin (PPC) and host. Full MEM1 dumps will also include lots of unrelated

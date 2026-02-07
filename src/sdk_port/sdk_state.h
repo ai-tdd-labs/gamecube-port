@@ -137,6 +137,8 @@ enum {
 
   // PAD (minimal subset)
   GC_SDK_OFF_PAD_INITIALIZED = 0x320,
+  GC_SDK_OFF_PAD_SPEC = 0x324,             // u32 (Spec)
+  GC_SDK_OFF_PAD_MAKE_STATUS_KIND = 0x328, // u32 (0=SPEC0,1=SPEC1,2=SPEC2)
 
   // GX (minimal subset for MP4 init chain snapshot)
   GC_SDK_OFF_GX_CP_DISP_SRC = 0x340,
