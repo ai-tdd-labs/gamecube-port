@@ -160,6 +160,12 @@ Rules:
   - `tests/sdk/smoke/mp4_init_chain_001/expected/mp4_init_chain_001_mem1.bin` vs `tests/sdk/smoke/mp4_init_chain_001/actual/mp4_init_chain_001_mem1.bin`
   - `tests/sdk/smoke/mp4_init_chain_002/expected/mp4_init_chain_002_mem1.bin` vs `tests/sdk/smoke/mp4_init_chain_002/actual/mp4_init_chain_002_mem1.bin`
 
+### MP4 chain: GXInit tail after GXSetDither
+- Fact: Dolphin SDK `GXInit()` continues with additional pixel/copy/POKE setup after `GXSetDither()`.
+  Evidence: `decomp_mario_party_4/src/dolphin/gx/GXInit.c:332+` (GXSetDstAlpha, GXSetFieldMask/Mode, GXSetCopyClamp, GXPoke*).
+- Result: Added MP4-realistic tests for the missing tail setters/pokes and appended them to `docs/sdk/mp4/MP4_chain_all.csv` so the chain stays contiguous.
+  Evidence: `docs/sdk/mp4/MP4_chain_all.csv` PlannedBatch4 (126..147) and `tests/sdk/gx/gx_*` suites.
+
 ### Real MP4 RVZ breakpoint sanity check
 - Fact: Dolphin GDB stub accepts `Z0/Z1` software breakpoints on this machine.
   Evidence: `tools/ram_dump.py --exec "...Mario Party 4 (USA).rvz" --breakpoint 0x800B723C ...` stops at `T0540:800b723c;...`.

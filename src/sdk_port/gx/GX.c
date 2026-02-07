@@ -440,6 +440,108 @@ void GXSetDispCopyGamma(u32 gamma) {
     gc_gx_copy_gamma = gamma;
 }
 
+// ---- GXInit tail setters (used by MP4 init chain after GXSetDither) ----
+
+u32 gc_gx_dst_alpha_enable;
+u32 gc_gx_dst_alpha;
+
+u32 gc_gx_field_mask_even;
+u32 gc_gx_field_mask_odd;
+
+u32 gc_gx_field_mode_field_mode;
+u32 gc_gx_field_mode_half_aspect;
+
+u32 gc_gx_copy_clamp;
+u32 gc_gx_copy_frame2field;
+
+u32 gc_gx_clear_bounding_box_calls;
+
+u32 gc_gx_poke_color_update_enable;
+u32 gc_gx_poke_alpha_update_enable;
+u32 gc_gx_poke_dither_enable;
+
+u32 gc_gx_poke_blend_type;
+u32 gc_gx_poke_blend_src;
+u32 gc_gx_poke_blend_dst;
+u32 gc_gx_poke_blend_op;
+
+u32 gc_gx_poke_alpha_mode_func;
+u32 gc_gx_poke_alpha_mode_thresh;
+u32 gc_gx_poke_alpha_read_mode;
+
+u32 gc_gx_poke_dst_alpha_enable;
+u32 gc_gx_poke_dst_alpha;
+
+u32 gc_gx_poke_zmode_enable;
+u32 gc_gx_poke_zmode_func;
+u32 gc_gx_poke_zmode_update_enable;
+
+void GXSetDstAlpha(u8 enable, u8 alpha) {
+    gc_gx_dst_alpha_enable = (u32)enable;
+    gc_gx_dst_alpha = (u32)alpha;
+}
+
+void GXSetFieldMask(u8 even, u8 odd) {
+    gc_gx_field_mask_even = (u32)even;
+    gc_gx_field_mask_odd = (u32)odd;
+}
+
+void GXSetFieldMode(u8 field_mode, u8 half_aspect) {
+    gc_gx_field_mode_field_mode = (u32)field_mode;
+    gc_gx_field_mode_half_aspect = (u32)half_aspect;
+}
+
+void GXSetCopyClamp(u32 clamp) {
+    gc_gx_copy_clamp = clamp;
+}
+
+void GXSetDispCopyFrame2Field(u32 mode) {
+    gc_gx_copy_frame2field = mode;
+}
+
+void GXClearBoundingBox(void) {
+    gc_gx_clear_bounding_box_calls++;
+}
+
+void GXPokeColorUpdate(u8 enable) {
+    gc_gx_poke_color_update_enable = (u32)enable;
+}
+
+void GXPokeAlphaUpdate(u8 enable) {
+    gc_gx_poke_alpha_update_enable = (u32)enable;
+}
+
+void GXPokeDither(u8 enable) {
+    gc_gx_poke_dither_enable = (u32)enable;
+}
+
+void GXPokeBlendMode(u32 type, u32 src_factor, u32 dst_factor, u32 op) {
+    gc_gx_poke_blend_type = type;
+    gc_gx_poke_blend_src = src_factor;
+    gc_gx_poke_blend_dst = dst_factor;
+    gc_gx_poke_blend_op = op;
+}
+
+void GXPokeAlphaMode(u32 func, u8 threshold) {
+    gc_gx_poke_alpha_mode_func = func;
+    gc_gx_poke_alpha_mode_thresh = (u32)threshold;
+}
+
+void GXPokeAlphaRead(u32 mode) {
+    gc_gx_poke_alpha_read_mode = mode;
+}
+
+void GXPokeDstAlpha(u8 enable, u8 alpha) {
+    gc_gx_poke_dst_alpha_enable = (u32)enable;
+    gc_gx_poke_dst_alpha = (u32)alpha;
+}
+
+void GXPokeZMode(u8 enable, u32 func, u8 update_enable) {
+    gc_gx_poke_zmode_enable = (u32)enable;
+    gc_gx_poke_zmode_func = func;
+    gc_gx_poke_zmode_update_enable = (u32)update_enable;
+}
+
 void GXInvalidateVtxCache(void) {
     gc_gx_invalidate_vtx_cache_calls++;
 }

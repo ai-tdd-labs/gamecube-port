@@ -22,6 +22,7 @@ evidence-based. Mark items DONE with a commit hash.
    - [ ] For each SDK function encountered: add one test per *unique call
          variant* seen in MP4 (and later other games), not synthetic scenarios.
    - [x] MP4 HuPadInit blockers: MP4 cases for `SISetSamplingRate`, `VISetPostRetraceCallback`, `PADControlMotor`, plus `PADSetSpec(PAD_SPEC_5)` and update smoke chain. (9ad732e)
+   - [x] Extend MP4 chain with remaining GXInit tail calls after `GXSetDither` and add missing GX setters/pokes. (pending commit)
 
 ## Later
 
