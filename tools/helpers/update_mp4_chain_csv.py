@@ -3,6 +3,7 @@ import csv
 from pathlib import Path
 import subprocess
 import sys
+from typing import Optional
 
 
 def repo_root() -> Path:
@@ -57,34 +58,82 @@ def main() -> int:
             suite_path = root / suite
             exp_dir = suite_path / "expected"
             act_dir = suite_path / "actual"
+            suite_slug = suite_path.name
 
             # Only count MP4 callsite testcases (dol/mp4/*), not generic or other-game variants.
+            #
+            # IMPORTANT: we must NOT depend on built artifacts (.dol files), because they are usually
+            # gitignored. The canonical case id is the directory name under dol/mp4/.
             mp4_dol_root = suite_path / "dol" / "mp4"
             mp4_cases: list[str] = []
             if mp4_dol_root.exists():
-                for dol in sorted(mp4_dol_root.glob("**/*.dol")):
-                    mp4_cases.append(dol.stem)
+                for p in sorted(mp4_dol_root.iterdir()):
+                    if not p.is_dir():
+                        continue
+
+                    # Canonical case id should match the produced .dol/.bin stem.
+                    # Prefer reading built artifact names (if present), otherwise fall back
+                    # to Makefile TARGET, otherwise directory name.
+                    dols = sorted(p.glob("*.dol"))
+                    if dols:
+                        mp4_cases.extend([d.stem for d in dols])
+                        continue
+
+                    mk = p / "Makefile"
+                    if mk.exists():
+                        for line in mk.read_text().splitlines():
+                            line = line.strip()
+                            if line.startswith("TARGET :="):
+                                mp4_cases.append(line.split(":=", 1)[1].strip())
+                                break
+                        else:
+                            mp4_cases.append(p.name)
+                    else:
+                        mp4_cases.append(p.name)
+
+            def resolve_bin(dirpath: Path, case: str) -> Optional[Path]:
+                # Convention: expected/actual bins are usually prefixed with the suite slug.
+                # Example: suite_slug=os_get_arena_lo, case=realistic_mem_alloc_001
+                # -> os_get_arena_lo_realistic_mem_alloc_001.bin
+                a = dirpath / f"{case}.bin"
+                if a.exists():
+                    return a
+                b = dirpath / f"{suite_slug}_{case}.bin"
+                if b.exists():
+                    return b
+                c = dirpath / f"{suite_slug}_mp4_{case}.bin"
+                if c.exists():
+                    return c
+                return None
 
             exp_bins = []
             act_bins = []
             if mp4_cases and exp_dir.exists():
-                exp_bins = [exp_dir / f"{name}.bin" for name in mp4_cases if (exp_dir / f"{name}.bin").exists()]
+                for name in mp4_cases:
+                    p = resolve_bin(exp_dir, name)
+                    if p is not None:
+                        exp_bins.append(p)
             if mp4_cases and act_dir.exists():
-                act_bins = [act_dir / f"{name}.bin" for name in mp4_cases if (act_dir / f"{name}.bin").exists()]
+                for name in mp4_cases:
+                    p = resolve_bin(act_dir, name)
+                    if p is not None:
+                        act_bins.append(p)
 
             exp_count = len(exp_bins)
             act_count = len(act_bins)
 
             for name in mp4_cases:
-                e = exp_dir / f"{name}.bin"
-                a = act_dir / f"{name}.bin"
+                e = resolve_bin(exp_dir, name) if exp_dir.exists() else None
+                a = resolve_bin(act_dir, name) if act_dir.exists() else None
+                if e is None or a is None:
+                    continue
                 if files_identical(e, a):
                     pass_count += 1
 
             if mp4_cases:
                 # Keep legacy/manual column in sync: "pass/total" (MP4-only cases).
                 tests_exp_act = f"{pass_count}/{len(mp4_cases)}"
-                covered = "yes" if pass_count == len(mp4_cases) else "no"
+                covered = "y" if pass_count == len(mp4_cases) and pass_count > 0 else ""
 
         out = dict(row)
         out["tests_exp_act"] = tests_exp_act if tests_exp_act else ("0/0" if suite else "")

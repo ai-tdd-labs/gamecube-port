@@ -17,6 +17,18 @@ Rules:
 - Previous "Z0/Z1 not supported" conclusion was a bug in our client: it ignored the `OK` reply because it starts with `O`.
   Evidence: `tools/ram_dump.py` fix after commit `c19d1f5`.
 
+### MP4 checkpoint smoke chain: mp4_pad_init_chain_001
+- Purpose: validate combined SDK effects for the HuPadInit-related subset (SI/VI/PAD + OS interrupt gating) as a checkpoint dump.
+  Evidence: `tests/sdk/smoke/mp4_pad_init_chain_001/README.md`
+- Determinism scope:
+  - Primary oracle: `sdk_port` on PPC (Dolphin DOL) vs `sdk_port` on host (virtual RAM) should be bit-exact for the dumped ranges.
+  - This does NOT prove retail MP4 correctness; retail correctness needs the RVZ breakpoint dump oracle.
+  Evidence: `docs/codex/WORKFLOW.md` ("Checkpoint Dumps")
+- Dolphin warning seen sometimes when running tiny DOLs: "Invalid write to 0x00000900" / "Unknown instruction at PC=00000900".
+  Interpretation: PPC exception vector `0x00000900` (decrementer/interrupt path) firing before handlers are installed.
+  Mitigation in smoke DOLs: use `gc_safepoint()` (disable MSR[EE] + push DEC far future) very early and during loops.
+  Evidence: `tests/sdk/smoke/mp4_pad_init_chain_001/dol/mp4/mp4_pad_init_chain_001/mp4_pad_init_chain_001.c`
+
 ### VISetNextFrameBuffer
 - Callsites enumerated across MP4/TP/WW/AC.
   Evidence: docs/sdk/vi/VISetNextFrameBuffer.md

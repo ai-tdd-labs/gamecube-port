@@ -78,7 +78,12 @@ MP4 init chain status is tracked in:
 - `docs/sdk/mp4/MP4_chain_all.csv`
 
 Update the `expected_bins/actual_bins/pass_bins/covered` columns by scanning MP4-only cases (`dol/mp4/*`) with:
-- `python3 tools/helpers/update_mp4_chain_csv.py`
+- `python3 tools/helpers/update_mp4_chain_csv.py docs/sdk/mp4/MP4_chain_all.csv`
+
+Notes on naming:
+- MP4 testcase identity comes from the MP4 dol-case folder name, or (if present) the `.dol` stem / Makefile `TARGET`.
+- `expected/*.bin` and `actual/*.bin` are usually named with a suite prefix (e.g. `os_get_arena_lo_mp4_realistic_initmem_001.bin`).
+  The helper resolves those automatically.
 
 ## Notes Format (Facts Only)
 
