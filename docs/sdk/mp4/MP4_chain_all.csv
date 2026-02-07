@@ -155,3 +155,6 @@ HuPadInit,6,OSRestoreInterrupts,sdk,,tests/sdk/os/os_disable_interrupts,0/1,0,0,
 HuPadInit,7,VIWaitForRetrace,sdk,v,tests/sdk/vi/vi_wait_for_retrace,1/1,1,1,1,y
 HuPadInit,8,VIWaitForRetrace,sdk,v,tests/sdk/vi/vi_wait_for_retrace,1/1,1,1,1,y
 HuPadInit,9,PADControlMotor,sdk,,tests/sdk/pad/pad_control_motor,1/1,1,1,1,y
+HuPerfInit,1,OSInitStopwatch,sdk,,tests/sdk/os/os_init_stopwatch,1/1,1,1,1,y
+HuPerfInit,2,GXSetDrawSyncCallback,sdk,,tests/sdk/gx/gx_set_draw_sync_callback,1/1,1,1,1,y
+HuPerfBegin,1,GXSetDrawSync,sdk,,tests/sdk/gx/gx_set_draw_sync,1/1,1,1,1,y

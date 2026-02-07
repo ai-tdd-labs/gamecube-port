@@ -50,6 +50,7 @@ case "$subsystem" in
       "$repo_root/src/sdk_port/os/OSError.c"
       "$repo_root/src/sdk_port/os/OSSystem.c"
       "$repo_root/src/sdk_port/os/OSRtc.c"
+      "$repo_root/src/sdk_port/os/OSStopwatch.c"
     )
     ;;
 esac

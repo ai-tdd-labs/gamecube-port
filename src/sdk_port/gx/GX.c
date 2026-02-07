@@ -103,6 +103,10 @@ u32 gc_gx_pos3f32_y_bits;
 u32 gc_gx_pos3f32_z_bits;
 u32 gc_gx_pos1x16_last;
 
+// Token / draw sync state (GXManage).
+uintptr_t gc_gx_token_cb_ptr;
+u32 gc_gx_last_draw_sync_token;
+
 typedef struct {
     uint8_t _dummy;
 } GXFifoObj;
@@ -118,6 +122,26 @@ static inline u32 set_field(u32 reg, u32 size, u32 shift, u32 v) {
 static inline void gx_write_ras_reg(u32 v) {
     // Deterministic mirror of "last written" BP/RAS register value.
     gc_gx_last_ras_reg = v;
+}
+
+typedef void (*GXDrawSyncCallback)(u16 token);
+
+GXDrawSyncCallback GXSetDrawSyncCallback(GXDrawSyncCallback cb) {
+    GXDrawSyncCallback old = (GXDrawSyncCallback)gc_gx_token_cb_ptr;
+    // Real SDK wraps with interrupt disable/restore; we model only the observable end state.
+    gc_gx_token_cb_ptr = (uintptr_t)cb;
+    return old;
+}
+
+void GXSetDrawSync(u16 token) {
+    // Mirror the two RAS writes the SDK does and record the token for tests/smoke.
+    // The intermediate bitfield set is redundant since reg already contains token.
+    u32 reg = ((u32)token) | 0x48000000u;
+    gx_write_ras_reg(reg);
+    gx_write_ras_reg(reg);
+    gc_gx_last_draw_sync_token = token;
+    // GXFlush() is a no-op in this host model; we only keep the bpSentNot mirror.
+    gc_gx_bp_sent_not = 0;
 }
 
 static inline void gx_write_xf_reg(u32 idx, u32 v) {
