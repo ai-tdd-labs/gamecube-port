@@ -287,7 +287,12 @@ int main(void) {
 
   emit_snapshot();
 
+  // Some SDK code paths can temporarily enable interrupts; keep the harness in a
+  // stable, non-interrupting state while Dolphin/GDB is dumping memory.
+  gc_safepoint();
+
   while (1) {
+    gc_safepoint();
     __asm__ volatile("nop");
   }
   return 0;
