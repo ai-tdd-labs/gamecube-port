@@ -62,6 +62,7 @@ case "$subsystem" in
     extra_srcs+=(
       "$repo_root/src/game_workload/mp4/vendor/src/game/init.c"
       "$repo_root/src/game_workload/mp4/vendor/src/game/pad.c"
+      "$repo_root/src/game_workload/mp4/vendor/src/game/process.c"
     )
     # Make the workload deterministic and avoid pulling in decomp build-system macros.
     extra_cflags+=(
@@ -164,7 +165,13 @@ if [[ ${#port_srcs[@]} -eq 0 ]]; then
 fi
 
 echo "[host-build] $SCENARIO_SRC"
-cc -O2 -g0 \
+ld_gc_flags=()
+case "$(uname -s)" in
+  Darwin) ld_gc_flags+=(-Wl,-dead_strip) ;;
+  *) ld_gc_flags+=(-Wl,--gc-sections) ;;
+esac
+
+cc -O2 -g0 -ffunction-sections -fdata-sections \
   "${extra_cflags[@]}" \
   -I"$repo_root/tests" \
   -I"$repo_root/tests/harness" \
@@ -177,6 +184,7 @@ cc -O2 -g0 \
   "${port_srcs[@]}" \
   "${extra_srcs[@]}" \
   "$SCENARIO_SRC" \
+  "${ld_gc_flags[@]}" \
   -o "$exe"
 
 echo "[host-run] $exe"

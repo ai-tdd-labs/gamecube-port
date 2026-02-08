@@ -418,3 +418,9 @@ Notes:
 - Scenario: `tests/workload/mp4/mp4_hupadinit_001_scenario.c`
 - Build/run: `tools/run_host_scenario.sh tests/workload/mp4/mp4_hupadinit_001_scenario.c`
 - Output (marker only): `tests/actual/workload/mp4_hupadinit_001.bin` begins with `MP41` + `DEADBEEF`.
+
+## MP4 host workload: HuPrcInit reachability (host-only)
+- Purpose: integration reachability only. Compiles MP4 decomp `process.c` on host and runs `HuPrcInit` after `HuSysInit` (aligning with MP4 `main.c` init order).
+- Scenario: `tests/workload/mp4/mp4_huprcinit_001_scenario.c`
+- Build/run: `tools/run_host_scenario.sh tests/workload/mp4/mp4_huprcinit_001_scenario.c`
+- Output (marker only): `tests/actual/workload/mp4_huprcinit_001.bin` begins with `MP42` + `DEADBEEF`.
