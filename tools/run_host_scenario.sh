@@ -183,17 +183,17 @@ case "$(uname -s)" in
 esac
 
 cc -O2 -g0 -ffunction-sections -fdata-sections \
-  "${extra_cflags[@]}" \
+  "${extra_cflags[@]+${extra_cflags[@]}}" \
   -I"$repo_root/tests" \
   -I"$repo_root/tests/harness" \
   -I"$repo_root/src" \
   -I"$repo_root/src/sdk_port" \
-  "${extra_includes[@]}" \
+  "${extra_includes[@]+${extra_includes[@]}}" \
   "$repo_root/tests/harness/gc_host_ram.c" \
   "$repo_root/tests/harness/gc_host_runner.c" \
   "$repo_root/src/sdk_port/gc_mem.c" \
   "${port_srcs[@]}" \
-  "${extra_srcs[@]}" \
+  "${extra_srcs[@]+${extra_srcs[@]}}" \
   "$SCENARIO_SRC" \
   "${ld_gc_flags[@]}" \
   -o "$exe"

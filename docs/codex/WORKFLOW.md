@@ -38,6 +38,9 @@ Commands:
 2) Produce actual: `tools/run_host_scenario.sh tests/sdk/<subsystem>/<function>/host/<case>_scenario.c`
 3) Diff: `tools/diff_bins.sh tests/sdk/<subsystem>/<function>/expected/<case>.bin tests/sdk/<subsystem>/<function>/actual/<case>.bin`
 
+Important:
+- Do **not** run `tools/run_tests.sh expected` in parallel across multiple suites. It starts headless Dolphin instances that share the same GDB stub port and uses `pkill` to clear stale instances, so parallel runs can corrupt expected dumps.
+
 Tip (per-game only):
 - Dump/build only MP4 cases: `GAME=mp4 tools/run_tests.sh all tests/sdk/<subsystem>/<function>`
 
