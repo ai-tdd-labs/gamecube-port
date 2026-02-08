@@ -234,6 +234,16 @@ Rules:
   decomp_mario_party_4/src/dolphin/gx/GXAttr.c (`GXSetTexCoordGen2`);
   tests/sdk/gx/gx_set_tex_coord_gen/expected/gx_set_tex_coord_gen_mp4_wipe_frame_still_001.bin
 
+### GXSetTevColor (MP4 wipe)
+- MP4 callsite (wipe):
+  `GXSetTevColor(GX_TEVSTAGE1, color)` uses numeric `1`, which matches `GX_TEVREG0` (C0).
+  It packs:
+  - `regRA` addr `224 + id*2` with 11-bit `r` at bits [0..10] and 11-bit `a` at [12..22]
+  - `regBG` addr `225 + id*2` with 11-bit `b` at bits [0..10] and 11-bit `g` at [12..22]
+  SDK writes `regRA` once then `regBG` three times (last write wins).
+  Evidence: decomp_mario_party_4/src/game/wipe.c (`WipeFrameStill`); decomp_mario_party_4/src/dolphin/gx/GXTev.c (`GXSetTevColor`);
+  tests/sdk/gx/gx_set_tev_color/expected/gx_set_tev_color_mp4_wipe_c0_001.bin
+
 ### GXSetCurrentMtx (MP4 Hu3DExec)
 - Contract: updates `matIdxA` low 6 bits and writes XF reg 24 to the updated `matIdxA` (via `__GXSetMatrixIndex`).
   Evidence: decomp_mario_party_4/src/dolphin/gx/GXTransform.c (`GXSetCurrentMtx`, `__GXSetMatrixIndex`).

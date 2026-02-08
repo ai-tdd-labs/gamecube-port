@@ -133,6 +133,10 @@ u32 gc_gx_tref[8];
 u32 gc_gx_texmap_id[16];
 u32 gc_gx_tev_tc_enab;
 
+// GXSetTevColor observable BP/RAS packed regs (last call).
+u32 gc_gx_tev_color_reg_ra_last;
+u32 gc_gx_tev_color_reg_bg_last;
+
 // Immediate-mode vertex helpers (in the real SDK these write to the FIFO).
 u32 gc_gx_pos3f32_x_bits;
 u32 gc_gx_pos3f32_y_bits;
@@ -240,6 +244,8 @@ GXFifoObj *GXInit(void *base, u32 size) {
         gc_gx_tref[i] = 0;
     }
     gc_gx_tev_tc_enab = 0;
+    gc_gx_tev_color_reg_ra_last = 0;
+    gc_gx_tev_color_reg_bg_last = 0;
     gc_gx_pos3f32_x_bits = 0;
     gc_gx_pos3f32_y_bits = 0;
     gc_gx_pos3f32_z_bits = 0;
@@ -1722,6 +1728,30 @@ void GXSetTevAlphaOp(u32 stage, u32 op, u32 bias, u32 scale, u32 clamp, u32 out_
     reg = set_field(reg, 2, 22, out_reg);
     gc_gx_teva[stage] = reg;
     gx_write_ras_reg(reg);
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXSetTevColor(u32 id, GXColor color) {
+    // Mirror decomp_mario_party_4/src/dolphin/gx/GXTev.c:GXSetTevColor observable packed RAS regs.
+    u32 regRA = 0;
+    u32 regBG = 0;
+
+    regRA = set_field(regRA, 11, 0, (u32)color.r);
+    regRA = set_field(regRA, 11, 12, (u32)color.a);
+    regRA = set_field(regRA, 8, 24, (u32)(224u + id * 2u));
+
+    regBG = set_field(regBG, 11, 0, (u32)color.b);
+    regBG = set_field(regBG, 11, 12, (u32)color.g);
+    regBG = set_field(regBG, 8, 24, (u32)(225u + id * 2u));
+
+    gc_gx_tev_color_reg_ra_last = regRA;
+    gc_gx_tev_color_reg_bg_last = regBG;
+
+    // SDK writes regRA then regBG three times; last write wins.
+    gx_write_ras_reg(regRA);
+    gx_write_ras_reg(regBG);
+    gx_write_ras_reg(regBG);
+    gx_write_ras_reg(regBG);
     gc_gx_bp_sent_not = 0;
 }
 
