@@ -808,6 +808,112 @@ enum {
     GX_CTF_Z16M = 0xD,
 };
 
+// Internal GXTexObj layout (0x20 bytes) from decomp_mario_party_4/src/dolphin/gx/GXTexture.c.
+// NOTE: Use 32-bit slots for pointers so host builds match the GameCube layout.
+typedef struct {
+    u32 mode0;
+    u32 mode1;
+    u32 image0;
+    u32 image3;
+    u32 userData;
+    u32 fmt;
+    u32 tlutName;
+    u16 loadCnt;
+    u8 loadFmt;
+    u8 flags;
+} GXTexObj;
+
+static inline u32 gx_some_set_reg_macro(u32 reg, u32 val) {
+    // Mirror GXTexture.c SOME_SET_REG_MACRO (rlwinm(...,0,27,23) clears bits 24..26).
+    return (reg & 0xF8FFFFFFu) | val;
+}
+
+void GXInitTexObj(GXTexObj *obj, void *image_ptr, u16 width, u16 height, u32 format, u32 wrap_s, u32 wrap_t, u8 mipmap) {
+    // Mirror decomp_mario_party_4/src/dolphin/gx/GXTexture.c:GXInitTexObj (observable packing only).
+    GXTexObj *t = obj;
+    if (!t) return;
+
+    // Equivalent to memset(t, 0, 0x20) without relying on libc in this TU.
+    {
+        u32 *w = (u32 *)(void *)t;
+        for (u32 i = 0; i < 8; i++) w[i] = 0;
+    }
+
+    t->mode0 = set_field(t->mode0, 2, 0, wrap_s);
+    t->mode0 = set_field(t->mode0, 2, 2, wrap_t);
+    t->mode0 = set_field(t->mode0, 1, 4, 1u);
+
+    if (mipmap != 0) {
+        // Extend when callsites require mipmap.
+        t->flags |= 1u;
+        // The SDK sets additional fields based on format and max lod.
+        // For now keep the macro behavior deterministic and local to callsites.
+        t->mode0 = gx_some_set_reg_macro(t->mode0, 0xC0u);
+    } else {
+        t->mode0 = gx_some_set_reg_macro(t->mode0, 0x80u);
+    }
+
+    t->fmt = format;
+
+    t->image0 = set_field(t->image0, 10, 0, (u32)(width - 1u));
+    t->image0 = set_field(t->image0, 10, 10, (u32)(height - 1u));
+    t->image0 = set_field(t->image0, 4, 20, (u32)(format & 0xFu));
+
+    {
+        u32 imageBase = ((u32)((uintptr_t)image_ptr) >> 5) & 0x01FFFFFFu;
+        t->image3 = set_field(t->image3, 21, 0, imageBase);
+    }
+
+    // Compute loadFmt + loadCnt based on format low nibble.
+    u16 rowT = 2;
+    u16 colT = 2;
+    switch (format & 0xFu) {
+    case 0: /* I4 */
+    case 8: /* C4 */
+        t->loadFmt = 1;
+        rowT = 3;
+        colT = 3;
+        break;
+    case 1: /* I8 */
+    case 2: /* IA4 */
+    case 9: /* C8 */
+        t->loadFmt = 2;
+        rowT = 3;
+        colT = 2;
+        break;
+    case 3: /* IA8 */
+    case 4: /* RGB565 */
+    case 5: /* RGB5A3 */
+    case 10: /* C14X2 */
+        t->loadFmt = 2;
+        rowT = 2;
+        colT = 2;
+        break;
+    case 6: /* RGBA8 */
+        t->loadFmt = 3;
+        rowT = 2;
+        colT = 2;
+        break;
+    case 14: /* CMPR */
+        t->loadFmt = 0;
+        rowT = 3;
+        colT = 3;
+        break;
+    default:
+        t->loadFmt = 2;
+        rowT = 2;
+        colT = 2;
+        break;
+    }
+
+    {
+        u32 rowC = ((u32)width + (1u << rowT) - 1u) >> rowT;
+        u32 colC = ((u32)height + (1u << colT) - 1u) >> colT;
+        t->loadCnt = (u16)((rowC * colC) & 0x7FFFu);
+    }
+    t->flags |= 2u;
+}
+
 static void get_image_tile_count(u32 fmt, u16 wd, u16 ht, u32 *rowTiles, u32 *colTiles, u32 *cmpTiles) {
     // Minimal tile math to support MP4 GX_CTF_R8 callsite.
     // For other formats, extend as needed (evidence-driven).

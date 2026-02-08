@@ -244,6 +244,16 @@ Rules:
   Evidence: decomp_mario_party_4/src/game/wipe.c (`WipeFrameStill`); decomp_mario_party_4/src/dolphin/gx/GXTev.c (`GXSetTevColor`);
   tests/sdk/gx/gx_set_tev_color/expected/gx_set_tev_color_mp4_wipe_c0_001.bin
 
+### GXInitTexObj (MP4 wipe)
+- MP4 callsite (wipe):
+  `GXInitTexObj(&tex, wipe->copy_data, wipe->w, wipe->h, GX_TF_RGB565, GX_CLAMP, GX_CLAMP, GX_FALSE)`.
+  For RGB565 and mipmap=false, the observable object fields include:
+  - `image0` packs `(width-1)` and `(height-1)` plus `format&0xF` at bits [20..23]
+  - `image3` packs `imageBase = (image_ptr >> 5) & 0x01FFFFFF` into bits [0..20]
+  - `loadFmt = 2`, `flags |= 2`, `loadCnt = ((ceil(w/4) * ceil(h/4)) & 0x7FFF)`
+  Evidence: decomp_mario_party_4/src/game/wipe.c (`WipeFrameStill`); decomp_mario_party_4/src/dolphin/gx/GXTexture.c (`GXInitTexObj`);
+  tests/sdk/gx/gx_init_tex_obj/expected/gx_init_tex_obj_mp4_wipe_rgb565_001.bin
+
 ### GXSetCurrentMtx (MP4 Hu3DExec)
 - Contract: updates `matIdxA` low 6 bits and writes XF reg 24 to the updated `matIdxA` (via `__GXSetMatrixIndex`).
   Evidence: decomp_mario_party_4/src/dolphin/gx/GXTransform.c (`GXSetCurrentMtx`, `__GXSetMatrixIndex`).
