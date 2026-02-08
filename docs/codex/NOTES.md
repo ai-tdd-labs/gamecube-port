@@ -500,7 +500,7 @@ Notes:
 ## MP4 host workload: one main loop iteration (stubbed)
 - Purpose: reachability only. Executes one iteration of the MP4 `while (1)` loop with non-SDK calls stubbed, to keep surfacing SDK gaps as we extend coverage.
 - Scenario: `tests/workload/mp4/mp4_mainloop_one_iter_001_scenario.c`
-- Uses real MP4 decomp functions for low-risk calls where available: `HuPadRead()` (from `pad.c`) and `pfClsScr()` (from `pfinit_only.c`).
+- Uses real MP4 decomp functions for low-risk calls where available: `HuPadRead()` (from `pad.c`), `pfClsScr()` (from `pfinit_only.c`), `HuSysBeforeRender()` and `HuSysDoneRender()` (from `init.c`).
 - Build/run: `tools/run_host_scenario.sh tests/workload/mp4/mp4_mainloop_one_iter_001_scenario.c`
 - Output (marker only): `tests/actual/workload/mp4_mainloop_one_iter_001.bin` begins with `MP47` + `DEADBEEF`.
 

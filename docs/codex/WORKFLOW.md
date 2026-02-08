@@ -118,6 +118,12 @@ There are two different "oracles" we use:
 2) **Secondary oracle (best effort):** real game (`.rvz` / `.iso`) running in Dolphin, dump at a checkpoint.
    This is useful to sanity-check that the smoke-chain isn't a "toy", but it is more fragile.
 
+Practical Dolphin note (MMU):
+- Some smoke DOLs call `OSInit()` and will write exception vectors in low memory (e.g. `0x00000900`).
+  Dolphin can warn/crash on these low-memory writes unless MMU is enabled.
+  If you see errors like "Invalid write to 0x00000900" or "Unknown instruction at PC=00000900",
+  rerun the dump with `tools/ram_dump.py --enable-mmu` (passes `-C Core.Core.MMU=True`).
+
 Smoke DOL build rule:
 - Do not `#include` multiple `src/sdk_port/*/*.c` files into a *single* DOL translation unit. Some modules define overlapping enums/macros (example: `VI_NTSC` in `VI.c` vs `SI.c`).
 - Instead, add `oracle_*.c` files next to the smoke DOL and include exactly one module per file (see `tests/sdk/smoke/mp4_init_chain_001/dol/mp4/mp4_init_chain_001/oracle_*.c`).
