@@ -177,7 +177,7 @@ WipeCrossFade,2,GXSetTexCopySrc,sdk,,tests/sdk/gx/gx_set_tex_copy_src,1/1,1,1,1,
 WipeCrossFade,3,GXSetTexCopyDst,sdk,,tests/sdk/gx/gx_set_tex_copy_dst,1/1,1,1,1,y
 WipeCrossFade,4,GXCopyTex,sdk,,tests/sdk/gx/gx_copy_tex,1/1,1,1,1,y
 WipeCrossFade,5,DCStoreRangeNoSync,sdk,,tests/sdk/os/dc_store_range_no_sync,1/1,1,1,1,y
-WipeFrameStill,1,GXLoadPosMtxImm,sdk,,tests/sdk/gx/gx_load_pos_mtx_imm,0/0,0,0,0,
+WipeFrameStill,1,GXLoadPosMtxImm,sdk,,tests/sdk/gx/gx_load_pos_mtx_imm,1/1,1,1,1,y
 WipeFrameStill,2,GXBegin,sdk,,tests/sdk/gx/gx_begin,0/0,0,0,0,
 WipeFrameStill,3,GXEnd,sdk,,tests/sdk/gx/gx_end,0/0,0,0,0,
 WipeFrameStill,4,GXSetTexCoordGen,sdk,,tests/sdk/gx/gx_set_tex_coord_gen,0/0,0,0,0,

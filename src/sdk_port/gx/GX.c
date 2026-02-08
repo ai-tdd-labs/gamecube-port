@@ -143,6 +143,12 @@ u32 gc_gx_pos1x16_last;
 uintptr_t gc_gx_token_cb_ptr;
 u32 gc_gx_last_draw_sync_token;
 
+// Minimal FIFO write mirror for deterministic transform tests.
+// Real GX writes into the GP FIFO; we record the last command + payload words.
+u32 gc_gx_fifo_u8_last;
+u32 gc_gx_fifo_u32_last;
+u32 gc_gx_fifo_mtx_words[12];
+
 typedef struct {
     uint8_t _dummy;
 } GXFifoObj;
@@ -227,6 +233,11 @@ GXFifoObj *GXInit(void *base, u32 size) {
     gc_gx_pos3f32_y_bits = 0;
     gc_gx_pos3f32_z_bits = 0;
     gc_gx_pos1x16_last = 0;
+    gc_gx_fifo_u8_last = 0;
+    gc_gx_fifo_u32_last = 0;
+    for (i = 0; i < 12; i++) {
+        gc_gx_fifo_mtx_words[i] = 0;
+    }
     for (i = 0; i < 8; i++) {
         gc_gx_su_ts0[i] = 0;
     }
@@ -278,6 +289,27 @@ void GXAdjustForOverscan(GXRenderModeObj *rmin, GXRenderModeObj *rmout, u16 hor,
     rmout->viHeight = (u16)(rmin->viHeight - ver2);
     rmout->viXOrigin = (u16)(rmin->viXOrigin + hor);
     rmout->viYOrigin = (u16)(rmin->viYOrigin + ver);
+}
+
+void GXLoadPosMtxImm(float mtx[3][4], u32 id) {
+    // Mirror decomp_mario_party_4/src/dolphin/gx/GXTransform.c:GXLoadPosMtxImm observable FIFO writes.
+    const u32 addr = id * 4u;
+    const u32 reg = addr | 0xB0000u;
+
+    gc_gx_fifo_u8_last = 0x10u;
+    gc_gx_fifo_u32_last = reg;
+
+    u32 i = 0;
+    u32 r, c;
+    for (r = 0; r < 3; r++) {
+        for (c = 0; c < 4; c++) {
+            union {
+                float f;
+                u32 u;
+            } u = { mtx[r][c] };
+            gc_gx_fifo_mtx_words[i++] = u.u;
+        }
+    }
 }
 
 void GXSetViewportJitter(float left, float top, float wd, float ht, float nearz, float farz, u32 field) {

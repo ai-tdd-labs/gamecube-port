@@ -207,6 +207,12 @@ Rules:
   decomp_mario_party_4/src/dolphin/gx/GXTexture.c (`GXGetTexBufferSize`);
   tests/sdk/gx/gx_get_tex_buffer_size/expected/gx_get_tex_buffer_size_mp4_wipe_cross_fade_001.bin
 
+### GXLoadPosMtxImm (MP4 wipe)
+- MP4 callsite (wipe):
+  `GXLoadPosMtxImm(identity, GX_PNMTX0)` writes FIFO cmd `0x10`, reg `0x000B0000`, then 12 float words (row-major 3x4).
+  Evidence: decomp_mario_party_4/src/game/wipe.c (`WipeFrameStill`); decomp_mario_party_4/src/dolphin/gx/GXTransform.c (`GXLoadPosMtxImm`);
+  tests/sdk/gx/gx_load_pos_mtx_imm/expected/gx_load_pos_mtx_imm_mp4_wipe_identity_001.bin
+
 ### GXSetCurrentMtx (MP4 Hu3DExec)
 - Contract: updates `matIdxA` low 6 bits and writes XF reg 24 to the updated `matIdxA` (via `__GXSetMatrixIndex`).
   Evidence: decomp_mario_party_4/src/dolphin/gx/GXTransform.c (`GXSetCurrentMtx`, `__GXSetMatrixIndex`).
