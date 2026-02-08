@@ -397,3 +397,12 @@ How:
 
 Notes:
 - This is a secondary oracle only. It proves our Dolphin+GDB capture pipeline works on a real RVZ at an early-init checkpoint.
+
+
+## MP4 RVZ oracle: MEM1 dump at HuPadInit
+- Game: Mario Party 4 (USA) RVZ (see docs/sdk/mp4/MP4_assets.md)
+- Checkpoint: HuPadInit PC=0x80005A5C (from symbols.txt)
+- Dump: MEM1 0x80000000 size 0x01800000
+- Local path (gitignored): `tests/oracles/mp4_rvz/mem1_at_pc_80005A5C_hupadinit.bin`
+- SHA256: `61f7c0d775bee3ef9f23364ad929a7d7d16c0c2ccbe7874f478030956bc6f9ae`
+- Notes: This is a secondary oracle snapshot to compare against our sdk_port+tests as we extend coverage around PAD init.
