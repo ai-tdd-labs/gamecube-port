@@ -29,3 +29,16 @@ Implementation:
   - Adds `-I tests/workload/include` and compiles `src/game_workload/mp4/vendor/src/game/init.c`.
   - Links against `src/sdk_port/*` and stubs game-only externs in the scenario TU.
 - First workload scenario: `tests/workload/mp4/mp4_husysinit_001_scenario.c` (expects marker `MP40/DEADBEEF` in `tests/actual/workload/mp4_husysinit_001.bin`).
+
+## PAD stubs for MP4 workload linking
+
+Decision:
+- For host workload builds that compile MP4 `src/game/pad.c`, provide a minimal PAD SDK surface in `src/sdk_port/pad/PAD.c` for linkability: `PADRead`, `PADClamp`, `PADReset`, `PADRecalibrate`.
+
+Why:
+- MP4 `pad.c` takes the address of `PadReadVSync` and therefore must link the full translation unit.
+- Even if the workload does not trigger retrace callbacks, the linker still needs all undefined symbols referenced by `pad.c` to be defined somewhere.
+
+Scope:
+- These stubs are deterministic and only record minimal observable side effects into the RAM-backed sdk_state page.
+- Correctness (real hardware semantics) must be established via dedicated DOL expected vs host actual unit tests for any behavior that becomes observable to the game.

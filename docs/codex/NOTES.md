@@ -412,3 +412,9 @@ Notes:
 - Scenario: `tests/workload/mp4/mp4_husysinit_001_scenario.c`
 - Build/run: `tools/run_host_scenario.sh tests/workload/mp4/mp4_husysinit_001_scenario.c`
 - Output (marker only): `tests/actual/workload/mp4_husysinit_001.bin` begins with `MP40` + `DEADBEEF`.
+
+## MP4 host workload: HuPadInit reachability (host-only)
+- Purpose: integration reachability only. Runs the next MP4 init step (`HuPadInit`) after `HuSysInit` on host against `src/sdk_port`.
+- Scenario: `tests/workload/mp4/mp4_hupadinit_001_scenario.c`
+- Build/run: `tools/run_host_scenario.sh tests/workload/mp4/mp4_hupadinit_001_scenario.c`
+- Output (marker only): `tests/actual/workload/mp4_hupadinit_001.bin` begins with `MP41` + `DEADBEEF`.

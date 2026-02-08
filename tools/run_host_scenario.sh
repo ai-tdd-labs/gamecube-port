@@ -61,6 +61,7 @@ case "$subsystem" in
     # For now, we only support the HuSysInit workload.
     extra_srcs+=(
       "$repo_root/src/game_workload/mp4/vendor/src/game/init.c"
+      "$repo_root/src/game_workload/mp4/vendor/src/game/pad.c"
     )
     # Make the workload deterministic and avoid pulling in decomp build-system macros.
     extra_cflags+=(

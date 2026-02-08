@@ -151,6 +151,14 @@ enum {
   GC_SDK_OFF_SI_SETXY_COUNT = 0x368,        // u32 (low byte)
   GC_SDK_OFF_SI_SETXY_CALLS = 0x36C,        // u32
 
+  // PAD read/maintenance call counters (required for linking MP4 pad.c workload).
+  GC_SDK_OFF_PAD_READ_CALLS = 0x380,          // u32
+  GC_SDK_OFF_PAD_CLAMP_CALLS = 0x384,         // u32
+  GC_SDK_OFF_PAD_RESET_CALLS = 0x388,         // u32
+  GC_SDK_OFF_PAD_RESET_MASK = 0x38C,          // u32
+  GC_SDK_OFF_PAD_RECALIBRATE_CALLS = 0x390,   // u32
+  GC_SDK_OFF_PAD_RECALIBRATE_MASK = 0x394,    // u32
+
   // PAD motor commands (minimal subset for HuPadInit)
   GC_SDK_OFF_PAD_MOTOR_CMD_BASE = 0x3A0,    // 4 * u32
 };

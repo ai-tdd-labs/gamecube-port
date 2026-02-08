@@ -5,6 +5,8 @@ typedef uint32_t u32;
 typedef uint64_t u64;
 typedef int32_t s32;
 typedef int BOOL;
+typedef int8_t s8;
+typedef uint8_t u8;
 #ifndef TRUE
 #define TRUE 1
 #define FALSE 0
@@ -30,6 +32,25 @@ static u32 RecalibrateBits;
 #define PAD_CHAN1_BIT 0x40000000u
 #define PAD_CHAN2_BIT 0x20000000u
 #define PAD_CHAN3_BIT 0x10000000u
+
+// Minimal SDK-visible status struct used by MP4 pad.c.
+typedef struct PADStatus {
+    u16 button;
+    s8 stickX;
+    s8 stickY;
+    s8 substickX;
+    s8 substickY;
+    u8 triggerL;
+    u8 triggerR;
+    u8 analogA;
+    u8 analogB;
+    s8 err;
+} PADStatus;
+
+enum {
+    PAD_ERR_NONE = 0,
+    PAD_ERR_NOT_READY = -2,
+};
 
 enum {
     GC_PAD_MAKE_STATUS_SPEC0 = 0,
@@ -68,7 +89,56 @@ static u64 OSGetTime(void) { return 0; }
 void SIRefreshSamplingRate(void);
 static void PAD_SIRefreshSamplingRate(void) { gc_pad_si_refresh_calls++; SIRefreshSamplingRate(); }
 static void OSRegisterResetFunction(void *info) { (void)info; gc_pad_register_reset_calls++; }
-static BOOL PADReset(u32 mask) { gc_pad_reset_mask = mask; return TRUE; }
+static BOOL PADResetInternal(u32 mask) { gc_pad_reset_mask = mask; return TRUE; }
+
+// --- SDK surface area used by MP4's pad.c ---
+//
+// These are currently modeled as deterministic, side-effect-recording stubs.
+// Correctness is enforced by dedicated unit tests (DOL expected vs host actual)
+// for the specific observable state each game callsite relies on.
+
+u32 PADRead(PADStatus *status) {
+    // Deterministic stub: no controllers. MP4's init path does not require real input.
+    if (status) {
+        for (int i = 0; i < 4; i++) {
+            status[i].button = 0;
+            status[i].stickX = 0;
+            status[i].stickY = 0;
+            status[i].substickX = 0;
+            status[i].substickY = 0;
+            status[i].triggerL = 0;
+            status[i].triggerR = 0;
+            status[i].analogA = 0;
+            status[i].analogB = 0;
+            status[i].err = (s8)PAD_ERR_NOT_READY;
+        }
+    }
+    gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_READ_CALLS,
+                             gc_sdk_state_load_u32_or(GC_SDK_OFF_PAD_READ_CALLS, 0) + 1u);
+    return 0;
+}
+
+void PADClamp(PADStatus *status) {
+    (void)status;
+    gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_CLAMP_CALLS,
+                             gc_sdk_state_load_u32_or(GC_SDK_OFF_PAD_CLAMP_CALLS, 0) + 1u);
+}
+
+BOOL PADReset(u32 mask) {
+    gc_pad_reset_mask = mask;
+    gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_RESET_MASK, mask);
+    gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_RESET_CALLS,
+                             gc_sdk_state_load_u32_or(GC_SDK_OFF_PAD_RESET_CALLS, 0) + 1u);
+    return TRUE;
+}
+
+BOOL PADRecalibrate(u32 mask) {
+    RecalibrateBits = mask;
+    gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_RECALIBRATE_MASK, mask);
+    gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_RECALIBRATE_CALLS,
+                             gc_sdk_state_load_u32_or(GC_SDK_OFF_PAD_RECALIBRATE_CALLS, 0) + 1u);
+    return TRUE;
+}
 
 void PADControlMotor(s32 chan, u32 command) {
     if (chan < 0 || chan >= 4) return;
@@ -103,5 +173,5 @@ BOOL PADInit(void) {
     PAD_SIRefreshSamplingRate();
     OSRegisterResetFunction(0);
 
-    return PADReset(PAD_CHAN0_BIT | PAD_CHAN1_BIT | PAD_CHAN2_BIT | PAD_CHAN3_BIT);
+    return PADResetInternal(PAD_CHAN0_BIT | PAD_CHAN1_BIT | PAD_CHAN2_BIT | PAD_CHAN3_BIT);
 }
