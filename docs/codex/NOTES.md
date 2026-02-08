@@ -206,6 +206,16 @@ Rules:
   - `dvd_read_async_mp4_hu_data_dvd_dir_direct_read_001`: `DVDReadAsync(&fi, dest, 0x20, 0x10, NULL)` copies bytes and `DVDGetCommandBlockStatus(&fi.cb)==0`.
     Evidence: `tests/sdk/dvd/dvd_read_async/expected/dvd_read_async_mp4_hu_data_dvd_dir_direct_read_001.bin` and `tests/sdk/dvd/dvd_read_async/actual/dvd_read_async_mp4_hu_data_dvd_dir_direct_read_001.bin`
 
+### DCInvalidateRange (MP4 HuDvdDataReadWait path)
+
+- Callsite (MP4): after allocating the read buffer, MP4 calls `DCInvalidateRange(buf, OSRoundUp32B(len))` before issuing `DVDReadAsync`.
+  Evidence: `decomp_mario_party_4/src/game/dvd.c`
+- Current port status: record-only; does not model cache effects, only tracks last `(addr,len)` for deterministic testing.
+  Evidence: `src/sdk_port/os/OSCache.c`
+- Testcase:
+  - `dc_invalidate_range_mp4_hu_dvd_data_read_wait_001`: records `addr=0x80400000` and `len=0x40`.
+    Evidence: `tests/sdk/os/dc_invalidate_range/expected/dc_invalidate_range_mp4_hu_dvd_data_read_wait_001.bin` and `tests/sdk/os/dc_invalidate_range/actual/dc_invalidate_range_mp4_hu_dvd_data_read_wait_001.bin`
+
 ## Test Runs (auto)
 
 - Format: `[PASS|FAIL] <label> expected=<path> actual=<path> (first_mismatch=0x........)`

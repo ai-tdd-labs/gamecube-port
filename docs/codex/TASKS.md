@@ -45,6 +45,8 @@ evidence-based. Mark items DONE with a commit hash.
        - MP4-realistic suites under `tests/sdk/*`
        - facts in `docs/codex/NOTES.md`
      Evidence anchor: `decomp_mario_party_4/src/game/data.c` and `decomp_mario_party_4/src/game/dvd.c`
+     Progress:
+       - [x] Identified + covered `DCInvalidateRange` callsite used by `HuDvdDataReadWait`. (new suite `tests/sdk/os/dc_invalidate_range`)
 
 ## Later
 
