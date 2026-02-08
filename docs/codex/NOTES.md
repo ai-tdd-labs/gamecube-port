@@ -384,3 +384,16 @@ Test:
 Facts (confirmed by bit-exact expected vs actual):
 - `GXInitTexCacheRegion` packs `image1`/`image2` from TMEM (>>5) and widthExp2 fields, and `GXLoadTexObjPreLoaded` injects the BP register ID in bits 24..31 for `mode0/mode1/image0/image1/image2/image3`.
 - Default non-CI region selection uses round-robin `nextTexRgn++ & 7`.
+
+## RVZ oracle: MEM1 dump at GXInit (MP4 USA)
+
+- RVZ: `/Users/chrislamark/projects/recomp/gamecube_static_recomp/game_files/Mario Party 4 (USA).rvz`
+- PC checkpoint: `GXInit` entry @ `0x800C7E7C` (from `decomp_mario_party_4/config/GMPE01_00/symbols.txt`)
+- Dump: `tests/oracles/mp4_rvz/mem1_at_pc_800C7E7C_gxinit.bin` (MEM1 0x80000000 size 0x01800000)
+- SHA256: `1de788bdfe8d7ab0643af186d8000c606263e667e81a5e5fa16d50aea58bfffa`
+
+How:
+- `tools/dump_expected_rvz_mem1_at_pc.sh <rvz> 0x800C7E7C <out> 60`
+
+Notes:
+- This is a secondary oracle only. It proves our Dolphin+GDB capture pipeline works on a real RVZ at an early-init checkpoint.

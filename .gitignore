@@ -86,3 +86,6 @@ tests/recomp_out/
 /tests/sdk/smoke/**/actual/*.bin
 /tests/expected/*.bin
 /tests/actual/*.bin
+
+# Large local-only RVZ oracle dumps (MEM1 snapshots). Keep hashes in docs instead.
+/tests/oracles/**/*.bin
