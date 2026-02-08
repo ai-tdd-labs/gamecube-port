@@ -56,6 +56,14 @@ Rules:
   - sha256: `9130214e62b4c4abade670307d903bb9e8329145ca631e73057ea4e7eead0c0e`
   Evidence: `tools/dump_expected_rvz_mem1_at_pc.sh` run with breakpoint `0x800308B8` and MMU enabled.
 
+### MP4 host workload: pfDrawFonts reachability stub
+- `pfDrawFonts()` is MP4 game-specific and GX-heavy; we keep it as a host-safe workload slice that only leaves deterministic breadcrumbs.
+  Evidence: `tests/workload/mp4/slices/pfdrawfonts_stub.c`.
+- Breadcrumb writes (big-endian):
+  - `0x80300020`: call count
+  - `0x80300024`: marker `0x464F4E54` (`'FONT'`)
+  Evidence: `tests/actual/workload/mp4_mainloop_one_iter_tick_001.bin` (count=1) and `tests/actual/workload/mp4_mainloop_two_iter_tick_001.bin` (count=2).
+
 ### VISetNextFrameBuffer
 - Callsites enumerated across MP4/TP/WW/AC.
   Evidence: docs/sdk/vi/VISetNextFrameBuffer.md

@@ -95,6 +95,12 @@ case "$subsystem" in
         extra_srcs+=("$repo_root/tests/workload/mp4/slices/wipeexecalways_decomp_blank.c")
         ;;
     esac
+    # pfDrawFonts() is game-specific and GX-heavy; keep it as a host-safe slice.
+    case "$scenario_base" in
+      mp4_mainloop_one_iter_001_scenario|mp4_mainloop_one_iter_tick_001_scenario|mp4_mainloop_two_iter_001_scenario|mp4_mainloop_two_iter_tick_001_scenario)
+        extra_srcs+=("$repo_root/tests/workload/mp4/slices/pfdrawfonts_stub.c")
+        ;;
+    esac
     # Make the workload deterministic and avoid pulling in decomp build-system macros.
     extra_cflags+=(
       -DVERSION=0

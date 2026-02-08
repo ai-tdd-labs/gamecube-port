@@ -66,7 +66,7 @@ static void HuPrcCall(int which) { (void)which; }
 static void MGSeqMain(void) {}
 static void Hu3DExec(void) {}
 void WipeExecAlways(void);
-static void pfDrawFonts(void) {}
+void pfDrawFonts(void);
 void msmMusFdoutEnd(void);
 
 // Real MP4 functions from vendor init.c (already compiled in workload via tools/run_host_scenario.sh).
