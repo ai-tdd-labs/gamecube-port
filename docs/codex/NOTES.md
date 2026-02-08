@@ -222,6 +222,18 @@ Rules:
   Evidence: decomp_mario_party_4/src/game/wipe.c (`WipeFrameStill`); decomp_mario_party_4/src/dolphin/gx/GXGeometry.c (`GXBegin`);
   tests/sdk/gx/gx_begin/expected/gx_begin_mp4_wipe_quads_001.bin
 
+### GXSetTexCoordGen (MP4 wipe)
+- MP4 callsite (wipe):
+  `GXSetTexCoordGen(GX_TEXCOORD0, GX_TG_MTX2x4, GX_TG_TEX0, GX_IDENTITY)` calls `GXSetTexCoordGen2(..., GX_FALSE, GX_PTIDENTITY)`.
+  For this callsite, the observable end state is:
+  - XF texgen ctrl (0x40 + 0): `0x00000280` (row=5 at bits [7..11])
+  - XF postmtx/normalize (0x50 + 0): `0x0000003D` (postmtx=125 => 125-64=61)
+  - matIdxA TEX0 field (bits [6..11]) = `GX_IDENTITY` (60), so `matIdxA = 60 << 6 = 0x00000F00`
+  - `__GXSetMatrixIndex` writes XF reg 24 = `matIdxA`
+  Evidence: decomp_mario_party_4/src/game/wipe.c (`WipeFrameStill`); decomp_mario_party_4/include/dolphin/gx/GXGeometry.h (`GXSetTexCoordGen` inline);
+  decomp_mario_party_4/src/dolphin/gx/GXAttr.c (`GXSetTexCoordGen2`);
+  tests/sdk/gx/gx_set_tex_coord_gen/expected/gx_set_tex_coord_gen_mp4_wipe_frame_still_001.bin
+
 ### GXSetCurrentMtx (MP4 Hu3DExec)
 - Contract: updates `matIdxA` low 6 bits and writes XF reg 24 to the updated `matIdxA` (via `__GXSetMatrixIndex`).
   Evidence: decomp_mario_party_4/src/dolphin/gx/GXTransform.c (`GXSetCurrentMtx`, `__GXSetMatrixIndex`).

@@ -153,6 +153,13 @@ u32 gc_gx_fifo_mtx_words[12];
 u32 gc_gx_fifo_begin_u8;
 u32 gc_gx_fifo_begin_u16;
 
+// Minimal texcoordgen XF state (GXSetTexCoordGen2 writes XF regs 0x40..0x47 and 0x50..0x57).
+u32 gc_gx_xf_texcoordgen_40[8];
+u32 gc_gx_xf_texcoordgen_50[8];
+
+// Matrix index B mirror (GXTransform.c:__GXSetMatrixIndex uses matIdxA/matIdxB).
+u32 gc_gx_mat_idx_b;
+
 typedef struct {
     uint8_t _dummy;
 } GXFifoObj;
@@ -244,6 +251,11 @@ GXFifoObj *GXInit(void *base, u32 size) {
     }
     gc_gx_fifo_begin_u8 = 0;
     gc_gx_fifo_begin_u16 = 0;
+    for (i = 0; i < 8; i++) {
+        gc_gx_xf_texcoordgen_40[i] = 0;
+        gc_gx_xf_texcoordgen_50[i] = 0;
+    }
+    gc_gx_mat_idx_b = 0;
     for (i = 0; i < 8; i++) {
         gc_gx_su_ts0[i] = 0;
     }
@@ -396,6 +408,85 @@ void GXBegin(u8 type, u8 vtxfmt, u16 nverts) {
 
 void GXEnd(void) {
     // In the SDK this is a macro barrier; deterministic host model: no-op.
+}
+
+void GXSetTexCoordGen2(u8 dst_coord, u32 func, u32 src_param, u32 mtx, u32 normalize, u32 postmtx) {
+    // Mirror decomp_mario_party_4/src/dolphin/gx/GXAttr.c:GXSetTexCoordGen2.
+    // For deterministic tests we model only the observable end state:
+    // - XF reg 0x40+dst_coord and 0x50+dst_coord payloads
+    // - matIdxA/matIdxB update and the XF reg 24/25 write via __GXSetMatrixIndex
+    u32 reg = 0;
+    u32 row = 5;
+    u32 form = 0;
+
+    if (dst_coord >= 8) return;
+
+    switch (src_param) {
+    case 0: /* GX_TG_POS */     row = 0; form = 1; break;
+    case 1: /* GX_TG_NRM */     row = 1; form = 1; break;
+    case 2: /* GX_TG_BINRM */   row = 3; form = 1; break;
+    case 3: /* GX_TG_TANGENT */ row = 4; form = 1; break;
+    case 4: /* GX_TG_TEX0 */    row = 5; break;
+    case 5: /* GX_TG_TEX1 */    row = 6; break;
+    case 6: /* GX_TG_TEX2 */    row = 7; break;
+    case 7: /* GX_TG_TEX3 */    row = 8; break;
+    case 8: /* GX_TG_TEX4 */    row = 9; break;
+    case 9: /* GX_TG_TEX5 */    row = 10; break;
+    case 10: /* GX_TG_TEX6 */   row = 11; break;
+    case 11: /* GX_TG_TEX7 */   row = 12; break;
+    case 19: /* GX_TG_COLOR0 */ row = 2; break;
+    case 20: /* GX_TG_COLOR1 */ row = 2; break;
+    default:
+        // Extend when new callsites require more source parameters.
+        row = 5;
+        form = 0;
+        break;
+    }
+
+    switch (func) {
+    case 1: /* GX_TG_MTX2x4 */
+        reg = set_field(reg, 1, 1, 0);
+        reg = set_field(reg, 1, 2, form);
+        reg = set_field(reg, 3, 4, 0);
+        reg = set_field(reg, 5, 7, row);
+        break;
+    case 0: /* GX_TG_MTX3x4 */
+        reg = set_field(reg, 1, 1, 1);
+        reg = set_field(reg, 1, 2, form);
+        reg = set_field(reg, 3, 4, 0);
+        reg = set_field(reg, 5, 7, row);
+        break;
+    default:
+        // Extend when new callsites require other gen types.
+        break;
+    }
+
+    gc_gx_xf_texcoordgen_40[dst_coord] = reg;
+
+    reg = 0;
+    reg = set_field(reg, 6, 0, (postmtx - 64u) & 0x3Fu);
+    reg = set_field(reg, 1, 8, (u32)(normalize != 0));
+    gc_gx_xf_texcoordgen_50[dst_coord] = reg;
+
+    // Matrix index update matches GXAttr.c switch over dst_coord.
+    if (dst_coord <= 3u) {
+        // matIdxA fields: TEX0..3 at shifts 6,12,18,24
+        const u32 shift = 6u + dst_coord * 6u;
+        gc_gx_mat_idx_a = set_field(gc_gx_mat_idx_a, 6, shift, mtx & 0x3Fu);
+        gx_write_xf_reg(24, gc_gx_mat_idx_a);
+    } else {
+        // matIdxB fields: TEX4..7 at shifts 0,6,12,18
+        const u32 shift = (dst_coord - 4u) * 6u;
+        gc_gx_mat_idx_b = set_field(gc_gx_mat_idx_b, 6, shift, mtx & 0x3Fu);
+        gx_write_xf_reg(25, gc_gx_mat_idx_b);
+    }
+    gc_gx_bp_sent_not = 1;
+}
+
+void GXSetTexCoordGen(u8 dst_coord, u32 func, u32 src_param, u32 mtx) {
+    // Mirror inline wrapper in decomp_mario_party_4/include/dolphin/gx/GXGeometry.h.
+    // normalize = GX_FALSE, postmtx = GX_PTIDENTITY (125).
+    GXSetTexCoordGen2(dst_coord, func, src_param, mtx, 0, 125u);
 }
 
 void GXSetCoPlanar(u32 enable) {
