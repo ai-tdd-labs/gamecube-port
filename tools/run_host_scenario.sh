@@ -150,6 +150,15 @@ case "$subsystem" in
 esac
 
 case "$subsystem" in
+  mtx)
+    port_srcs+=(
+      "$repo_root/src/sdk_port/mtx/mtx.c"
+      "$repo_root/src/sdk_port/mtx/mtx44.c"
+    )
+    ;;
+esac
+
+case "$subsystem" in
   dvd|os+dvd+vi+pad+gx)
     port_srcs+=(
       "$repo_root/src/sdk_port/dvd/DVD.c"

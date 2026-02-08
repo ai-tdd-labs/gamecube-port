@@ -545,3 +545,16 @@ Notes:
 - Dump: MEM1 0x80000000 size 0x01800000
 - Local path (gitignored): `tests/oracles/mp4_rvz/mem1_at_pc_8001FBCC_hu3dpreproc.bin`
 - SHA256: `7dc513a8280395f8c037ff9ed36740d5b234bc4975a6b3a512e26727b9e55959`
+
+## SDK MTX: C_MTXIdentity
+- Evidence: `tests/sdk/mtx/mtx_identity` (DOL expected vs host actual) PASS:
+  - `tests/sdk/mtx/mtx_identity/expected/mtx_identity_min_001.bin`
+  - `tests/sdk/mtx/mtx_identity/actual/mtx_identity_min_001.bin`
+- Confirmed behavior: writes a 3x4 identity matrix (diag = 1.0f, all other entries = 0.0f).
+
+## SDK MTX: C_MTXOrtho
+- Evidence: `tests/sdk/mtx/mtx_ortho` (DOL expected vs host actual) PASS:
+  - `tests/sdk/mtx/mtx_ortho/expected/mtx_ortho_ortho_0_1_001.bin`
+  - `tests/sdk/mtx/mtx_ortho/actual/mtx_ortho_ortho_0_1_001.bin`
+- Confirmed behavior: matches `decomp_mario_party_4/src/dolphin/mtx/mtx44.c:C_MTXOrtho`.
+- Tested parameters: `t=0, b=1, l=0, r=1, n=0, f=1` (chosen to avoid float rounding drift).
