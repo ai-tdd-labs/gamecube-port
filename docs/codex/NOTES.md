@@ -37,6 +37,17 @@ Rules:
   Mitigation in smoke DOLs: use `gc_safepoint()` (disable MSR[EE] + push DEC far future) very early and during loops.
   Evidence: `tests/sdk/smoke/mp4_pad_init_chain_001/dol/mp4/mp4_pad_init_chain_001/mp4_pad_init_chain_001.c`
 
+### MP4 host workload: GWInit reachability
+- Workload scenario runs MP4 init chain up to `GWInit()` on host:
+  `HuSysInit -> HuPrcInit -> HuPadInit -> GWInit`.
+  Evidence: `tests/workload/mp4/mp4_gwinit_001_scenario.c`; `tests/actual/workload/mp4_gwinit_001.bin` marker `MP43 DEADBEEF`.
+- `GWInit` is compiled from a deliberately small slice of decomp `gamework.c` (reachability-only).
+  Evidence: `tests/workload/mp4/slices/gwinit_only.c` (mirrors decomp `decomp_mario_party_4/src/game/gamework.c` `GWInit` body and helpers).
+- Retail MP4 RVZ MEM1 oracle at `GWInit` PC `0x800308B8`:
+  - file: `tests/oracles/mp4_rvz/mem1_at_pc_800308B8_gwinit.bin`
+  - sha256: `9130214e62b4c4abade670307d903bb9e8329145ca631e73057ea4e7eead0c0e`
+  Evidence: `tools/dump_expected_rvz_mem1_at_pc.sh` run with breakpoint `0x800308B8` and MMU enabled.
+
 ### VISetNextFrameBuffer
 - Callsites enumerated across MP4/TP/WW/AC.
   Evidence: docs/sdk/vi/VISetNextFrameBuffer.md
