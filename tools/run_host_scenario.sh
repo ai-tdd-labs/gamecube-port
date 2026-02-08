@@ -64,6 +64,7 @@ case "$subsystem" in
       "$repo_root/src/game_workload/mp4/vendor/src/game/pad.c"
       "$repo_root/src/game_workload/mp4/vendor/src/game/process.c"
       "$repo_root/tests/workload/mp4/slices/gwinit_only.c"
+      "$repo_root/tests/workload/mp4/slices/pfinit_only.c"
     )
     # Make the workload deterministic and avoid pulling in decomp build-system macros.
     extra_cflags+=(

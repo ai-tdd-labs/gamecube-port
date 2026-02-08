@@ -442,3 +442,29 @@ Notes:
 - Scenario: `tests/workload/mp4/mp4_huprcinit_001_scenario.c`
 - Build/run: `tools/run_host_scenario.sh tests/workload/mp4/mp4_huprcinit_001_scenario.c`
 - Output (marker only): `tests/actual/workload/mp4_huprcinit_001.bin` begins with `MP42` + `DEADBEEF`.
+
+## MP4 RVZ oracle: MEM1 dump at GWInit
+- Game: Mario Party 4 (USA) RVZ (see docs/sdk/mp4/MP4_assets.md)
+- Checkpoint: GWInit PC=0x800308B8 (from symbols.txt)
+- Dump: MEM1 0x80000000 size 0x01800000
+- Local path (gitignored): `tests/oracles/mp4_rvz/mem1_at_pc_800308B8_gwinit.bin`
+- SHA256: `9130214e62b4c4abade670307d903bb9e8329145ca631e73057ea4e7eead0c0e`
+
+## MP4 host workload: GWInit reachability (host-only)
+- Purpose: integration reachability only. Runs MP4 init chain up to `GWInit` against `src/sdk_port`.
+- Scenario: `tests/workload/mp4/mp4_gwinit_001_scenario.c`
+- Build/run: `tools/run_host_scenario.sh tests/workload/mp4/mp4_gwinit_001_scenario.c`
+- Output (marker only): `tests/actual/workload/mp4_gwinit_001.bin` begins with `MP43` + `DEADBEEF`.
+
+## MP4 RVZ oracle: MEM1 dump at pfInit
+- Game: Mario Party 4 (USA) RVZ (see docs/sdk/mp4/MP4_assets.md)
+- Checkpoint: pfInit PC=0x8000AEF0 (from symbols.txt)
+- Dump: MEM1 0x80000000 size 0x01800000
+- Local path (gitignored): `tests/oracles/mp4_rvz/mem1_at_pc_8000AEF0_pfinit.bin`
+- SHA256: `13f41479161d3d1e1036d722dd0ac9d24655cc3ef9f6b2568140a931c3e0f73f`
+
+## MP4 host workload: pfInit reachability (host-only)
+- Purpose: integration reachability only. Runs MP4 init chain up to `pfInit` against `src/sdk_port`.
+- Scenario: `tests/workload/mp4/mp4_pfinit_001_scenario.c`
+- Build/run: `tools/run_host_scenario.sh tests/workload/mp4/mp4_pfinit_001_scenario.c`
+- Output (marker only): `tests/actual/workload/mp4_pfinit_001.bin` begins with `MP44` + `DEADBEEF`.
