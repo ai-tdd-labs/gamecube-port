@@ -76,7 +76,7 @@ case "$subsystem" in
 
     # Only link heavy-module stubs for scenarios that explicitly need them.
     case "$scenario_base" in
-      mp4_init_to_viwait_001_scenario|mp4_mainloop_one_iter_001_scenario)
+      mp4_init_to_viwait_001_scenario|mp4_mainloop_one_iter_001_scenario|mp4_mainloop_two_iter_001_scenario)
         extra_srcs+=("$repo_root/tests/workload/mp4/slices/post_sprinit_stubs.c")
         ;;
     esac

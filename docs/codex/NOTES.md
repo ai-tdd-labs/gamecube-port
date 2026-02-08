@@ -504,6 +504,12 @@ Notes:
 - Build/run: `tools/run_host_scenario.sh tests/workload/mp4/mp4_mainloop_one_iter_001_scenario.c`
 - Output (marker only): `tests/actual/workload/mp4_mainloop_one_iter_001.bin` begins with `MP47` + `DEADBEEF`.
 
+## MP4 host workload: two main loop iterations (stubbed)
+- Purpose: reachability only. Executes two iterations of the MP4 `while (1)` loop with non-SDK calls stubbed, to catch VI/GX state bugs that only show up after multiple frames.
+- Scenario: `tests/workload/mp4/mp4_mainloop_two_iter_001_scenario.c`
+- Build/run: `tools/run_host_scenario.sh tests/workload/mp4/mp4_mainloop_two_iter_001_scenario.c`
+- Output (marker only): `tests/actual/workload/mp4_mainloop_two_iter_001.bin` begins with `MP49` + `DEADBEEF`.
+
 ## MP4 RVZ oracle: MEM1 dump at HuPerfInit
 - Game: Mario Party 4 (USA) RVZ (see docs/sdk/mp4/MP4_assets.md)
 - Checkpoint: HuPerfInit PC=0x8002E74C (from symbols.txt)
