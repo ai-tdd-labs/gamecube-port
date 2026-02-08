@@ -199,6 +199,14 @@ Rules:
   Evidence: decomp_mario_party_4/src/game/hsfman.c (`Hu3DShadowExec`); decomp_mario_party_4/src/dolphin/gx/GXFrameBuf.c (`GXCopyTex`);
   tests/sdk/gx/gx_copy_tex/expected/gx_copy_tex_mp4_shadow_small_001.bin
 
+### GXGetTexBufferSize (MP4 WipeCrossFade)
+- MP4 callsite:
+  `GXGetTexBufferSize(w, h, GX_TF_RGB565, GX_FALSE, 0)` where `w=fbWidth=640`, `h=efbHeight=480`.
+  Returns `0x00096000` bytes for RGB565 (tile shift 2x2, tileBytes=32).
+  Evidence: decomp_mario_party_4/src/game/wipe.c (`WipeInit`, `WipeCrossFade`);
+  decomp_mario_party_4/src/dolphin/gx/GXTexture.c (`GXGetTexBufferSize`);
+  tests/sdk/gx/gx_get_tex_buffer_size/expected/gx_get_tex_buffer_size_mp4_wipe_cross_fade_001.bin
+
 ### GXSetCurrentMtx (MP4 Hu3DExec)
 - Contract: updates `matIdxA` low 6 bits and writes XF reg 24 to the updated `matIdxA` (via `__GXSetMatrixIndex`).
   Evidence: decomp_mario_party_4/src/dolphin/gx/GXTransform.c (`GXSetCurrentMtx`, `__GXSetMatrixIndex`).

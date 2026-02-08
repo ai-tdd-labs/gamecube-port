@@ -760,6 +760,57 @@ void GXCopyTex(void *dest, u32 clear) {
     gc_gx_bp_sent_not = 0;
 }
 
+u32 GXGetTexBufferSize(u16 width, u16 height, u32 format, u8 mipmap, u8 max_lod) {
+    // Mirror decomp_mario_party_4/src/dolphin/gx/GXTexture.c:GXGetTexBufferSize.
+    // Evidence-driven: MP4 currently uses GX_TF_RGB565 with mipmap=0 in WipeCrossFade.
+    u32 tileShiftX = 0;
+    u32 tileShiftY = 0;
+    u32 tileBytes;
+    u32 bufferSize;
+
+    // Tile shifts from __GXGetTexTileShift (subset).
+    switch (format & 0x3Fu) {
+    case GX_TF_RGB565:
+        tileShiftX = 2;
+        tileShiftY = 2;
+        break;
+    case GX_TF_RGBA8:
+        tileShiftX = 2;
+        tileShiftY = 2;
+        break;
+    default:
+        // Extend when new formats are observed in callsites.
+        tileShiftX = 0;
+        tileShiftY = 0;
+        break;
+    }
+
+    tileBytes = ((format & 0x3Fu) == GX_TF_RGBA8) ? 64u : 32u;
+
+    if (mipmap == 1) {
+        // Match SDK behavior: for mipmapped textures, sum levels up to max_lod.
+        // We intentionally skip SDK assertions; callers are expected to be valid.
+        u32 level;
+        bufferSize = 0;
+        for (level = 0; level < (u32)max_lod; level++) {
+            u32 nx = (width + (1u << tileShiftX) - 1u) >> tileShiftX;
+            u32 ny = (height + (1u << tileShiftY) - 1u) >> tileShiftY;
+            bufferSize += tileBytes * (nx * ny);
+            if (width == 1 && height == 1) break;
+            width = (width > 1) ? (u16)(width >> 1) : 1;
+            height = (height > 1) ? (u16)(height >> 1) : 1;
+        }
+        return bufferSize;
+    }
+
+    {
+        u32 nx = (width + (1u << tileShiftX) - 1u) >> tileShiftX;
+        u32 ny = (height + (1u << tileShiftY) - 1u) >> tileShiftY;
+        bufferSize = nx * ny * tileBytes;
+    }
+    return bufferSize;
+}
+
 void GXSetCopyClear(GXColor clear_clr, u32 clear_z) {
     // Mirror Dolphin SDK GXFrameBuf.c:GXSetCopyClear observable BP reg writes.
     // We track all 3 regs so callsite tests can validate the full sequence.
