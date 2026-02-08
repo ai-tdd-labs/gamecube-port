@@ -18,6 +18,9 @@ void HuSprInit(void);
 void HuPadRead(void);
 void pfClsScr(void);
 
+// Minimal MP4 slice (tests/workload/mp4/slices/husoftresetbuttoncheck_only.c)
+int HuSoftResetButtonCheck(void);
+
 // Host-only stubs (tests/workload/mp4/slices/post_sprinit_stubs.c)
 void Hu3DInit(void);
 void HuDataInit(void);
@@ -48,7 +51,7 @@ void GXReadMemMetric(uint32_t *cp_req, uint32_t *tc_req, uint32_t *cpu_rd_req, u
                      uint32_t *rf_req, uint32_t *fi_req);
 
 // ---- Minimal game stubs for one-loop execution ----
-static int HuSoftResetButtonCheck(void) { return 0; }
+
 static void HuPerfZero(void) {}
 static void HuPerfBegin(int which) { (void)which; }
 static void HuPerfEnd(int which) { (void)which; }
