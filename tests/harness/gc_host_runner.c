@@ -7,6 +7,8 @@
 #include "sdk_state.h"
 
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 int main(int argc, char **argv) {
     (void)argc;
@@ -32,6 +34,38 @@ int main(int argc, char **argv) {
 
     if (gc_ram_dump(&ram, dump_addr, dump_size, out_path) != 0) {
         die("gc_ram_dump failed");
+    }
+
+    // Optional extra dump (e.g. MEM1) for checkpoint comparisons.
+    //
+    // Environment variables:
+    // - GC_HOST_DUMP_ADDR: hex/dec address (e.g. 0x80000000)
+    // - GC_HOST_DUMP_SIZE: hex/dec size (e.g. 0x01800000)
+    // - GC_HOST_DUMP_PATH: output path (optional; defaults to "<out_path>.mem1.bin")
+    const char *env_addr = getenv("GC_HOST_DUMP_ADDR");
+    const char *env_size = getenv("GC_HOST_DUMP_SIZE");
+    if (env_addr && env_size) {
+        char *endp = 0;
+        uint32_t big_addr = (uint32_t)strtoul(env_addr, &endp, 0);
+        if (!endp || *endp != 0) die("invalid GC_HOST_DUMP_ADDR");
+
+        endp = 0;
+        size_t big_size = (size_t)strtoull(env_size, &endp, 0);
+        if (!endp || *endp != 0) die("invalid GC_HOST_DUMP_SIZE");
+
+        const char *big_path = getenv("GC_HOST_DUMP_PATH");
+        char derived_path[4096];
+        if (!big_path || !*big_path) {
+            if (snprintf(derived_path, sizeof(derived_path), "%s.mem1.bin", out_path) >=
+                (int)sizeof(derived_path)) {
+                die("derived dump path too long");
+            }
+            big_path = derived_path;
+        }
+
+        if (gc_ram_dump(&ram, big_addr, big_size, big_path) != 0) {
+            die("gc_ram_dump big failed");
+        }
     }
 
     gc_ram_free(&ram);

@@ -64,6 +64,15 @@ Rules:
   - `0x80300024`: marker `0x464F4E54` (`'FONT'`)
   Evidence: `tests/actual/workload/mp4_mainloop_one_iter_tick_001.bin` (count=1) and `tests/actual/workload/mp4_mainloop_two_iter_tick_001.bin` (count=2).
 
+### RVZ vs host MEM1 dump (GWInit checkpoint)
+- RVZ oracle: MEM1 dump at retail MP4 PC `0x800308B8` (`GWInit`) exists as `tests/oracles/mp4_rvz/mem1_at_pc_800308B8_gwinit.bin` (24 MiB).
+  Evidence: `tools/dump_expected_rvz_mem1_at_pc.sh` run (recorded earlier in this file under "GWInit reachability").
+- Host workload MEM1 dump for `tests/workload/mp4/mp4_gwinit_001_scenario.c` produced `tests/actual/workload/mp4_gwinit_001_mem1.bin` (24 MiB) via `tools/dump_actual_mem1.sh`.
+- Full-image diff FAILs immediately after the ignored low-memory prefix:
+  - first mismatch at offset `0x00004134` (expected `0x7c`, actual `0x00`).
+  Interpretation: expected includes the loaded retail MP4 DOL image; host virtual RAM does not.
+  Evidence: `tools/diff_bins.sh tests/oracles/mp4_rvz/mem1_at_pc_800308B8_gwinit.bin tests/actual/workload/mp4_gwinit_001_mem1.bin` output.
+
 ### VISetNextFrameBuffer
 - Callsites enumerated across MP4/TP/WW/AC.
   Evidence: docs/sdk/vi/VISetNextFrameBuffer.md

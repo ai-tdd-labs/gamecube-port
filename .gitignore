@@ -34,6 +34,7 @@ src/game_workload/*/vendor/
 # Test outputs
 tests/actual/
 tests/recomp_out/
+tests/workload/mp4/tests/
 
 # ROMs / discs / archives / assets (do not publish)
 **/*.iso

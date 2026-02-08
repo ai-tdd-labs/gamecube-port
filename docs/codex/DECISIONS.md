@@ -42,3 +42,17 @@ Why:
 Scope:
 - These stubs are deterministic and only record minimal observable side effects into the RAM-backed sdk_state page.
 - Correctness (real hardware semantics) must be established via dedicated DOL expected vs host actual unit tests for any behavior that becomes observable to the game.
+
+## RVZ MEM1 dumps are not bit-comparable to host without a loader
+
+Decision:
+- Do not treat a full MEM1 dump (`0x80000000` size `0x01800000`) from retail MP4 RVZ as bit-comparable to a host workload MEM1 dump until we implement a real DOL loader / memory image on host.
+
+Why:
+- Retail RVZ runs the real MP4 DOL; MEM1 contains the game's loaded `.text/.data/.bss`, plus SDK globals at their real addresses.
+- Our host workloads run selected MP4 C translation units and do **not** load the MP4 DOL image into virtual RAM, so large regions (especially code/data) are zero or different by construction.
+- Result: the first mismatch is typically early in MEM1 (shortly after the ignored low-memory prefix) and does not indicate an SDK-port bug.
+
+What to do instead (until loader exists):
+- Use the deterministic oracle as primary: `sdk_port` on PPC (Dolphin DOL) vs `sdk_port` on host (virtual RAM).
+- For RVZ sanity checks, probe **specific symbol addresses** (e.g. `__OSArenaLo`, `__OSArenaHi`, SI/VI state) and compare derived invariants, not the entire MEM1 image.

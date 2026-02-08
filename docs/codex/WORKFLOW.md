@@ -138,6 +138,18 @@ If you cannot rely on breakpoints for a particular run (e.g. address not hit / t
 - Run for a small step, halt, read stop packet, decode PC (reg `0x40`), repeat until PC==target.
 - Then dump RAM.
 
+### Host MEM1 dumping (for RVZ comparisons)
+
+For comparing a host workload scenario against an RVZ MEM1 oracle, dump host MEM1 from the
+virtual RAM buffer:
+
+- Expected (RVZ at PC): `tools/dump_expected_rvz_mem1_at_pc.sh <rvz_path> <pc_hex> <out_mem1_bin>`
+- Actual (host scenario): `tools/dump_actual_mem1.sh <scenario_c> <out_mem1_bin>`
+- Diff: `tools/diff_bins.sh <expected_mem1_bin> <actual_mem1_bin>`
+
+Implementation detail: the host runner supports an optional second dump via env vars
+(`GC_HOST_DUMP_ADDR`, `GC_HOST_DUMP_SIZE`, `GC_HOST_DUMP_PATH`). See `tests/harness/gc_host_runner.c`.
+
 Command pattern:
 
 ```bash
