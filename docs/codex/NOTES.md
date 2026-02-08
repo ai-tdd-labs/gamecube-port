@@ -152,6 +152,24 @@ Rules:
 - MP4 callsite-style testcase (expected.bin only for now; host port pending).
   Evidence: tests/sdk/gx/gx_set_dither/expected/gx_set_dither_mp4_init_gx_001.bin
 
+### GXSetCopyClear (MP4 Hu3DPreProc)
+- Contract: emits 3 BP/RAS writes (0x4F/0x50/0x51) encoding clear color (R,A then B,G) and 24-bit Z.
+  Evidence: decomp_mario_party_4/src/dolphin/gx/GXFrameBuf.c (`GXSetCopyClear`).
+- MP4 callsite test: `GXSetCopyClear(BGColor={0,0,0,0xFF}, 0xFFFFFF)`.
+  Evidence: decomp_mario_party_4/src/game/hsfman.c (`Hu3DPreProc`); tests/sdk/gx/gx_set_copy_clear/expected/gx_set_copy_clear_mp4_hu3d_preproc_001.bin
+
+### GXSetCurrentMtx (MP4 Hu3DExec)
+- Contract: updates `matIdxA` low 6 bits and writes XF reg 24 to the updated `matIdxA` (via `__GXSetMatrixIndex`).
+  Evidence: decomp_mario_party_4/src/dolphin/gx/GXTransform.c (`GXSetCurrentMtx`, `__GXSetMatrixIndex`).
+- MP4 callsite test: `GXSetCurrentMtx(0)`.
+  Evidence: decomp_mario_party_4/src/game/hsfman.c (`Hu3DExec`); tests/sdk/gx/gx_set_current_mtx/expected/gx_set_current_mtx_mp4_hu3d_exec_001.bin
+
+### GXSetDrawDone / GXWaitDrawDone (MP4 Hu3DExec)
+- SDK behavior: `GXSetDrawDone()` writes BP `0x45000002` and resets a completion flag; `GXWaitDrawDone()` blocks until the flag is set by a finish interrupt.
+  Evidence: decomp_mario_party_4/src/dolphin/gx/GXMisc.c (`GXSetDrawDone`, `GXWaitDrawDone`).
+- Current repo model: deterministic no-block shim for `GXWaitDrawDone` (marks complete immediately) to keep host tests deterministic.
+  Evidence: src/sdk_port/gx/GX.c (`GXWaitDrawDone`); tests/sdk/gx/gx_wait_draw_done/expected/gx_wait_draw_done_mp4_hu3d_exec_001.bin
+
 ## Known Invariants
 
 ## Undocumented Quirks

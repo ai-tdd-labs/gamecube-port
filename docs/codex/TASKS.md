@@ -47,6 +47,13 @@ evidence-based. Mark items DONE with a commit hash.
      Evidence anchor: `decomp_mario_party_4/src/game/data.c` and `decomp_mario_party_4/src/game/dvd.c`
      Progress:
        - [x] Identified + covered `DCInvalidateRange` callsite used by `HuDvdDataReadWait`. (new suite `tests/sdk/os/dc_invalidate_range`)
+       - [x] Covered the remaining HuDataInit DVD path calls (`DVDFastOpen`, `DVDReadAsync` poll + callback variant, `DVDGetCommandBlockStatus`) with deterministic virtual-disc backend. (c2f8f72, 2cc9c27, 8037773)
+
+   - [ ] Next MP4 frame-loop SDK blockers: trace `Hu3DPreProc` + `Hu3DExec` (hsfman.c) and keep adding MP4-realistic GX callsite suites.
+     Starting point:
+       - [x] `GXSetCopyClear`, `GXSetCurrentMtx`, `GXSetDrawDone`, `GXWaitDrawDone` MP4 callsites. (this session)
+     Next likely GX gaps inside `Hu3DExec` / shadow path:
+       - `GXSetFog`, `GXSetProjection`, `GXSetTexCopySrc`, `GXSetTexCopyDst`, `GXCopyTex`, `GXClearVtxDesc`, `GXSetVtxDesc`, `GXSetVtxAttrFmt`, `GXSetTevColor`, `GXLoadPosMtxImm`, `GXBegin`, `GXColor3u8`, ...
 
 ## Later
 

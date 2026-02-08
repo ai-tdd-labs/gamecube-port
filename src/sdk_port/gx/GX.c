@@ -60,6 +60,20 @@ u32 gc_gx_invalidate_vtx_cache_calls;
 u32 gc_gx_invalidate_tex_all_calls;
 u32 gc_gx_draw_done_calls;
 
+// Copy-clear observable state (GXSetCopyClear writes 3 BP regs: 0x4F/0x50/0x51).
+u32 gc_gx_copy_clear_reg0;
+u32 gc_gx_copy_clear_reg1;
+u32 gc_gx_copy_clear_reg2;
+
+// Current matrix index observable (GXSetCurrentMtx updates matIdxA + XF reg 24).
+u32 gc_gx_mat_idx_a;
+
+// Draw-done shim (GXSetDrawDone/GXWaitDrawDone). We do not emulate PE finish interrupts,
+// only the observable register writes and a deterministic completion flag for tests.
+u32 gc_gx_set_draw_done_calls;
+u32 gc_gx_wait_draw_done_calls;
+u32 gc_gx_draw_done_flag;
+
 // GX metric state (software mirror). Real hardware accumulates counters; for now we model
 // only what our deterministic tests assert and what MP4 callsites depend on.
 u32 gc_gx_gp_perf0;
@@ -578,6 +592,59 @@ void GXDrawDone(void) {
     gc_gx_draw_done_calls++;
 }
 
+typedef struct {
+    u8 r, g, b, a;
+} GXColor;
+
+void GXSetCopyClear(GXColor clear_clr, u32 clear_z) {
+    // Mirror Dolphin SDK GXFrameBuf.c:GXSetCopyClear observable BP reg writes.
+    // We track all 3 regs so callsite tests can validate the full sequence.
+    u32 reg;
+    reg = 0;
+    reg = set_field(reg, 8, 0, (u32)clear_clr.r);
+    reg = set_field(reg, 8, 8, (u32)clear_clr.a);
+    reg = set_field(reg, 8, 24, 0x4Fu);
+    gc_gx_copy_clear_reg0 = reg;
+    gx_write_ras_reg(reg);
+
+    reg = 0;
+    reg = set_field(reg, 8, 0, (u32)clear_clr.b);
+    reg = set_field(reg, 8, 8, (u32)clear_clr.g);
+    reg = set_field(reg, 8, 24, 0x50u);
+    gc_gx_copy_clear_reg1 = reg;
+    gx_write_ras_reg(reg);
+
+    reg = 0;
+    reg = set_field(reg, 24, 0, clear_z & 0xFFFFFFu);
+    reg = set_field(reg, 8, 24, 0x51u);
+    gc_gx_copy_clear_reg2 = reg;
+    gx_write_ras_reg(reg);
+
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXSetCurrentMtx(u32 id) {
+    // Mirror GXTransform.c:GXSetCurrentMtx + __GXSetMatrixIndex(GX_VA_PNMTXIDX).
+    // We model only the matIdxA update and the XF reg write (24).
+    gc_gx_mat_idx_a = set_field(gc_gx_mat_idx_a, 6, 0, id);
+    gx_write_xf_reg(24, gc_gx_mat_idx_a);
+    gc_gx_bp_sent_not = 1;
+}
+
+void GXSetDrawDone(void) {
+    // Mirror GXMisc.c:GXSetDrawDone observable write.
+    // Real SDK also touches interrupt state + DrawDone flag; we keep it deterministic.
+    gc_gx_set_draw_done_calls++;
+    gx_write_ras_reg(0x45000002u);
+    gc_gx_draw_done_flag = 0;
+}
+
+void GXWaitDrawDone(void) {
+    // Deterministic completion: don't block, just mark "done".
+    gc_gx_wait_draw_done_calls++;
+    gc_gx_draw_done_flag = 1;
+}
+
 void GXSetZMode(u8 enable, u32 func, u8 update_enable) {
     gc_gx_zmode_enable = (u32)enable;
     gc_gx_zmode_func = func;
@@ -593,10 +660,6 @@ void GXSetColorUpdate(u8 enable) {
 }
 
 // ---- Batch 3 (GX light/tev/pixel setters used by GXInit) ----
-
-typedef struct {
-    u8 r, g, b, a;
-} GXColor;
 
 enum {
     GX_COLOR0 = 0,

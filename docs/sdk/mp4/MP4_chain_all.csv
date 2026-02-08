@@ -163,3 +163,7 @@ HuDataInit,2,DVDFastOpen,sdk,,tests/sdk/dvd/dvd_fast_open,1/1,1,1,1,y
 HuDataInit,3,DVDReadAsync,sdk,,tests/sdk/dvd/dvd_read_async,2/2,2,2,2,y
 HuDataInit,4,DVDGetCommandBlockStatus,sdk,,tests/sdk/dvd/dvd_read_async,2/2,2,2,2,y
 HuDataInit,5,DCInvalidateRange,sdk,,tests/sdk/os/dc_invalidate_range,1/1,1,1,1,y
+Hu3DPreProc,1,GXSetCopyClear,sdk,,tests/sdk/gx/gx_set_copy_clear,1/1,1,1,1,y
+Hu3DExec,1,GXSetCurrentMtx,sdk,,tests/sdk/gx/gx_set_current_mtx,1/1,1,1,1,y
+Hu3DExec,2,GXSetDrawDone,sdk,,tests/sdk/gx/gx_set_draw_done,1/1,1,1,1,y
+Hu3DExec,3,GXWaitDrawDone,sdk,,tests/sdk/gx/gx_wait_draw_done,1/1,1,1,1,y
