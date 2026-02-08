@@ -28,6 +28,12 @@ Rules:
 - OSDisableInterrupts MP4-realistic test suite: `tests/sdk/os/os_disable_interrupts` now PASSes expected vs actual.
   - Fix applied: DOL Makefile must not include decomp headers, because some decomps ship a nonstandard `<stdint.h>` that breaks `uint32_t` etc.
   Evidence: `tests/sdk/smoke/mp4_pad_init_chain_001/README.md`
+- Additional MP4 pad callsite-style suites (used by the MP4 main loop / PadReadVSync path) now have deterministic PPC-vs-host coverage:
+  - `tests/sdk/pad/pad_read`
+  - `tests/sdk/pad/pad_clamp`
+  - `tests/sdk/pad/pad_reset`
+  - `tests/sdk/pad/pad_recalibrate`
+  Evidence: `tests/sdk/pad/*/expected/*padreadvsync_001.bin` and matching `actual/*`.
 - Determinism scope:
   - Primary oracle: `sdk_port` on PPC (Dolphin DOL) vs `sdk_port` on host (virtual RAM) should be bit-exact for the dumped ranges.
   - This does NOT prove retail MP4 correctness; retail correctness needs the RVZ breakpoint dump oracle.
