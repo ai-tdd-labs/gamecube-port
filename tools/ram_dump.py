@@ -504,9 +504,9 @@ Examples:
     if args.exec_file:
         config_overrides = list(args.dolphin_config or [])
         if args.enable_mmu:
-            # Dolphin's exact key naming can vary by version; we set the
-            # commonly used one and rely on the user's Dolphin build to accept it.
-            config_overrides.append("Core.Core.MMU=True")
+            # Dolphin stores this in Dolphin.ini under the [Core] section as "MMU".
+            # Use the short "Section.Key=Value" form that Dolphin's -C understands.
+            config_overrides.append("Core.MMU=True")
 
         dolphin_proc = start_dolphin(
             args.exec_file,
