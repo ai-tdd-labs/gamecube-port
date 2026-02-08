@@ -511,6 +511,14 @@ Notes:
 - Build/run: `tools/run_host_scenario.sh tests/workload/mp4/mp4_mainloop_two_iter_001_scenario.c`
 - Output (marker only): `tests/actual/workload/mp4_mainloop_two_iter_001.bin` begins with `MP49` + `DEADBEEF`.
 
+## MP4 host workload: one main loop iteration with VI tick (PadReadVSync driven)
+- Purpose: reachability + pad callback proof. Simulates one VI retrace tick so the PostRetraceCallback installed by `HuPadInit` (PadReadVSync) runs.
+- Scenario: `tests/workload/mp4/mp4_mainloop_one_iter_tick_001_scenario.c`
+- Build/run: `tools/run_host_scenario.sh tests/workload/mp4/mp4_mainloop_one_iter_tick_001_scenario.c`
+- Output: `tests/actual/workload/mp4_mainloop_one_iter_tick_001.bin`
+  - 0x00: `MP4P` marker
+  - 0x08: HuPadErr[0] (expected: 0xFE == PAD_ERR_NOT_READY in our deterministic PADRead stub)
+
 ## MP4 RVZ oracle: MEM1 dump at HuPerfInit
 - Game: Mario Party 4 (USA) RVZ (see docs/sdk/mp4/MP4_assets.md)
 - Checkpoint: HuPerfInit PC=0x8002E74C (from symbols.txt)
