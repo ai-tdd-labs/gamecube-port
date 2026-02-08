@@ -66,6 +66,7 @@ case "$subsystem" in
       "$repo_root/tests/workload/mp4/slices/gwinit_only.c"
       "$repo_root/tests/workload/mp4/slices/pfinit_only.c"
       "$repo_root/tests/workload/mp4/slices/husprinit_only.c"
+      "$repo_root/tests/workload/mp4/slices/post_sprinit_stubs.c"
     )
     # Make the workload deterministic and avoid pulling in decomp build-system macros.
     extra_cflags+=(
