@@ -407,6 +407,13 @@ Notes:
 - SHA256: `61f7c0d775bee3ef9f23364ad929a7d7d16c0c2ccbe7874f478030956bc6f9ae`
 - Notes: This is a secondary oracle snapshot to compare against our sdk_port+tests as we extend coverage around PAD init.
 
+## MP4 RVZ oracle: MEM1 dump at HuPrcInit
+- Game: Mario Party 4 (USA) RVZ (see docs/sdk/mp4/MP4_assets.md)
+- Checkpoint: HuPrcInit PC=0x8000C4A4 (from symbols.txt)
+- Dump: MEM1 0x80000000 size 0x01800000
+- Local path (gitignored): `tests/oracles/mp4_rvz/mem1_at_pc_8000C4A4_huprcinit.bin`
+- SHA256: `e37e874fee24439a83351d7683913d419ceef27751205097a1e27f4262852ec8`
+
 ## MP4 host workload: HuSysInit reachability (host-only)
 - Purpose: integration reachability only (not a correctness oracle). Used to discover missing SDK surface while running decompiled MP4 init code against `src/sdk_port`.
 - Scenario: `tests/workload/mp4/mp4_husysinit_001_scenario.c`
