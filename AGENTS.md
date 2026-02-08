@@ -5,6 +5,34 @@ We are reverse-engineering and porting a Nintendo GameCube game using decompiled
 Codex has no memory. The repository is the memory.
 
 =====================
+ISSUE TRACKING (bd / beads)
+=====================
+
+This project uses **bd (beads)** for issue tracking.
+
+Rules:
+- Always create issues before starting new work.
+- Wire dependencies so later steps are blocked until prerequisites complete.
+- Only close issues after tests are run and evidence is recorded in `docs/codex/NOTES.md`.
+
+Quick reference:
+- `bd ready` (find unblocked work)
+- `bd create "Title" --type task --priority 1 --body "..."` (P1 = OS/memory/loader prereqs)
+- `bd update <id> --status in_progress`
+- `bd dep add <blocked> <blocker>`
+- `bd close <id> --reason "Tested: ..."`
+- `bd sync` (export JSONL for git sync)
+
+Template for an SDK function chain (keep these as separate bd issues, linked by deps):
+1) Read SDK source + find MP4/TP/WW/AC callsites
+2) Design deterministic testcase(s)
+3) Build DOL test
+4) Dump `expected.bin` in Dolphin
+5) Implement minimal `src/sdk_port` behavior
+6) Run host scenario -> `actual.bin`
+7) Diff bit-exact + write notes
+
+=====================
 GOAL
 =====================
 
@@ -135,3 +163,29 @@ At the end of EVERY session:
 1) Update docs/codex/NOTES.md
 2) Update or add tests
 3) Commit changes
+
+## Landing the Plane (Session Completion)
+
+**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+
+**MANDATORY WORKFLOW:**
+
+1. **File issues for remaining work** - Create issues for anything that needs follow-up
+2. **Run quality gates** (if code changed) - Tests, linters, builds
+3. **Update issue status** - Close finished work, update in-progress items
+4. **PUSH TO REMOTE** - This is MANDATORY:
+   ```bash
+   git pull --rebase
+   bd sync
+   git push
+   git status  # MUST show "up to date with origin"
+   ```
+5. **Clean up** - Clear stashes, prune remote branches
+6. **Verify** - All changes committed AND pushed
+7. **Hand off** - Provide context for next session
+
+**CRITICAL RULES:**
+- Work is NOT complete until `git push` succeeds
+- NEVER stop before pushing - that leaves work stranded locally
+- NEVER say "ready to push when you are" - YOU must push
+- If push fails, resolve and retry until it succeeds
