@@ -60,7 +60,7 @@ static void MGSeqMain(void) {}
 static void Hu3DExec(void) {}
 static void WipeExecAlways(void) {}
 static void pfDrawFonts(void) {}
-static void msmMusFdoutEnd(void) {}
+void msmMusFdoutEnd(void);
 
 // Real MP4 functions from vendor init.c (already compiled in workload via tools/run_host_scenario.sh).
 void HuSysBeforeRender(void);
