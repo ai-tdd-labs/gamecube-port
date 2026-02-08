@@ -67,6 +67,7 @@ case "$subsystem" in
       "$repo_root/tests/workload/mp4/slices/pfinit_only.c"
       "$repo_root/tests/workload/mp4/slices/husprinit_only.c"
       "$repo_root/tests/workload/mp4/slices/huperfinit_only.c"
+      "$repo_root/tests/workload/mp4/slices/hu3dinit_only.c"
       "$repo_root/tests/workload/mp4/slices/hu3d_preproc_only.c"
     )
 

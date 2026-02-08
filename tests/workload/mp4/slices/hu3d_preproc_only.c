@@ -24,9 +24,10 @@ typedef struct {
 enum { HU3D_MODEL_MAX = 512 };
 enum { HU3D_ATTR_MOT_EXEC = 0x800 };
 
-// Minimal global state used by Hu3DPreProc.
-static ModelDataMini Hu3DData[HU3D_MODEL_MAX];
-static GXColor BGColor;
+// Minimal global state used by Hu3DInit/Hu3DPreProc.
+// These are intentionally global (not static) so other minimal Hu3D slices can share them.
+ModelDataMini Hu3DData[HU3D_MODEL_MAX];
+GXColor BGColor;
 
 static u32 totalPolyCnted, totalMatCnted, totalTexCnted, totalTexCacheCnted;
 static u32 totalPolyCnt, totalMatCnt, totalTexCnt, totalTexCacheCnt;
@@ -51,4 +52,3 @@ void Hu3DPreProc(void) {
     totalTexCacheCnted = totalTexCacheCnt;
     totalPolyCnt = totalMatCnt = totalTexCnt = totalTexCacheCnt = 0;
 }
-

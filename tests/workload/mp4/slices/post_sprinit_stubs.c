@@ -6,7 +6,6 @@
 // Purpose: allow the host workload to reach later SDK calls (e.g. VIWaitForRetrace)
 // without pulling the entire game engine/decomp into the repo.
 
-void Hu3DInit(void) {}
 void HuDataInit(void) {}
 void WipeInit(void *render_mode) { (void)render_mode; }
 
