@@ -205,6 +205,8 @@ Rules:
     Evidence: `tests/sdk/dvd/dvd_fast_open/expected/dvd_fast_open_mp4_hu_dvd_data_fast_read_001.bin` and `tests/sdk/dvd/dvd_fast_open/actual/dvd_fast_open_mp4_hu_dvd_data_fast_read_001.bin`
   - `dvd_read_async_mp4_hu_data_dvd_dir_direct_read_001`: `DVDReadAsync(&fi, dest, 0x20, 0x10, NULL)` copies bytes and `DVDGetCommandBlockStatus(&fi.cb)==0`.
     Evidence: `tests/sdk/dvd/dvd_read_async/expected/dvd_read_async_mp4_hu_data_dvd_dir_direct_read_001.bin` and `tests/sdk/dvd/dvd_read_async/actual/dvd_read_async_mp4_hu_data_dvd_dir_direct_read_001.bin`
+  - `dvd_read_async_mp4_hu_dvd_data_read_wait_cb_001`: `DVDReadAsync(&fi, dest, 0x20, 0x00, cb)` calls the callback (cb_called=1) and copies bytes.
+    Evidence: `tests/sdk/dvd/dvd_read_async/expected/dvd_read_async_mp4_hu_dvd_data_read_wait_cb_001.bin` and `tests/sdk/dvd/dvd_read_async/actual/dvd_read_async_mp4_hu_dvd_data_read_wait_cb_001.bin`
 
 ### DCInvalidateRange (MP4 HuDvdDataReadWait path)
 
