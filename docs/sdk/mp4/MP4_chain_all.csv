@@ -159,3 +159,6 @@ HuPerfInit,1,OSInitStopwatch,sdk,,tests/sdk/os/os_init_stopwatch,1/1,1,1,1,y
 HuPerfInit,2,GXSetDrawSyncCallback,sdk,,tests/sdk/gx/gx_set_draw_sync_callback,1/1,1,1,1,y
 HuPerfBegin,1,GXSetDrawSync,sdk,,tests/sdk/gx/gx_set_draw_sync,1/1,1,1,1,y
 HuDataInit,1,DVDConvertPathToEntrynum,sdk,,tests/sdk/dvd/dvd_convert_path_to_entrynum,2/2,2,2,2,y
+HuDataInit,2,DVDFastOpen,sdk,,tests/sdk/dvd/dvd_fast_open,1/1,1,1,1,y
+HuDataInit,3,DVDReadAsync,sdk,,tests/sdk/dvd/dvd_read_async,1/1,1,1,1,y
+HuDataInit,4,DVDGetCommandBlockStatus,sdk,,tests/sdk/dvd/dvd_read_async,1/1,1,1,1,y

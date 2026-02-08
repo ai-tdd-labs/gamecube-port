@@ -7,7 +7,7 @@
 typedef struct { uint32_t _dummy; } DVDFileInfo;
 
 extern uint32_t gc_dvd_open_calls;
-int DVDOpen(DVDFileInfo *fi, const char *path);
+int DVDOpen(const char *path, DVDFileInfo *fi);
 
 const char *gc_scenario_label(void) { return "DVDOpen/mp4_init_mem"; }
 const char *gc_scenario_out_path(void) { return "../actual/dvd_open_mp4_init_mem_001.bin"; }
@@ -15,7 +15,7 @@ const char *gc_scenario_out_path(void) { return "../actual/dvd_open_mp4_init_mem
 void gc_scenario_run(GcRam *ram) {
     gc_dvd_open_calls = 0;
     DVDFileInfo fi;
-    int ok = DVDOpen(&fi, "/meminfo.bin");
+    int ok = DVDOpen("/meminfo.bin", &fi);
 
     uint8_t *p = gc_ram_ptr(ram, 0x80300000u, 0x0C);
     if (!p) die("gc_ram_ptr failed");

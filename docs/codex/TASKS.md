@@ -37,7 +37,14 @@ evidence-based. Mark items DONE with a commit hash.
      Evidence: `tests/sdk/smoke/mp4_pad_init_chain_001/`
    - [x] HuDataInit: cover `DVDConvertPathToEntrynum` MP4 callsite behavior (minimal deterministic backend).
      Evidence: `tests/sdk/dvd/dvd_convert_path_to_entrynum/`
-   - [ ] Next MP4 init step: extract SDK calls (and add MP4 callsite tests) for `GWInit`, `pfInit`, `HuSprInit`, `Hu3DInit`, `WipeInit`.
+   - [x] HuDataDirRead path: cover `DVDFastOpen` + `DVDReadAsync` + `DVDGetCommandBlockStatus` MP4 callsite behavior (minimal deterministic backend).
+     Evidence: `tests/sdk/dvd/dvd_fast_open/` and `tests/sdk/dvd/dvd_read_async/`
+   - [ ] Next MP4 init step: determine the *actual next SDK blocker after HuDataInit* by tracing from `HuDataDirRead` into `HuDataReadNumHeapShortForce` and `HuDvdDataReadWait`.
+     Output:
+       - new rows in `docs/sdk/mp4/MP4_chain_all.csv`
+       - MP4-realistic suites under `tests/sdk/*`
+       - facts in `docs/codex/NOTES.md`
+     Evidence anchor: `decomp_mario_party_4/src/game/data.c` and `decomp_mario_party_4/src/game/dvd.c`
 
 ## Later
 

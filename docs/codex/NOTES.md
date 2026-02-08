@@ -191,6 +191,21 @@ Rules:
   - `dvd_convert_path_to_entrynum_mp4_datadir_table_001`: validates *all* MP4 `datadir_table.h` paths resolve (count=140); returns `-1` for a missing path.
     Evidence: `tests/sdk/dvd/dvd_convert_path_to_entrynum/expected/dvd_convert_path_to_entrynum_mp4_datadir_table_001.bin` and `tests/sdk/dvd/dvd_convert_path_to_entrynum/actual/dvd_convert_path_to_entrynum_mp4_datadir_table_001.bin`
 
+### DVDFastOpen / DVDReadAsync (MP4 HuDvdDataFastRead path)
+
+- Callsites (MP4):
+  - `HuDvdDataFastRead(entrynum)` does `DVDFastOpen(entrynum, &file)` then reads `file.length`.
+    Evidence: `decomp_mario_party_4/src/game/dvd.c`
+  - `HuDataDVDdirDirectRead(fileInfo, dest, len, offset)` does `DVDReadAsync(...)` then polls `DVDGetCommandBlockStatus(&fileInfo->cb)` until it returns 0.
+    Evidence: `decomp_mario_party_4/src/game/data.c`
+- Current port status: deterministic “virtual disc” backend only (injectable entrynum->bytes table), not a real disc/FST model yet.
+  Evidence: `src/sdk_port/dvd/DVD.c` (`gc_dvd_test_set_file`, `DVDFastOpen`, `DVDReadAsync`)
+- Testcases (PPC in Dolphin vs host sdk_port):
+  - `dvd_fast_open_mp4_hu_dvd_data_fast_read_001`: `DVDFastOpen(0)` sets `file.length=0x40`.
+    Evidence: `tests/sdk/dvd/dvd_fast_open/expected/dvd_fast_open_mp4_hu_dvd_data_fast_read_001.bin` and `tests/sdk/dvd/dvd_fast_open/actual/dvd_fast_open_mp4_hu_dvd_data_fast_read_001.bin`
+  - `dvd_read_async_mp4_hu_data_dvd_dir_direct_read_001`: `DVDReadAsync(&fi, dest, 0x20, 0x10, NULL)` copies bytes and `DVDGetCommandBlockStatus(&fi.cb)==0`.
+    Evidence: `tests/sdk/dvd/dvd_read_async/expected/dvd_read_async_mp4_hu_data_dvd_dir_direct_read_001.bin` and `tests/sdk/dvd/dvd_read_async/actual/dvd_read_async_mp4_hu_data_dvd_dir_direct_read_001.bin`
+
 ## Test Runs (auto)
 
 - Format: `[PASS|FAIL] <label> expected=<path> actual=<path> (first_mismatch=0x........)`
