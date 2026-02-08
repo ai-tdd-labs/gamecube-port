@@ -55,7 +55,6 @@ static void HuPerfEnd(int which) { (void)which; }
 static void HuPrcCall(int which) { (void)which; }
 static void MGSeqMain(void) {}
 static void Hu3DExec(void) {}
-static void HuDvdErrorWatch(void) {}
 static void WipeExecAlways(void) {}
 static void pfDrawFonts(void) {}
 static void msmMusFdoutEnd(void) {}
@@ -66,6 +65,9 @@ void HuSysDoneRender(int retrace_count);
 
 // Minimal MP4 slice (tests/workload/mp4/slices/hu3d_preproc_only.c)
 void Hu3DPreProc(void);
+
+// Minimal MP4 slice (tests/workload/mp4/slices/hudvderrorwatch_only.c)
+void HuDvdErrorWatch(void);
 
 // This global is referenced by older chain code; keep it consistent.
 int HuDvdErrWait = 0;
