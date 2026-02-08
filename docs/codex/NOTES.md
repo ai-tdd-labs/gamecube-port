@@ -173,6 +173,32 @@ Rules:
   - XF regs 32..38 written (32..37 = projMtx floats, 38 = projType)
   Evidence: decomp_mario_party_4/src/dolphin/gx/GXTransform.c (`GXSetProjection`/`__GXSetProjection`); tests/sdk/gx/gx_set_projection/expected/gx_set_projection_mp4_shadow_ortho_001.bin
 
+### GXSetTexCopySrc (MP4 Hu3DShadowExec small branch)
+- MP4 callsite (shadow copy setup, unk_02 <= 0xF0):
+  `GXSetTexCopySrc(0, 0, unk_02 * 2, unk_02 * 2)` packs:
+  - `cpTexSrc` high byte 0x49 with left/top fields
+  - `cpTexSize` high byte 0x4A with (wd-1)/(ht-1)
+  Evidence: decomp_mario_party_4/src/game/hsfman.c (`Hu3DShadowExec`); decomp_mario_party_4/src/dolphin/gx/GXFrameBuf.c (`GXSetTexCopySrc`);
+  tests/sdk/gx/gx_set_tex_copy_src/expected/gx_set_tex_copy_src_mp4_shadow_small_001.bin
+
+### GXSetTexCopyDst (MP4 Hu3DShadowExec small branch)
+- MP4 callsite (shadow copy setup, unk_02 <= 0xF0):
+  `GXSetTexCopyDst(unk_02, unk_02, GX_CTF_R8, 1)` packs:
+  - `cpTexStride` high byte 0x4D, field0 = `rowTiles * cmpTiles` for format
+  - `cpTex` mipmap bit + format fields (used later by `GXCopyTex`)
+  - `cpTexZ` flag (0 for GX_CTF_R8)
+  Evidence: decomp_mario_party_4/src/game/hsfman.c (`Hu3DShadowExec`); decomp_mario_party_4/src/dolphin/gx/GXFrameBuf.c (`GXSetTexCopyDst`);
+  tests/sdk/gx/gx_set_tex_copy_dst/expected/gx_set_tex_copy_dst_mp4_shadow_small_001.bin
+
+### GXCopyTex (MP4 Hu3DShadowExec small branch)
+- MP4 callsite (shadow copy):
+  `GXCopyTex(dest, GX_TRUE)` writes:
+  - BP 0x4B (addr): low 21 bits = `(dest & 0x3FFFFFFF) >> 5`
+  - BP 0x52 (cpTex): sets clear bit (bit11) and tex-copy bit14=0
+  - On `clear=1`, also emits zmode (0x40...) then a temporary cmode reg (0x42...) with bits0/1 cleared.
+  Evidence: decomp_mario_party_4/src/game/hsfman.c (`Hu3DShadowExec`); decomp_mario_party_4/src/dolphin/gx/GXFrameBuf.c (`GXCopyTex`);
+  tests/sdk/gx/gx_copy_tex/expected/gx_copy_tex_mp4_shadow_small_001.bin
+
 ### GXSetCurrentMtx (MP4 Hu3DExec)
 - Contract: updates `matIdxA` low 6 bits and writes XF reg 24 to the updated `matIdxA` (via `__GXSetMatrixIndex`).
   Evidence: decomp_mario_party_4/src/dolphin/gx/GXTransform.c (`GXSetCurrentMtx`, `__GXSetMatrixIndex`).

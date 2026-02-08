@@ -40,11 +40,21 @@ u32 gc_gx_mat_color[2];
 // Pixel engine control mirrors (subset).
 u32 gc_gx_cmode0;
 u32 gc_gx_pe_ctrl;
+u32 gc_gx_zmode;
 
 u32 gc_gx_cp_disp_src;
 u32 gc_gx_cp_disp_size;
 u32 gc_gx_cp_disp_stride;
 u32 gc_gx_cp_disp;
+
+// Texture copy registers (GXSetTexCopySrc/Dst + GXCopyTex).
+u32 gc_gx_cp_tex_src;
+u32 gc_gx_cp_tex_size;
+u32 gc_gx_cp_tex_stride;
+u32 gc_gx_cp_tex;
+u32 gc_gx_cp_tex_z;
+u32 gc_gx_cp_tex_addr_reg;
+u32 gc_gx_cp_tex_written_reg;
 
 // Additional state surfaced for tests that model MP4 callsites.
 u32 gc_gx_copy_filter_aa;
@@ -608,6 +618,148 @@ typedef struct {
     u8 r, g, b, a;
 } GXColor;
 
+void GXSetTexCopySrc(u16 left, u16 top, u16 wd, u16 ht) {
+    // Mirror GXFrameBuf.c:GXSetTexCopySrc (observable packed regs).
+    // Note: wd/ht are stored as (wd-1)/(ht-1).
+    gc_gx_cp_tex_src = 0;
+    gc_gx_cp_tex_src = set_field(gc_gx_cp_tex_src, 10, 0, (u32)left);
+    gc_gx_cp_tex_src = set_field(gc_gx_cp_tex_src, 10, 10, (u32)top);
+    gc_gx_cp_tex_src = set_field(gc_gx_cp_tex_src, 8, 24, 0x49u);
+
+    gc_gx_cp_tex_size = 0;
+    gc_gx_cp_tex_size = set_field(gc_gx_cp_tex_size, 10, 0, (u32)(wd - 1u));
+    gc_gx_cp_tex_size = set_field(gc_gx_cp_tex_size, 10, 10, (u32)(ht - 1u));
+    gc_gx_cp_tex_size = set_field(gc_gx_cp_tex_size, 8, 24, 0x4Au);
+}
+
+enum {
+    GX_TF_I4 = 0x0,
+    GX_TF_I8 = 0x1,
+    GX_TF_IA4 = 0x2,
+    GX_TF_IA8 = 0x3,
+    GX_TF_RGB565 = 0x4,
+    GX_TF_RGB5A3 = 0x5,
+    GX_TF_RGBA8 = 0x6,
+    GX_TF_C4 = 0x8,
+    GX_TF_C8 = 0x9,
+    GX_TF_C14X2 = 0xA,
+    GX_TF_CMPR = 0xE,
+    GX_TF_Z16 = 0xF, // special cased in SDK
+};
+
+enum {
+    // Copy texture formats (GX_CTF_*). MP4 uses GX_CTF_R8 for shadow.
+    GX_CTF_R4 = 0x0,
+    GX_CTF_RA4 = 0x2,
+    GX_CTF_RA8 = 0x3,
+    GX_CTF_R8 = 0x4,
+    GX_CTF_G8 = 0x5,
+    GX_CTF_B8 = 0x6,
+    GX_CTF_RG8 = 0x7,
+    GX_CTF_GB8 = 0x8,
+    GX_CTF_Z8M = 0x9,
+    GX_CTF_Z8L = 0xA,
+    GX_CTF_Z16L = 0xC,
+    GX_CTF_Z16M = 0xD,
+};
+
+static void get_image_tile_count(u32 fmt, u16 wd, u16 ht, u32 *rowTiles, u32 *colTiles, u32 *cmpTiles) {
+    // Minimal tile math to support MP4 GX_CTF_R8 callsite.
+    // For other formats, extend as needed (evidence-driven).
+    u16 tileW = 8;
+    u16 tileH = 4;
+    u32 cmp = 1;
+
+    switch (fmt) {
+    case GX_CTF_R8:
+        tileW = 8;
+        tileH = 4;
+        cmp = 1;
+        break;
+    default:
+        // Safe fallback: treat as 8x4 tiles.
+        tileW = 8;
+        tileH = 4;
+        cmp = 1;
+        break;
+    }
+
+    *rowTiles = (wd + tileW - 1u) / tileW;
+    *colTiles = (ht + tileH - 1u) / tileH;
+    *cmpTiles = cmp;
+}
+
+void GXSetTexCopyDst(u16 wd, u16 ht, u32 fmt, u32 mipmap) {
+    // Mirror GXFrameBuf.c:GXSetTexCopyDst observable behavior for MP4 callsite (GX_CTF_R8).
+    u32 rowTiles, colTiles, cmpTiles;
+    u32 peTexFmt = fmt & 0xFu;
+    u32 peTexFmtH;
+
+    // gx->cpTexZ = 0;
+    gc_gx_cp_tex_z = 0;
+
+    // gx->cpTex field 15 depends on fmt class; for GX_CTF_R8 it goes to "default" (2).
+    gc_gx_cp_tex = set_field(gc_gx_cp_tex, 2, 15, 2u);
+
+    // Z texture flag.
+    // _GX_TF_ZTF is 0x10 in SDK headers. We don't see MP4 use it here.
+    gc_gx_cp_tex_z = (fmt & 0x10u) == 0x10u;
+
+    peTexFmtH = (peTexFmt >> 3) & 1u;
+    gc_gx_cp_tex = set_field(gc_gx_cp_tex, 1, 3, peTexFmtH);
+    peTexFmt = peTexFmt & 7u;
+
+    get_image_tile_count(fmt, wd, ht, &rowTiles, &colTiles, &cmpTiles);
+
+    gc_gx_cp_tex_stride = 0;
+    gc_gx_cp_tex_stride = set_field(gc_gx_cp_tex_stride, 10, 0, rowTiles * cmpTiles);
+    gc_gx_cp_tex_stride = set_field(gc_gx_cp_tex_stride, 8, 24, 0x4Du);
+
+    gc_gx_cp_tex = set_field(gc_gx_cp_tex, 1, 9, (u32)(mipmap != 0));
+    gc_gx_cp_tex = set_field(gc_gx_cp_tex, 3, 4, peTexFmt);
+}
+
+void GXCopyTex(void *dest, u32 clear) {
+    // Mirror GXFrameBuf.c:GXCopyTex observable packing/writes for deterministic tests.
+    // We track the packed address reg (0x4B) and the cpTex reg write (0x52).
+    u32 reg;
+    u32 phyAddr = ((u32)(uintptr_t)dest) & 0x3FFFFFFFu;
+
+    // Address BP reg 0x4B with phyAddr>>5 in low 21 bits.
+    reg = 0;
+    reg = set_field(reg, 21, 0, (phyAddr >> 5));
+    reg = set_field(reg, 8, 24, 0x4Bu);
+    gc_gx_cp_tex_addr_reg = reg;
+
+    // cpTex write (0x52) sets clear bit11, and sets bit14=0 (tex copy).
+    gc_gx_cp_tex = set_field(gc_gx_cp_tex, 1, 11, (u32)(clear != 0));
+    gc_gx_cp_tex = set_field(gc_gx_cp_tex, 1, 14, 0u);
+    gc_gx_cp_tex = set_field(gc_gx_cp_tex, 8, 24, 0x52u);
+    gc_gx_cp_tex_written_reg = gc_gx_cp_tex;
+
+    // Observable write ordering in the SDK includes cpTexSrc/cpTexSize/cpTexStride first.
+    // For our deterministic oracle, we preserve those regs and update "last RAS reg" to
+    // the last written register in the sequence.
+    gx_write_ras_reg(gc_gx_cp_tex_src);
+    gx_write_ras_reg(gc_gx_cp_tex_size);
+    gx_write_ras_reg(gc_gx_cp_tex_stride);
+    gx_write_ras_reg(gc_gx_cp_tex_addr_reg);
+    gx_write_ras_reg(gc_gx_cp_tex_written_reg);
+
+    if (clear != 0) {
+        gx_write_ras_reg(gc_gx_zmode);
+        // For the clear path, the SDK writes a locally modified cmode0:
+        // bits0/1 are cleared (alpha update + dst alpha), reg id 0x42.
+        u32 cmode_clear = gc_gx_cmode0;
+        cmode_clear = set_field(cmode_clear, 1, 0, 0u);
+        cmode_clear = set_field(cmode_clear, 1, 1, 0u);
+        cmode_clear = set_field(cmode_clear, 8, 24, 0x42u);
+        gx_write_ras_reg(cmode_clear);
+    }
+
+    gc_gx_bp_sent_not = 0;
+}
+
 void GXSetCopyClear(GXColor clear_clr, u32 clear_z) {
     // Mirror Dolphin SDK GXFrameBuf.c:GXSetCopyClear observable BP reg writes.
     // We track all 3 regs so callsite tests can validate the full sequence.
@@ -797,6 +949,14 @@ void GXSetZMode(u8 enable, u32 func, u8 update_enable) {
     gc_gx_zmode_enable = (u32)enable;
     gc_gx_zmode_func = func;
     gc_gx_zmode_update_enable = (u32)update_enable;
+
+    // Mirror GXPixel.c: gx->zmode packed reg (only fields used by GXCopyTex clear path).
+    // Layout: bit0 enable, bits1..3 func, bit4 update enable, high byte 0x40.
+    gc_gx_zmode = 0;
+    gc_gx_zmode = set_field(gc_gx_zmode, 1, 0, (u32)enable);
+    gc_gx_zmode = set_field(gc_gx_zmode, 3, 1, func & 7u);
+    gc_gx_zmode = set_field(gc_gx_zmode, 1, 4, (u32)update_enable);
+    gc_gx_zmode = set_field(gc_gx_zmode, 8, 24, 0x40u);
 }
 
 void GXSetColorUpdate(u8 enable) {
