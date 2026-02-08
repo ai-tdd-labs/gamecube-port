@@ -26,7 +26,7 @@ void Hu3DInit(void);
 void HuDataInit(void);
 void HuPerfInit(void);
 int HuPerfCreate(const char *name, uint8_t r, uint8_t g, uint8_t b, uint8_t a);
-void WipeInit(void *render_mode);
+void WipeInit(GXRenderModeObj *rmode);
 void omMasterInit(int a0, void *ovltbl, int ovl_count, int ovl_boot);
 
 // Nintendo SDK (sdk_port)
@@ -58,7 +58,7 @@ static void HuPerfEnd(int which) { (void)which; }
 static void HuPrcCall(int which) { (void)which; }
 static void MGSeqMain(void) {}
 static void Hu3DExec(void) {}
-static void WipeExecAlways(void) {}
+void WipeExecAlways(void);
 static void pfDrawFonts(void) {}
 void msmMusFdoutEnd(void);
 
@@ -159,7 +159,7 @@ void gc_scenario_run(GcRam *ram) {
     HuPerfInit();
     (void)HuPerfCreate("USR0", 0xFF, 0xFF, 0xFF, 0xFF);
     (void)HuPerfCreate("USR1", 0x00, 0xFF, 0xFF, 0xFF);
-    WipeInit(0);
+    WipeInit(&GXNtsc480IntDf);
     omMasterInit(0, 0, 0, 0);
 
     // Align with MP4 main() init: first retrace and field check.

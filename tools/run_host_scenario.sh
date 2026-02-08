@@ -81,6 +81,20 @@ case "$subsystem" in
         extra_srcs+=("$repo_root/tests/workload/mp4/slices/post_sprinit_stubs.c")
         ;;
     esac
+    # mp4_init_to_viwait uses WipeInit as a reachability stub.
+    case "$scenario_base" in
+      mp4_init_to_viwait_001_scenario)
+        extra_srcs+=("$repo_root/tests/workload/mp4/slices/wipeinit_stub.c")
+        ;;
+    esac
+    # mp4_mainloop_* scenarios call WipeExecAlways(). Keep it out of the scenario TU
+    # so we can later swap in a decomp slice without editing the scenario. For now,
+    # we link a minimal decomp slice that does not emulate GX drawing.
+    case "$scenario_base" in
+      mp4_mainloop_one_iter_001_scenario|mp4_mainloop_two_iter_001_scenario)
+        extra_srcs+=("$repo_root/tests/workload/mp4/slices/wipeexecalways_decomp_blank.c")
+        ;;
+    esac
     # Make the workload deterministic and avoid pulling in decomp build-system macros.
     extra_cflags+=(
       -DVERSION=0

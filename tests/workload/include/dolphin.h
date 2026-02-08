@@ -9,5 +9,5 @@
 #include "dolphin/vi.h"
 #include "dolphin/pad.h"
 #include "dolphin/si.h"
+#include "dolphin/mtx.h"
 #include "dolphin/gx.h"
-

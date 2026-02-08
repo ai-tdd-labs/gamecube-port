@@ -558,3 +558,16 @@ Notes:
   - `tests/sdk/mtx/mtx_ortho/actual/mtx_ortho_ortho_0_1_001.bin`
 - Confirmed behavior: matches `decomp_mario_party_4/src/dolphin/mtx/mtx44.c:C_MTXOrtho`.
 - Tested parameters: `t=0, b=1, l=0, r=1, n=0, f=1` (chosen to avoid float rounding drift).
+
+## MP4 host workload: WipeExecAlways minimal decomp slice (blank-mode only)
+- Purpose: integration reachability only (not a GX parity oracle).
+- Change: mp4_mainloop workloads now link `tests/workload/mp4/slices/wipeexecalways_decomp_blank.c` instead of an inline stub.
+- Behavior: executes the real `WipeExecAlways` mode switch for `WIPE_MODE_BLANK`; all GX drawing helpers are NO-OP on host.
+- WipeInit:
+  - `mp4_init_to_viwait_001_scenario` uses stub `tests/workload/mp4/slices/wipeinit_stub.c`
+  - `mp4_mainloop_*` scenarios call `WipeInit(&GXNtsc480IntDf)` from the decomp slice
+
+## MP4 host workload: HuPrcCall remains stubbed
+- Attempt: link real `src/game_workload/mp4/vendor/src/game/process.c:HuPrcCall`.
+- Result: blocked on missing coroutine support (`gcsetjmp`/`gclongjmp` with PPC register layout in `tests/workload/include/game/jmp.h`) and heap cleanup dependency (`HuMemDirectFree`).
+- Decision: keep HuPrcCall as a scenario-level stub until we design a host-safe process scheduler strategy.
