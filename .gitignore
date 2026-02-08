@@ -89,5 +89,4 @@ tests/workload/mp4/tests/
 /tests/actual/*.bin
 
 # Large local-only RVZ oracle dumps (MEM1 snapshots). Keep hashes in docs instead.
-/tests/oracles/**/*.bin
-/tests/oracles/**/manifest.sha256
+/tests/oracles/**

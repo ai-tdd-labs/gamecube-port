@@ -10,6 +10,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+static inline void store_u32be(uint32_t addr, uint32_t v) {
+    uint8_t *p = gc_mem_ptr(addr, 4);
+    if (!p) return;
+    p[0] = (uint8_t)(v >> 24);
+    p[1] = (uint8_t)(v >> 16);
+    p[2] = (uint8_t)(v >> 8);
+    p[3] = (uint8_t)(v >> 0);
+}
+
 int main(int argc, char **argv) {
     (void)argc;
     (void)argv;
@@ -22,6 +31,30 @@ int main(int argc, char **argv) {
     // Make sdk_port address translation available for the scenario.
     gc_mem_set(ram.base, ram.size, ram.buf);
     gc_sdk_state_reset();
+
+    // Optional BootInfo seeding for workloads that want to emulate the retail
+    // arena pointers. OSInit reads BootInfo->arenaLo/arenaHi at 0x80000030/34.
+    //
+    // Environment variables:
+    // - GC_HOST_BOOT_ARENA_LO: hex/dec (0 means "unset")
+    // - GC_HOST_BOOT_ARENA_HI: hex/dec (0 means "unset")
+    const char *env_boot_lo = getenv("GC_HOST_BOOT_ARENA_LO");
+    const char *env_boot_hi = getenv("GC_HOST_BOOT_ARENA_HI");
+    if (env_boot_lo || env_boot_hi) {
+        const uint32_t bootinfo_base = 0x80000000u;
+        if (env_boot_lo) {
+            char *endp = 0;
+            uint32_t v = (uint32_t)strtoul(env_boot_lo, &endp, 0);
+            if (!endp || *endp != 0) die("invalid GC_HOST_BOOT_ARENA_LO");
+            if (v) store_u32be(bootinfo_base + 0x30u, v);
+        }
+        if (env_boot_hi) {
+            char *endp = 0;
+            uint32_t v = (uint32_t)strtoul(env_boot_hi, &endp, 0);
+            if (!endp || *endp != 0) die("invalid GC_HOST_BOOT_ARENA_HI");
+            if (v) store_u32be(bootinfo_base + 0x34u, v);
+        }
+    }
 
     gc_scenario_run(&ram);
 

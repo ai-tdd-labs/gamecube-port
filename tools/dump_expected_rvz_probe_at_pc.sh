@@ -54,6 +54,11 @@ NAMES+=("pad_si_window")
 ADDRS+=("0x801D44F0")
 SIZES+=("0x180")
 
+# BootInfo window (OS_BASE_CACHED = 0x80000000). We want arenaLo/arenaHi values.
+NAMES+=("bootinfo_window")
+ADDRS+=("0x80000020")
+SIZES+=("0x40")
+
 # RVZ runs tend to be less tolerant of big GDB packets.
 CHUNK=0x1000
 
@@ -104,4 +109,3 @@ for i in "${!NAMES[@]}"; do
 done
 
 echo "[rvz-probe] wrote $manifest"
-

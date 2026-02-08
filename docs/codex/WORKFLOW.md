@@ -158,6 +158,14 @@ to what `sdk_port` reports.
 
 Tool:
 - `tools/dump_expected_rvz_probe_at_pc.sh <rvz> <pc_hex> <out_dir> [timeout]`
+- `tools/dump_actual_host_probe_at_scenario.sh <scenario_c> <out_dir>`
+
+`dump_actual_host_probe_at_scenario.sh` runs the host scenario once, dumps the full 32 MiB
+host RAM buffer, then slices out:
+- a BootInfo window (0x80000020..0x80000060)
+- the `sdk_state` window (RAM-backed SDK globals page)
+
+It also writes `values.txt` with parsed semantic values (arenas, sampling rate, pad spec).
 
 Default probe windows are currently hardcoded to cover MP4 SDK globals around:
 - `__OSCurrHeap`, `__OSArenaLo`, `__OSArenaHi`

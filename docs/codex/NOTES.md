@@ -87,12 +87,25 @@ Rules:
   - `SamplingRate` @ `0x801D4628` = `0x00000000`
   - `__PADSpec`    @ `0x801D450C` = `0x00000000`
 
-#### RVZ vs host invariant check (ArenaLo/Hi)
-- RVZ at GWInit: `__OSArenaLo == __OSArenaHi == 0x817FDEA0`.
-- Host workload at GWInit (`tests/workload/mp4/mp4_gwinit_001_scenario.c`) stores arena lo/hi in `sdk_state`:
-  - `GC_SDK_STATE_BASE + 0x10` / `+0x14` inside `tests/actual/workload/mp4_gwinit_001_mem1.bin`.
-  - Observed host value: `0x81700000` for both (mismatch).
-  Implication: our arena init logic does not yet match retail MP4 at this checkpoint.
+### RVZ probe (HuPadInit entry) for SDK globals
+- RVZ: same image at PC `0x80005A5C` (`HuPadInit` entry).
+- Output dir: `tests/oracles/mp4_rvz/probes/hupadinit_pc_80005A5C/` (see `manifest.sha256`).
+- Parsed values (same symbols as above):
+  - `__OSArenaLo` / `__OSArenaHi` already `0x817FDEA0` (BootInfo-driven high arena).
+  - `SamplingRate` is `0x00000000` because MP4 calls `SISetSamplingRate(0)`.
+  - `__PADSpec` is `0x00000000` by design: `PADSetSpec` always clears `__PADSpec` and stores the current spec in `Spec` (not exposed via symbols here).
+  Evidence: `decomp_mario_party_4/src/dolphin/pad/Pad.c` (`PADSetSpec`).
+
+#### RVZ vs host semantic check (GWInit checkpoint)
+- We do **not** compare retail `.bss` addresses to host directly (host stores SDK state in the RAM-backed `sdk_state` page).
+- RVZ at GWInit:
+  - BootInfo `arenaHi` (0x80000034) = `0x817FDEA0`.
+  - `__OSArenaLo == __OSArenaHi == 0x817FDEA0` (from symbols).
+- Host workload at GWInit (`tests/workload/mp4/mp4_gwinit_001_scenario.c`):
+  - BootInfo `arenaHi` (0x80000034) = `0x817FDEA0` (seeded via env for workloads).
+  - `sdk_state.os_arena_lo == sdk_state.os_arena_hi == 0x817FDEA0` (MATCH).
+  - `sdk_state.pad_spec == 0x00000005` (MP4 calls `PADSetSpec(PAD_SPEC_5)`).
+  Evidence: `tools/dump_actual_host_probe_at_scenario.sh tests/workload/mp4/mp4_gwinit_001_scenario.c tests/oracles/mp4_rvz/probes/host_gwinit_mp4_gwinit_001_v2/` and `tests/oracles/mp4_rvz/probes/host_gwinit_mp4_gwinit_001_v2/values.txt`.
 
 ### VISetNextFrameBuffer
 - Callsites enumerated across MP4/TP/WW/AC.

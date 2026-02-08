@@ -42,6 +42,8 @@ if [[ -z "$subsystem" ]]; then
   fi
 fi
 
+is_workload=0
+
 # Smoke suites may span multiple subsystems; compile the union.
 if [[ "$subsystem" == "smoke" ]]; then
   subsystem="os+dvd+vi+pad+gx"
@@ -52,6 +54,7 @@ extra_srcs=()
 extra_cflags=()
 case "$subsystem" in
   workload)
+    is_workload=1
     # Allow building small integration workloads against a minimal, host-safe
     # header surface that matches the subset of the SDK used by the workload.
     extra_includes+=(
@@ -234,6 +237,15 @@ cc -O2 -g0 -ffunction-sections -fdata-sections \
   -o "$exe"
 
 echo "[host-run] $exe"
-(cd "$scenario_dir" && "$exe")
+run_env=()
+if [[ "$is_workload" -eq 1 ]]; then
+  # Workloads use the mp4 decomp callsites and benefit from a retail-like BootInfo arenaHi.
+  # Keep this conservative: only set arenaHi by default; arenaLo can remain default unless needed.
+  if [[ -z "${GC_HOST_BOOT_ARENA_HI:-}" ]]; then
+    run_env+=("GC_HOST_BOOT_ARENA_HI=0x817FDEA0")
+  fi
+fi
+
+(cd "$scenario_dir" && env "${run_env[@]+${run_env[@]}}" "$exe")
 
 rm -f "$exe" >/dev/null 2>&1 || true

@@ -15,7 +15,7 @@ ACT=${2:?actual bin required}
 # 0x80300000 marker + 0x80300100 snapshot live at file offsets 0x00300000+.
 #
 # We now also compare the RAM-backed sdk_port state page at the end of MEM1:
-#   base 0x817F0000 => file offset 0x017F0000 (size 0x10000)
+#   base 0x817FE000 => file offset 0x017FE000 (size 0x2000)
 python3 tools/ram_compare.py "$EXP" "$ACT" \
   --include-range 0x00300000,0x2000 \
-  --include-range 0x017F0000,0x10000
+  --include-range 0x017FE000,0x2000

@@ -15,10 +15,13 @@
 //
 // NOTE: This is intentionally minimal and grows subsystem-by-subsystem.
 
-// Keep this outside the default arenas used by OSInit (0x80002000..0x81700000).
-// Last 64 KiB of MEM1 (MEM1 end = 0x81800000).
-#define GC_SDK_STATE_BASE 0x817F0000u
-#define GC_SDK_STATE_SIZE 0x00010000u
+// Keep this at the end of MEM1, but small: retail games can push OS arena high
+// very close to 0x81800000. We reserve just enough for our deterministic
+// RAM-backed SDK state page.
+//
+// MEM1 end = 0x81800000, so this places the page at 0x817FE000..0x81800000.
+#define GC_SDK_STATE_BASE 0x817FE000u
+#define GC_SDK_STATE_SIZE 0x00002000u
 
 enum {
   GC_SDK_STATE_MAGIC = 0x53444B53u, // "SDKS"

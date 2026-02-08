@@ -17,8 +17,7 @@ Outputs:
 Assertion:
 `tools/diff_bins_smoke.sh` compares only:
 - marker + snapshot window around `0x80300000`
-- RAM-backed sdk_port state page at the end of MEM1 (`0x817F0000..0x81800000`)
+- RAM-backed sdk_port state page at the end of MEM1 (`0x817FE000..0x81800000`)
 
 This does **not** prove retail MP4 correctness by itself; it proves PPC-vs-host
 determinism for our current sdk_port model.
-

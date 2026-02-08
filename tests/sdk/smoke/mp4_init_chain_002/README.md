@@ -7,7 +7,7 @@ from Dolphin (expected) and from host sdk_port virtual RAM (actual).
 We *assert* bit-exact equality for deterministic windows inside MEM1:
 - marker @ 0x80300000
 - snapshot @ 0x80300100
-- sdk_state page @ 0x817F0000..0x817FFFFF (RAM-backed SDK globals)
+- sdk_state page @ 0x817FE000..0x817FFFFF (RAM-backed SDK globals)
 
 Oracle: Dolphin MEM1 dump (PPC run of sdk_port) vs host MEM1 dump (host run of sdk_port).
 
