@@ -493,7 +493,7 @@ Notes:
 ## MP4 host workload: init to VIWaitForRetrace (stubbed post-HuSprInit)
 - Purpose: reachability only. Uses host-only stubs for heavy game modules after `HuSprInit` to reach the first hard SDK checkpoint `VIWaitForRetrace()` without importing full MP4 engine code.
 - Scenario: `tests/workload/mp4/mp4_init_to_viwait_001_scenario.c`
-- Stubs: `tests/workload/mp4/slices/post_sprinit_stubs.c` (HuDataInit/WipeInit/omMasterInit)
+- Stubs: `tests/workload/mp4/slices/post_sprinit_stubs.c` (WipeInit/omMasterInit)
 - Build/run: `tools/run_host_scenario.sh tests/workload/mp4/mp4_init_to_viwait_001_scenario.c`
 - Output (marker only): `tests/actual/workload/mp4_init_to_viwait_001.bin` begins with `MP46` + `DEADBEEF`.
 
