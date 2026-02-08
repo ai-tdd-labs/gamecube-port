@@ -23,7 +23,12 @@ fi
 
 scenario_dir="$(cd "$(dirname "$SCENARIO_SRC")" && pwd)"
 scenario_base="$(basename "$SCENARIO_SRC" .c)"
-exe="$scenario_dir/${scenario_base}_host"
+
+# Keep repo clean: build host executables into an ignored temp build dir,
+# not next to the scenario source.
+build_dir="$repo_root/tests/build/host_scenarios"
+mkdir -p "$build_dir"
+exe="$build_dir/${scenario_base}_host_$$"
 
 # Infer subsystem from the path: .../tests/sdk/<subsystem>/...
 subsystem="$(echo "$SCENARIO_SRC" | sed -n 's|.*tests/sdk/\([^/]*\)/.*|\1|p')"
@@ -109,7 +114,7 @@ if [[ ${#port_srcs[@]} -eq 0 ]]; then
 fi
 
 echo "[host-build] $SCENARIO_SRC"
-cc -O2 -g \
+cc -O2 -g0 \
   -I"$repo_root/tests" \
   -I"$repo_root/tests/harness" \
   -I"$repo_root/src" \
@@ -123,3 +128,5 @@ cc -O2 -g \
 
 echo "[host-run] $exe"
 (cd "$scenario_dir" && "$exe")
+
+rm -f "$exe" >/dev/null 2>&1 || true

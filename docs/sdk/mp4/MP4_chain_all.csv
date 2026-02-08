@@ -167,3 +167,5 @@ Hu3DPreProc,1,GXSetCopyClear,sdk,,tests/sdk/gx/gx_set_copy_clear,1/1,1,1,1,y
 Hu3DExec,1,GXSetCurrentMtx,sdk,,tests/sdk/gx/gx_set_current_mtx,1/1,1,1,1,y
 Hu3DExec,2,GXSetDrawDone,sdk,,tests/sdk/gx/gx_set_draw_done,1/1,1,1,1,y
 Hu3DExec,3,GXWaitDrawDone,sdk,,tests/sdk/gx/gx_wait_draw_done,1/1,1,1,1,y
+Hu3DInit,1,GXSetFog,sdk,,tests/sdk/gx/gx_set_fog,1/1,1,1,1,y
+Hu3DShadowExec,1,GXSetProjection,sdk,,tests/sdk/gx/gx_set_projection,1/1,1,1,1,y

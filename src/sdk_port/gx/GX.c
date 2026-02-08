@@ -30,7 +30,8 @@ u32 gc_gx_scissor_box_offset_reg;
 u32 gc_gx_clip_mode;
 
 // XF register mirror (only indices asserted by tests are meaningful).
-u32 gc_gx_xf_regs[32];
+// Size includes the projection block (XF regs 32..38).
+u32 gc_gx_xf_regs[64];
 
 // Light/channel color mirrors.
 u32 gc_gx_amb_color[2];
@@ -73,6 +74,17 @@ u32 gc_gx_mat_idx_a;
 u32 gc_gx_set_draw_done_calls;
 u32 gc_gx_wait_draw_done_calls;
 u32 gc_gx_draw_done_flag;
+
+// Fog observable BP regs (GXSetFog writes 0xEE..0xF2).
+u32 gc_gx_fog0;
+u32 gc_gx_fog1;
+u32 gc_gx_fog2;
+u32 gc_gx_fog3;
+u32 gc_gx_fogclr;
+
+// Projection observable state (GXSetProjection writes XF regs 32..38).
+u32 gc_gx_proj_type;
+u32 gc_gx_proj_mtx_bits[6];
 
 // GX metric state (software mirror). Real hardware accumulates counters; for now we model
 // only what our deterministic tests assert and what MP4 callsites depend on.
@@ -643,6 +655,142 @@ void GXWaitDrawDone(void) {
     // Deterministic completion: don't block, just mark "done".
     gc_gx_wait_draw_done_calls++;
     gc_gx_draw_done_flag = 1;
+}
+
+typedef float f32;
+typedef enum {
+    GX_FOG_NONE = 0,
+} GXFogType;
+
+void GXSetFog(GXFogType type, f32 startz, f32 endz, f32 nearz, f32 farz, GXColor color) {
+    // Mirror decomp_mario_party_4/src/dolphin/gx/GXPixel.c:GXSetFog.
+    // NOTE: For MP4 Hu3DFogClear callsite we hit the degenerate branch (all zeros),
+    // which avoids platform FP quirks while still validating bitfield packing.
+    u32 fogclr, fog0, fog1, fog2, fog3;
+    f32 A, B, B_mant, C;
+    f32 a, c;
+    u32 B_expn;
+    u32 b_m;
+    u32 b_s;
+    u32 a_hex;
+    u32 c_hex;
+
+    if (farz == nearz || endz == startz) {
+        A = 0.0f;
+        B = 0.5f;
+        C = 0.0f;
+    } else {
+        A = (farz * nearz) / ((farz - nearz) * (endz - startz));
+        B = farz / (farz - nearz);
+        C = startz / (endz - startz);
+    }
+
+    B_mant = B;
+    B_expn = 0;
+    while (B_mant > 1.0f) {
+        B_mant *= 0.5f;
+        B_expn++;
+    }
+    while (B_mant > 0.0f && B_mant < 0.5f) {
+        B_mant *= 2.0f;
+        B_expn--;
+    }
+
+    a = A / (f32)(1u << (B_expn + 1u));
+    b_m = (u32)(8.388638e6f * B_mant);
+    b_s = B_expn + 1u;
+    c = C;
+
+    fog1 = 0;
+    fog1 = set_field(fog1, 24, 0, b_m);
+    fog1 = set_field(fog1, 8, 24, 0xEFu);
+
+    fog2 = 0;
+    fog2 = set_field(fog2, 5, 0, b_s);
+    fog2 = set_field(fog2, 8, 24, 0xF0u);
+
+    // Strict-aliasing safe float->bits.
+    __builtin_memcpy(&a_hex, &a, sizeof(a_hex));
+    __builtin_memcpy(&c_hex, &c, sizeof(c_hex));
+
+    fog0 = 0;
+    fog0 = set_field(fog0, 11, 0, (a_hex >> 12) & 0x7FFu);
+    fog0 = set_field(fog0, 8, 11, (a_hex >> 23) & 0xFFu);
+    fog0 = set_field(fog0, 1, 19, (a_hex >> 31));
+    fog0 = set_field(fog0, 8, 24, 0xEEu);
+
+    fog3 = 0;
+    fog3 = set_field(fog3, 11, 0, (c_hex >> 12) & 0x7FFu);
+    fog3 = set_field(fog3, 8, 11, (c_hex >> 23) & 0xFFu);
+    fog3 = set_field(fog3, 1, 19, (c_hex >> 31));
+    fog3 = set_field(fog3, 1, 20, 0);
+    fog3 = set_field(fog3, 3, 21, (u32)type);
+    fog3 = set_field(fog3, 8, 24, 0xF1u);
+
+    fogclr = 0;
+    fogclr = set_field(fogclr, 8, 0, (u32)color.b);
+    fogclr = set_field(fogclr, 8, 8, (u32)color.g);
+    fogclr = set_field(fogclr, 8, 16, (u32)color.r);
+    fogclr = set_field(fogclr, 8, 24, 0xF2u);
+
+    gc_gx_fog0 = fog0;
+    gc_gx_fog1 = fog1;
+    gc_gx_fog2 = fog2;
+    gc_gx_fog3 = fog3;
+    gc_gx_fogclr = fogclr;
+
+    gx_write_ras_reg(fog0);
+    gx_write_ras_reg(fog1);
+    gx_write_ras_reg(fog2);
+    gx_write_ras_reg(fog3);
+    gx_write_ras_reg(fogclr);
+    gc_gx_bp_sent_not = 0;
+}
+
+typedef enum {
+    GX_PERSPECTIVE = 0,
+    GX_ORTHOGRAPHIC = 1,
+} GXProjectionType;
+
+static void gx_set_projection_internal(void) {
+    // Mirror decomp_mario_party_4/src/dolphin/gx/GXTransform.c:__GXSetProjection
+    // observable XF writes (32..38). We don't model the FIFO header writes here.
+    gx_write_xf_reg(32, gc_gx_proj_mtx_bits[0]);
+    gx_write_xf_reg(33, gc_gx_proj_mtx_bits[1]);
+    gx_write_xf_reg(34, gc_gx_proj_mtx_bits[2]);
+    gx_write_xf_reg(35, gc_gx_proj_mtx_bits[3]);
+    gx_write_xf_reg(36, gc_gx_proj_mtx_bits[4]);
+    gx_write_xf_reg(37, gc_gx_proj_mtx_bits[5]);
+    gx_write_xf_reg(38, gc_gx_proj_type);
+}
+
+void GXSetProjection(f32 mtx[4][4], GXProjectionType type) {
+    // Mirror GXTransform.c:GXSetProjection packing and observable XF writes.
+    gc_gx_proj_type = (u32)type;
+
+    f32 p0 = mtx[0][0];
+    f32 p2 = mtx[1][1];
+    f32 p4 = mtx[2][2];
+    f32 p5 = mtx[2][3];
+    f32 p1;
+    f32 p3;
+    if (type == GX_ORTHOGRAPHIC) {
+        p1 = mtx[0][3];
+        p3 = mtx[1][3];
+    } else {
+        p1 = mtx[0][2];
+        p3 = mtx[1][2];
+    }
+
+    __builtin_memcpy(&gc_gx_proj_mtx_bits[0], &p0, sizeof(u32));
+    __builtin_memcpy(&gc_gx_proj_mtx_bits[1], &p1, sizeof(u32));
+    __builtin_memcpy(&gc_gx_proj_mtx_bits[2], &p2, sizeof(u32));
+    __builtin_memcpy(&gc_gx_proj_mtx_bits[3], &p3, sizeof(u32));
+    __builtin_memcpy(&gc_gx_proj_mtx_bits[4], &p4, sizeof(u32));
+    __builtin_memcpy(&gc_gx_proj_mtx_bits[5], &p5, sizeof(u32));
+
+    gx_set_projection_internal();
+    gc_gx_bp_sent_not = 1;
 }
 
 void GXSetZMode(u8 enable, u32 func, u8 update_enable) {

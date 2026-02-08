@@ -52,8 +52,10 @@ evidence-based. Mark items DONE with a commit hash.
    - [ ] Next MP4 frame-loop SDK blockers: trace `Hu3DPreProc` + `Hu3DExec` (hsfman.c) and keep adding MP4-realistic GX callsite suites.
      Starting point:
        - [x] `GXSetCopyClear`, `GXSetCurrentMtx`, `GXSetDrawDone`, `GXWaitDrawDone` MP4 callsites. (this session)
+       - [x] `GXSetFog` MP4 callsite (`Hu3DFogClear` style). (this session)
+       - [x] `GXSetProjection` MP4 callsite (shadow-copy ortho). (this session)
      Next likely GX gaps inside `Hu3DExec` / shadow path:
-       - `GXSetFog`, `GXSetProjection`, `GXSetTexCopySrc`, `GXSetTexCopyDst`, `GXCopyTex`, `GXClearVtxDesc`, `GXSetVtxDesc`, `GXSetVtxAttrFmt`, `GXSetTevColor`, `GXLoadPosMtxImm`, `GXBegin`, `GXColor3u8`, ...
+       - `GXSetTexCopySrc`, `GXSetTexCopyDst`, `GXCopyTex`, `GXClearVtxDesc`, `GXSetVtxDesc`, `GXSetVtxAttrFmt`, `GXSetTevColor`, `GXLoadPosMtxImm`, `GXBegin`, `GXColor3u8`, ...
 
 ## Later
 

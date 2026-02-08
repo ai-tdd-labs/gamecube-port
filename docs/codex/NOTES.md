@@ -158,6 +158,21 @@ Rules:
 - MP4 callsite test: `GXSetCopyClear(BGColor={0,0,0,0xFF}, 0xFFFFFF)`.
   Evidence: decomp_mario_party_4/src/game/hsfman.c (`Hu3DPreProc`); tests/sdk/gx/gx_set_copy_clear/expected/gx_set_copy_clear_mp4_hu3d_preproc_001.bin
 
+### GXSetFog (MP4 Hu3DFogClear / shadow path)
+- MP4 callsite style (fog clear): `GXSetFog(GX_FOG_NONE, 0,0,0,0, BGColor)` updates fog BP regs 0xEE..0xF2 (fog0..fog3 + fogclr) and writes them as last RAS reg sequence.
+  Evidence: decomp_mario_party_4/src/game/hsfman.c (`Hu3DShadowExec` fog clear); decomp_mario_party_4/src/dolphin/gx/GXPixel.c (`GXSetFog`);
+  tests/sdk/gx/gx_set_fog/expected/gx_set_fog_mp4_hu3d_fog_clear_001.bin
+
+### GXSetProjection (MP4 Hu3DShadowExec ortho)
+- MP4 shadow-copy path sets an orthographic projection after copying the shadow texture:
+  `C_MTXOrtho(sp18, 0,1,0,1,0,1); GXSetProjection(sp18, GX_ORTHOGRAPHIC);`
+  Evidence: decomp_mario_party_4/src/game/hsfman.c (`Hu3DShadowExec`); tests/sdk/gx/gx_set_projection/expected/gx_set_projection_mp4_shadow_ortho_001.bin
+- Observable side effects (deterministic oracle):
+  - projType stored
+  - projMtx[0..5] packed from the input matrix
+  - XF regs 32..38 written (32..37 = projMtx floats, 38 = projType)
+  Evidence: decomp_mario_party_4/src/dolphin/gx/GXTransform.c (`GXSetProjection`/`__GXSetProjection`); tests/sdk/gx/gx_set_projection/expected/gx_set_projection_mp4_shadow_ortho_001.bin
+
 ### GXSetCurrentMtx (MP4 Hu3DExec)
 - Contract: updates `matIdxA` low 6 bits and writes XF reg 24 to the updated `matIdxA` (via `__GXSetMatrixIndex`).
   Evidence: decomp_mario_party_4/src/dolphin/gx/GXTransform.c (`GXSetCurrentMtx`, `__GXSetMatrixIndex`).
