@@ -571,3 +571,10 @@ Notes:
 - Attempt: link real `src/game_workload/mp4/vendor/src/game/process.c:HuPrcCall`.
 - Result: blocked on missing coroutine support (`gcsetjmp`/`gclongjmp` with PPC register layout in `tests/workload/include/game/jmp.h`) and heap cleanup dependency (`HuMemDirectFree`).
 - Decision: keep HuPrcCall as a scenario-level stub until we design a host-safe process scheduler strategy.
+
+## SDK VI: VIWaitForRetrace invokes PostRetraceCallback (modeled)
+- Decomp evidence: `decomp_mario_party_4/src/dolphin/vi.c:__VIRetraceHandler` calls `PostCB(retraceCount)` on each retrace.
+- Model behavior: `src/sdk_port/vi/VI.c:VIWaitForRetrace` increments `GC_SDK_OFF_VI_RETRACE_COUNT` and invokes the stored PostRetraceCallback once per call.
+- Deterministic test PASS (DOL expected vs host actual):
+  - `tests/sdk/vi/vi_wait_for_retrace/expected/vi_wait_for_retrace_calls_post_cb_hupadinit_001.bin`
+  - `tests/sdk/vi/vi_wait_for_retrace/actual/vi_wait_for_retrace_calls_post_cb_hupadinit_001.bin`

@@ -16,7 +16,7 @@ static inline void store_u32be_ptr(volatile uint8_t *p, uint32_t v) {
 }
 
 // Use fixed "pointer tokens" so PPC-vs-host dumps can match.
-// VISetPostRetraceCallback stores the pointer but does not call it in our model.
+// Note: callback invocation is modeled by VIWaitForRetrace (see VI.c).
 #define CB_A ((VIRetraceCallback)(uintptr_t)0x80001234u)
 #define CB_B ((VIRetraceCallback)(uintptr_t)0x80005678u)
 

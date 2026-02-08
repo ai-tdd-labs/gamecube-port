@@ -21,6 +21,8 @@ u32 gc_vi_set_black_calls;
 u32 gc_vi_next_field;
 u32 gc_vi_retrace_count;
 u32 gc_vi_black;
+u32 gc_vi_post_cb_calls;
+u32 gc_vi_post_cb_last_arg;
 
 // VISetNextFrameBuffer is used very early by games (including MP4). For now our
 // deterministic tests only require that the symbol exists.
@@ -29,6 +31,7 @@ void VISetNextFrameBuffer(void *fb) { (void)fb; }
 typedef void (*VIRetraceCallback)(u32 retraceCount);
 
 static u32 gc_vi_post_cb_ptr;
+static VIRetraceCallback gc_vi_post_cb_fn;
 
 static int VI_DisableInterrupts(void) {
     u32 v = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_DISABLE_CALLS, gc_vi_disable_calls);
@@ -46,9 +49,11 @@ static void VI_RestoreInterrupts(int level) {
 
 VIRetraceCallback VISetPostRetraceCallback(VIRetraceCallback callback) {
     u32 old = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_POST_CB_PTR, gc_vi_post_cb_ptr);
+    VIRetraceCallback old_fn = gc_vi_post_cb_fn;
 
     // Match SDK pattern: protect callback swap with interrupts disabled.
     int lvl = VI_DisableInterrupts();
+    gc_vi_post_cb_fn = callback;
     gc_vi_post_cb_ptr = (u32)(uintptr_t)callback;
     gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_POST_CB_PTR, &gc_vi_post_cb_ptr, gc_vi_post_cb_ptr);
     u32 calls = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_POST_CB_SET_CALLS, 0);
@@ -56,7 +61,10 @@ VIRetraceCallback VISetPostRetraceCallback(VIRetraceCallback callback) {
     gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_POST_CB_SET_CALLS, 0, calls);
     VI_RestoreInterrupts(lvl);
 
-    return (VIRetraceCallback)(uintptr_t)old;
+    // Return the previous callback (host-safe; doesn't truncate pointers).
+    // For our deterministic dumps we still store the pointer token in sdk_state.
+    (void)old;
+    return old_fn;
 }
 
 void VIFlush(void) {
@@ -69,6 +77,21 @@ void VIWaitForRetrace(void) {
     u32 v = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_WAIT_RETRACE_CALLS, gc_vi_wait_retrace_calls);
     v++;
     gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_WAIT_RETRACE_CALLS, &gc_vi_wait_retrace_calls, v);
+
+    // We do not emulate the actual VI interrupt machinery on host.
+    // Instead, model the observable consequence: retraceCount advances and
+    // PostRetraceCallback is invoked once per retrace.
+    u32 rc = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_RETRACE_COUNT, gc_vi_retrace_count);
+    rc++;
+    gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_RETRACE_COUNT, &gc_vi_retrace_count, rc);
+
+    if (gc_vi_post_cb_fn) {
+        gc_vi_post_cb_fn(rc);
+        u32 calls = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_POST_CB_CALLS, gc_vi_post_cb_calls);
+        calls++;
+        gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_POST_CB_CALLS, &gc_vi_post_cb_calls, calls);
+        gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_POST_CB_LAST_ARG, &gc_vi_post_cb_last_arg, rc);
+    }
 }
 
 #define VI_DTV_STAT 55

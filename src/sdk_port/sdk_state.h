@@ -130,6 +130,8 @@ enum {
   // VI retrace callbacks (used by MP4 HuPadInit).
   GC_SDK_OFF_VI_POST_CB_PTR = 0x200,        // u32 (function pointer)
   GC_SDK_OFF_VI_POST_CB_SET_CALLS = 0x204,  // u32
+  GC_SDK_OFF_VI_POST_CB_CALLS = 0x208,      // u32
+  GC_SDK_OFF_VI_POST_CB_LAST_ARG = 0x20C,   // u32
 
   // DVD (minimal subset)
   GC_SDK_OFF_DVD_INITIALIZED = 0x300,
