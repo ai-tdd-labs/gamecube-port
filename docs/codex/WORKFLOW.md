@@ -150,6 +150,21 @@ virtual RAM buffer:
 Implementation detail: the host runner supports an optional second dump via env vars
 (`GC_HOST_DUMP_ADDR`, `GC_HOST_DUMP_SIZE`, `GC_HOST_DUMP_PATH`). See `tests/harness/gc_host_runner.c`.
 
+### RVZ symbol probes (recommended without loader)
+
+Until we implement a real DOL loader on host, do **not** compare full MEM1 images retail-vs-host.
+Instead, dump a few RVZ memory windows at a stable PC checkpoint and compare *derived invariants*
+to what `sdk_port` reports.
+
+Tool:
+- `tools/dump_expected_rvz_probe_at_pc.sh <rvz> <pc_hex> <out_dir> [timeout]`
+
+Default probe windows are currently hardcoded to cover MP4 SDK globals around:
+- `__OSCurrHeap`, `__OSArenaLo`, `__OSArenaHi`
+- `__PADSpec`, `__PADFixBits`, `SamplingRate`
+
+Addresses come from: `decomp_mario_party_4/config/GMPE01_00/symbols.txt`.
+
 Command pattern:
 
 ```bash

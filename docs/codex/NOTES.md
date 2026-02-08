@@ -73,6 +73,27 @@ Rules:
   Interpretation: expected includes the loaded retail MP4 DOL image; host virtual RAM does not.
   Evidence: `tools/diff_bins.sh tests/oracles/mp4_rvz/mem1_at_pc_800308B8_gwinit.bin tests/actual/workload/mp4_gwinit_001_mem1.bin` output.
 
+### RVZ probe (GWInit checkpoint) for SDK globals
+- Probe tool: `tools/dump_expected_rvz_probe_at_pc.sh`.
+- RVZ: `/Users/chrislamark/projects/recomp/gamecube_static_recomp/game_files/Mario Party 4 (USA).rvz` at PC `0x800308B8` (`GWInit`).
+- Output dir: `tests/oracles/mp4_rvz/probes/gwinit_pc_800308B8/` (see `manifest.sha256`):
+  - `os_heap_arena_window.bin` (`0x801D38A0` size `0x80`) sha256 `a51024657eb2224f6c342f65797e7fd8535493bf7e9e49aa676dba306c51ba0d`
+  - `os_arena_hi_window.bin` (`0x801D42E0` size `0x40`) sha256 `91947db67dece35f297f38d994fa8b1770567aa6b89c7a5a7f94923cc421f8d2`
+  - `pad_si_window.bin` (`0x801D44F0` size `0x180`) sha256 `0246922752041d29fb2034aa1fe5e00472caab49119bfceeb2a66b85df9e998b`
+- Parsed values (from `decomp_mario_party_4/config/GMPE01_00/symbols.txt`):
+  - `__OSCurrHeap` @ `0x801D38B8` = `0x00000000`
+  - `__OSArenaLo`  @ `0x801D38C0` = `0x817FDEA0`
+  - `__OSArenaHi`  @ `0x801D42F8` = `0x817FDEA0`
+  - `SamplingRate` @ `0x801D4628` = `0x00000000`
+  - `__PADSpec`    @ `0x801D450C` = `0x00000000`
+
+#### RVZ vs host invariant check (ArenaLo/Hi)
+- RVZ at GWInit: `__OSArenaLo == __OSArenaHi == 0x817FDEA0`.
+- Host workload at GWInit (`tests/workload/mp4/mp4_gwinit_001_scenario.c`) stores arena lo/hi in `sdk_state`:
+  - `GC_SDK_STATE_BASE + 0x10` / `+0x14` inside `tests/actual/workload/mp4_gwinit_001_mem1.bin`.
+  - Observed host value: `0x81700000` for both (mismatch).
+  Implication: our arena init logic does not yet match retail MP4 at this checkpoint.
+
 ### VISetNextFrameBuffer
 - Callsites enumerated across MP4/TP/WW/AC.
   Evidence: docs/sdk/vi/VISetNextFrameBuffer.md
