@@ -158,4 +158,4 @@ HuPadInit,9,PADControlMotor,sdk,,tests/sdk/pad/pad_control_motor,1/1,1,1,1,y
 HuPerfInit,1,OSInitStopwatch,sdk,,tests/sdk/os/os_init_stopwatch,1/1,1,1,1,y
 HuPerfInit,2,GXSetDrawSyncCallback,sdk,,tests/sdk/gx/gx_set_draw_sync_callback,1/1,1,1,1,y
 HuPerfBegin,1,GXSetDrawSync,sdk,,tests/sdk/gx/gx_set_draw_sync,1/1,1,1,1,y
-HuDataInit,1,DVDConvertPathToEntrynum,sdk,,tests/sdk/dvd/dvd_convert_path_to_entrynum,1/1,1,1,1,y
+HuDataInit,1,DVDConvertPathToEntrynum,sdk,,tests/sdk/dvd/dvd_convert_path_to_entrynum,2/2,2,2,2,y

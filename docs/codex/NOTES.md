@@ -188,6 +188,8 @@ Rules:
 - Testcase:
   - `dvd_convert_path_to_entrynum_mp4_hu_data_init_001`: returns stable indices for known MP4 `data/*.bin` paths; returns `-1` for a missing path.
     Evidence: `tests/sdk/dvd/dvd_convert_path_to_entrynum/expected/dvd_convert_path_to_entrynum_mp4_hu_data_init_001.bin` and `tests/sdk/dvd/dvd_convert_path_to_entrynum/actual/dvd_convert_path_to_entrynum_mp4_hu_data_init_001.bin`
+  - `dvd_convert_path_to_entrynum_mp4_datadir_table_001`: validates *all* MP4 `datadir_table.h` paths resolve (count=140); returns `-1` for a missing path.
+    Evidence: `tests/sdk/dvd/dvd_convert_path_to_entrynum/expected/dvd_convert_path_to_entrynum_mp4_datadir_table_001.bin` and `tests/sdk/dvd/dvd_convert_path_to_entrynum/actual/dvd_convert_path_to_entrynum_mp4_datadir_table_001.bin`
 
 ## Test Runs (auto)
 
