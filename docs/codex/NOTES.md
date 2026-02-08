@@ -517,3 +517,10 @@ Notes:
 - Scenario: `tests/workload/mp4/mp4_huperfinit_001_scenario.c`
 - Build/run: `tools/run_host_scenario.sh tests/workload/mp4/mp4_huperfinit_001_scenario.c`
 - Output (marker only): `tests/actual/workload/mp4_huperfinit_001.bin` begins with `MP48` + `DEADBEEF`.
+
+## MP4 RVZ oracle: MEM1 dump at HuSysBeforeRender
+- Game: Mario Party 4 (USA) RVZ (see docs/sdk/mp4/MP4_assets.md)
+- Checkpoint: HuSysBeforeRender PC=0x80009FF8 (from symbols.txt)
+- Dump: MEM1 0x80000000 size 0x01800000
+- Local path (gitignored): `tests/oracles/mp4_rvz/mem1_at_pc_80009FF8_husysbeforerender.bin`
+- SHA256: `d2d51196f4bfd4d740597cfe9ec89477a74871d6b3865511d65b7d94b5fb986f`
