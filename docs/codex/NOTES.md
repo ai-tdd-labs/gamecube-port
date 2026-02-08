@@ -488,3 +488,9 @@ Notes:
 - Stubs: `tests/workload/mp4/slices/post_sprinit_stubs.c` (Hu3DInit/HuDataInit/HuPerfInit/WipeInit/omMasterInit)
 - Build/run: `tools/run_host_scenario.sh tests/workload/mp4/mp4_init_to_viwait_001_scenario.c`
 - Output (marker only): `tests/actual/workload/mp4_init_to_viwait_001.bin` begins with `MP46` + `DEADBEEF`.
+
+## MP4 host workload: one main loop iteration (stubbed)
+- Purpose: reachability only. Executes one iteration of the MP4 `while (1)` loop with non-SDK calls stubbed, to keep surfacing SDK gaps as we extend coverage.
+- Scenario: `tests/workload/mp4/mp4_mainloop_one_iter_001_scenario.c`
+- Build/run: `tools/run_host_scenario.sh tests/workload/mp4/mp4_mainloop_one_iter_001_scenario.c`
+- Output (marker only): `tests/actual/workload/mp4_mainloop_one_iter_001.bin` begins with `MP47` + `DEADBEEF`.
