@@ -3,6 +3,8 @@
 typedef uint32_t u32;
 typedef uint16_t u16;
 typedef uint8_t u8;
+typedef int16_t s16;
+typedef int32_t s32;
 
 // RAM-backed state (big-endian in MEM1) for dump comparability.
 #include "../sdk_state.h"
@@ -142,6 +144,8 @@ u32 gc_gx_pos3f32_x_bits;
 u32 gc_gx_pos3f32_y_bits;
 u32 gc_gx_pos3f32_z_bits;
 u32 gc_gx_pos1x16_last;
+u32 gc_gx_pos2s16_x;
+u32 gc_gx_pos2s16_y;
 
 // Token / draw sync state (GXManage).
 uintptr_t gc_gx_token_cb_ptr;
@@ -1915,6 +1919,14 @@ void GXPosition3f32(float x, float y, float z) {
 
 void GXPosition1x16(u16 x) {
     gc_gx_pos1x16_last = (u32)x;
+}
+
+void GXPosition2s16(s16 x, s16 y) {
+    // Deterministic host model: keep last written values.
+    // Store as 32-bit sign-extended values (matches how callers typically
+    // promote s16 when doing comparisons/logging).
+    gc_gx_pos2s16_x = (u32)(s32)x;
+    gc_gx_pos2s16_y = (u32)(s32)y;
 }
 
 void GXSetTevColorIn(u32 stage, u32 a, u32 b, u32 c, u32 d) {
