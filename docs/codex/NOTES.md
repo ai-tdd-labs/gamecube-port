@@ -524,3 +524,17 @@ Notes:
 - Dump: MEM1 0x80000000 size 0x01800000
 - Local path (gitignored): `tests/oracles/mp4_rvz/mem1_at_pc_80009FF8_husysbeforerender.bin`
 - SHA256: `d2d51196f4bfd4d740597cfe9ec89477a74871d6b3865511d65b7d94b5fb986f`
+
+## MP4 RVZ oracle: MEM1 dump at HuSysDoneRender
+- Game: Mario Party 4 (USA) RVZ (see docs/sdk/mp4/MP4_assets.md)
+- Checkpoint: HuSysDoneRender PC=0x8000A0DC (from symbols.txt)
+- Dump: MEM1 0x80000000 size 0x01800000
+- Local path (gitignored): `tests/oracles/mp4_rvz/mem1_at_pc_8000A0DC_husysdonerender.bin`
+- SHA256: `1affc12f7a01dadef66fe81c6c3e5ec14536f07acd32c0a2d8739bfb4451d3da`
+
+## MP4 RVZ oracle: MEM1 dump at Hu3DPreProc
+- Game: Mario Party 4 (USA) RVZ (see docs/sdk/mp4/MP4_assets.md)
+- Checkpoint: Hu3DPreProc PC=0x8001FBCC (from symbols.txt)
+- Dump: MEM1 0x80000000 size 0x01800000
+- Local path (gitignored): `tests/oracles/mp4_rvz/mem1_at_pc_8001FBCC_hu3dpreproc.bin`
+- SHA256: `7dc513a8280395f8c037ff9ed36740d5b234bc4975a6b3a512e26727b9e55959`
