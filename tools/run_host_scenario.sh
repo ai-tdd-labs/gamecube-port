@@ -33,14 +33,44 @@ exe="$build_dir/${scenario_base}_host_$$"
 # Infer subsystem from the path: .../tests/sdk/<subsystem>/...
 subsystem="$(echo "$SCENARIO_SRC" | sed -n 's|.*tests/sdk/\([^/]*\)/.*|\1|p')"
 if [[ -z "$subsystem" ]]; then
-  echo "fatal: could not infer subsystem from path: $SCENARIO_SRC" >&2
-  exit 2
+  # Workloads live outside tests/sdk.
+  if echo "$SCENARIO_SRC" | rg -q "/tests/workload/"; then
+    subsystem="workload"
+  else
+    echo "fatal: could not infer subsystem from path: $SCENARIO_SRC" >&2
+    exit 2
+  fi
 fi
 
 # Smoke suites may span multiple subsystems; compile the union.
 if [[ "$subsystem" == "smoke" ]]; then
   subsystem="os+dvd+vi+pad+gx"
 fi
+
+extra_includes=()
+extra_srcs=()
+extra_cflags=()
+case "$subsystem" in
+  workload)
+    # Allow building small integration workloads against a minimal, host-safe
+    # header surface that matches the subset of the SDK used by the workload.
+    extra_includes+=(
+      -I"$repo_root/tests/workload/include"
+      -I"$repo_root/src/game_workload/mp4/vendor/src"
+    )
+    # For now, we only support the HuSysInit workload.
+    extra_srcs+=(
+      "$repo_root/src/game_workload/mp4/vendor/src/game/init.c"
+    )
+    # Make the workload deterministic and avoid pulling in decomp build-system macros.
+    extra_cflags+=(
+      -DVERSION=0
+      -DVERSION_PAL=0
+      -DVERSION_NTSC=1
+    )
+    subsystem="os+dvd+vi+pad+gx"
+    ;;
+esac
 
 port_srcs=()
 case "$subsystem" in
@@ -108,6 +138,25 @@ case "$subsystem" in
     ;;
 esac
 
+# De-duplicate sources (some union subsystems add the same file via multiple cases).
+# macOS ships Bash 3.2 by default (no associative arrays), so keep this portable.
+if [[ ${#port_srcs[@]} -gt 0 ]]; then
+  __uniq=()
+  for s in "${port_srcs[@]}"; do
+    __skip=0
+    for u in "${__uniq[@]+${__uniq[@]}}"; do
+      if [[ "$u" == "$s" ]]; then
+        __skip=1
+        break
+      fi
+    done
+    if [[ $__skip -eq 0 ]]; then
+      __uniq+=("$s")
+    fi
+  done
+  port_srcs=("${__uniq[@]+${__uniq[@]}}")
+fi
+
 if [[ ${#port_srcs[@]} -eq 0 ]]; then
   echo "fatal: no sdk_port sources configured for subsystem: $subsystem" >&2
   exit 2
@@ -115,14 +164,17 @@ fi
 
 echo "[host-build] $SCENARIO_SRC"
 cc -O2 -g0 \
+  "${extra_cflags[@]}" \
   -I"$repo_root/tests" \
   -I"$repo_root/tests/harness" \
   -I"$repo_root/src" \
   -I"$repo_root/src/sdk_port" \
+  "${extra_includes[@]}" \
   "$repo_root/tests/harness/gc_host_ram.c" \
   "$repo_root/tests/harness/gc_host_runner.c" \
   "$repo_root/src/sdk_port/gc_mem.c" \
   "${port_srcs[@]}" \
+  "${extra_srcs[@]}" \
   "$SCENARIO_SRC" \
   -o "$exe"
 

@@ -406,3 +406,9 @@ Notes:
 - Local path (gitignored): `tests/oracles/mp4_rvz/mem1_at_pc_80005A5C_hupadinit.bin`
 - SHA256: `61f7c0d775bee3ef9f23364ad929a7d7d16c0c2ccbe7874f478030956bc6f9ae`
 - Notes: This is a secondary oracle snapshot to compare against our sdk_port+tests as we extend coverage around PAD init.
+
+## MP4 host workload: HuSysInit reachability (host-only)
+- Purpose: integration reachability only (not a correctness oracle). Used to discover missing SDK surface while running decompiled MP4 init code against `src/sdk_port`.
+- Scenario: `tests/workload/mp4/mp4_husysinit_001_scenario.c`
+- Build/run: `tools/run_host_scenario.sh tests/workload/mp4/mp4_husysinit_001_scenario.c`
+- Output (marker only): `tests/actual/workload/mp4_husysinit_001.bin` begins with `MP40` + `DEADBEEF`.
