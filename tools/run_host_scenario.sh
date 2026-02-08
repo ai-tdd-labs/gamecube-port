@@ -66,8 +66,15 @@ case "$subsystem" in
       "$repo_root/tests/workload/mp4/slices/gwinit_only.c"
       "$repo_root/tests/workload/mp4/slices/pfinit_only.c"
       "$repo_root/tests/workload/mp4/slices/husprinit_only.c"
-      "$repo_root/tests/workload/mp4/slices/post_sprinit_stubs.c"
+      "$repo_root/tests/workload/mp4/slices/huperfinit_only.c"
     )
+
+    # Only link heavy-module stubs for scenarios that explicitly need them.
+    case "$scenario_base" in
+      mp4_init_to_viwait_001_scenario|mp4_mainloop_one_iter_001_scenario)
+        extra_srcs+=("$repo_root/tests/workload/mp4/slices/post_sprinit_stubs.c")
+        ;;
+    esac
     # Make the workload deterministic and avoid pulling in decomp build-system macros.
     extra_cflags+=(
       -DVERSION=0

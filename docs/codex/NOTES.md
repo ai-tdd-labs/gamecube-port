@@ -485,7 +485,7 @@ Notes:
 ## MP4 host workload: init to VIWaitForRetrace (stubbed post-HuSprInit)
 - Purpose: reachability only. Uses host-only stubs for heavy game modules after `HuSprInit` to reach the first hard SDK checkpoint `VIWaitForRetrace()` without importing full MP4 engine code.
 - Scenario: `tests/workload/mp4/mp4_init_to_viwait_001_scenario.c`
-- Stubs: `tests/workload/mp4/slices/post_sprinit_stubs.c` (Hu3DInit/HuDataInit/HuPerfInit/WipeInit/omMasterInit)
+- Stubs: `tests/workload/mp4/slices/post_sprinit_stubs.c` (Hu3DInit/HuDataInit/WipeInit/omMasterInit)
 - Build/run: `tools/run_host_scenario.sh tests/workload/mp4/mp4_init_to_viwait_001_scenario.c`
 - Output (marker only): `tests/actual/workload/mp4_init_to_viwait_001.bin` begins with `MP46` + `DEADBEEF`.
 
@@ -494,3 +494,17 @@ Notes:
 - Scenario: `tests/workload/mp4/mp4_mainloop_one_iter_001_scenario.c`
 - Build/run: `tools/run_host_scenario.sh tests/workload/mp4/mp4_mainloop_one_iter_001_scenario.c`
 - Output (marker only): `tests/actual/workload/mp4_mainloop_one_iter_001.bin` begins with `MP47` + `DEADBEEF`.
+
+## MP4 RVZ oracle: MEM1 dump at HuPerfInit
+- Game: Mario Party 4 (USA) RVZ (see docs/sdk/mp4/MP4_assets.md)
+- Checkpoint: HuPerfInit PC=0x8002E74C (from symbols.txt)
+- Dump: MEM1 0x80000000 size 0x01800000
+- Local path (gitignored): `tests/oracles/mp4_rvz/mem1_at_pc_8002E74C_huperfinit.bin`
+- SHA256: `8cc09cd47ba1eed19c925d747fae9e090a3475d16ec3c4e1639f80f979ea8c21`
+
+## MP4 host workload: HuPerfInit reachability (host-only)
+- Purpose: integration reachability only. Adds a minimal decomp slice for `HuPerfInit`/`HuPerfCreate` (perf.c) and runs MP4 init chain up to that point.
+- Slice: `tests/workload/mp4/slices/huperfinit_only.c`
+- Scenario: `tests/workload/mp4/mp4_huperfinit_001_scenario.c`
+- Build/run: `tools/run_host_scenario.sh tests/workload/mp4/mp4_huperfinit_001_scenario.c`
+- Output (marker only): `tests/actual/workload/mp4_huperfinit_001.bin` begins with `MP48` + `DEADBEEF`.
