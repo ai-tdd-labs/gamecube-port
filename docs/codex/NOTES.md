@@ -468,3 +468,16 @@ Notes:
 - Scenario: `tests/workload/mp4/mp4_pfinit_001_scenario.c`
 - Build/run: `tools/run_host_scenario.sh tests/workload/mp4/mp4_pfinit_001_scenario.c`
 - Output (marker only): `tests/actual/workload/mp4_pfinit_001.bin` begins with `MP44` + `DEADBEEF`.
+
+## MP4 RVZ oracle: MEM1 dump at HuSprInit
+- Game: Mario Party 4 (USA) RVZ (see docs/sdk/mp4/MP4_assets.md)
+- Checkpoint: HuSprInit PC=0x8000D348 (from symbols.txt)
+- Dump: MEM1 0x80000000 size 0x01800000
+- Local path (gitignored): `tests/oracles/mp4_rvz/mem1_at_pc_8000D348_husprinit.bin`
+- SHA256: `c2c0d9b5ba41152b1e9e6d0e94b19037880d478cdeb380267e611fb30b994f73`
+
+## MP4 host workload: HuSprInit reachability (host-only)
+- Purpose: integration reachability only. Runs MP4 init chain up to `HuSprInit` against `src/sdk_port`.
+- Scenario: `tests/workload/mp4/mp4_husprinit_001_scenario.c`
+- Build/run: `tools/run_host_scenario.sh tests/workload/mp4/mp4_husprinit_001_scenario.c`
+- Output (marker only): `tests/actual/workload/mp4_husprinit_001.bin` begins with `MP45` + `DEADBEEF`.
