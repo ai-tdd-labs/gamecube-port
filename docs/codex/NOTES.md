@@ -213,6 +213,15 @@ Rules:
   Evidence: decomp_mario_party_4/src/game/wipe.c (`WipeFrameStill`); decomp_mario_party_4/src/dolphin/gx/GXTransform.c (`GXLoadPosMtxImm`);
   tests/sdk/gx/gx_load_pos_mtx_imm/expected/gx_load_pos_mtx_imm_mp4_wipe_identity_001.bin
 
+### GXBegin / GXEnd (MP4 wipe)
+- MP4 callsite (wipe):
+  `GXBegin(GX_QUADS, GX_VTXFMT0, 4)` emits a FIFO header:
+  - `GX_WRITE_U8(vtxfmt | type)` -> `0x80`
+  - `GX_WRITE_U16(nverts)` -> `4`
+  `GXEnd()` is a macro barrier (no observable state change for our deterministic model).
+  Evidence: decomp_mario_party_4/src/game/wipe.c (`WipeFrameStill`); decomp_mario_party_4/src/dolphin/gx/GXGeometry.c (`GXBegin`);
+  tests/sdk/gx/gx_begin/expected/gx_begin_mp4_wipe_quads_001.bin
+
 ### GXSetCurrentMtx (MP4 Hu3DExec)
 - Contract: updates `matIdxA` low 6 bits and writes XF reg 24 to the updated `matIdxA` (via `__GXSetMatrixIndex`).
   Evidence: decomp_mario_party_4/src/dolphin/gx/GXTransform.c (`GXSetCurrentMtx`, `__GXSetMatrixIndex`).

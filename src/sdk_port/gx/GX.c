@@ -149,6 +149,10 @@ u32 gc_gx_fifo_u8_last;
 u32 gc_gx_fifo_u32_last;
 u32 gc_gx_fifo_mtx_words[12];
 
+// Minimal GXBegin header mirror for deterministic geometry tests.
+u32 gc_gx_fifo_begin_u8;
+u32 gc_gx_fifo_begin_u16;
+
 typedef struct {
     uint8_t _dummy;
 } GXFifoObj;
@@ -238,6 +242,8 @@ GXFifoObj *GXInit(void *base, u32 size) {
     for (i = 0; i < 12; i++) {
         gc_gx_fifo_mtx_words[i] = 0;
     }
+    gc_gx_fifo_begin_u8 = 0;
+    gc_gx_fifo_begin_u16 = 0;
     for (i = 0; i < 8; i++) {
         gc_gx_su_ts0[i] = 0;
     }
@@ -380,6 +386,16 @@ void GXEnableTexOffsets(u32 coord, u8 line_enable, u8 point_enable) {
     gc_gx_su_ts0[coord] = set_field(gc_gx_su_ts0[coord], 1, 18, (u32)(line_enable != 0));
     gc_gx_su_ts0[coord] = set_field(gc_gx_su_ts0[coord], 1, 19, (u32)(point_enable != 0));
     gc_gx_bp_sent_not = 0;
+}
+
+void GXBegin(u8 type, u8 vtxfmt, u16 nverts) {
+    // Mirror decomp_mario_party_4/src/dolphin/gx/GXGeometry.c:GXBegin observable FIFO header writes.
+    gc_gx_fifo_begin_u8 = (u32)(vtxfmt | type);
+    gc_gx_fifo_begin_u16 = (u32)nverts;
+}
+
+void GXEnd(void) {
+    // In the SDK this is a macro barrier; deterministic host model: no-op.
 }
 
 void GXSetCoPlanar(u32 enable) {
