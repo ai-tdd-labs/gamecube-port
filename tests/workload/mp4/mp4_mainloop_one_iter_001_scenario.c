@@ -52,7 +52,6 @@ static int HuSoftResetButtonCheck(void) { return 0; }
 static void HuPerfZero(void) {}
 static void HuPerfBegin(int which) { (void)which; }
 static void HuPerfEnd(int which) { (void)which; }
-static void Hu3DPreProc(void) {}
 static void HuPrcCall(int which) { (void)which; }
 static void MGSeqMain(void) {}
 static void Hu3DExec(void) {}
@@ -64,6 +63,9 @@ static void msmMusFdoutEnd(void) {}
 // Real MP4 functions from vendor init.c (already compiled in workload via tools/run_host_scenario.sh).
 void HuSysBeforeRender(void);
 void HuSysDoneRender(int retrace_count);
+
+// Minimal MP4 slice (tests/workload/mp4/slices/hu3d_preproc_only.c)
+void Hu3DPreProc(void);
 
 // This global is referenced by older chain code; keep it consistent.
 int HuDvdErrWait = 0;
