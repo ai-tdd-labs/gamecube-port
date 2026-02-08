@@ -183,4 +183,4 @@ WipeFrameStill,3,GXEnd,sdk,,tests/sdk/gx/gx_begin,1/1,1,1,1,y
 WipeFrameStill,4,GXSetTexCoordGen,sdk,,tests/sdk/gx/gx_set_tex_coord_gen,1/1,1,1,1,y
 WipeFrameStill,5,GXSetTevColor,sdk,,tests/sdk/gx/gx_set_tev_color,1/1,1,1,1,y
 WipeFrameStill,6,GXInitTexObj,sdk,,tests/sdk/gx/gx_init_tex_obj,1/1,1,1,1,y
-WipeFrameStill,7,GXLoadTexObj,sdk,,tests/sdk/gx/gx_load_tex_obj,0/0,0,0,0,
+WipeFrameStill,7,GXLoadTexObj,sdk,,tests/sdk/gx/gx_load_tex_obj,1/1,1,1,1,y

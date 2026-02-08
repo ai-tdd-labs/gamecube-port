@@ -164,6 +164,14 @@ u32 gc_gx_xf_texcoordgen_50[8];
 // Matrix index B mirror (GXTransform.c:__GXSetMatrixIndex uses matIdxA/matIdxB).
 u32 gc_gx_mat_idx_b;
 
+// Texture load observable state (GXLoadTexObjPreLoaded writes 6 BP regs).
+u32 gc_gx_tex_load_mode0_last;
+u32 gc_gx_tex_load_mode1_last;
+u32 gc_gx_tex_load_image0_last;
+u32 gc_gx_tex_load_image1_last;
+u32 gc_gx_tex_load_image2_last;
+u32 gc_gx_tex_load_image3_last;
+
 typedef struct {
     uint8_t _dummy;
 } GXFifoObj;
@@ -206,6 +214,60 @@ static inline void gx_write_xf_reg(u32 idx, u32 v) {
         gc_gx_xf_regs[idx] = v;
     }
 }
+
+// ---- Texture objects / regions (GXTexture.c + GXInit.c) ----
+//
+// These are placed before GXInit so we can initialize the default region pool.
+
+// Internal GXTexObj layout (0x20 bytes) from decomp_mario_party_4/src/dolphin/gx/GXTexture.c.
+// NOTE: Use 32-bit slots for pointers so host builds match the GameCube layout.
+typedef struct {
+    u32 mode0;
+    u32 mode1;
+    u32 image0;
+    u32 image3;
+    u32 userData;
+    u32 fmt;
+    u32 tlutName;
+    u16 loadCnt;
+    u8 loadFmt;
+    u8 flags;
+} GXTexObj;
+
+// Internal GXTexRegion layout (matches __GXTexRegionInt in GXTexture.c).
+typedef struct {
+    u32 image1;
+    u32 image2;
+    u16 sizeEven;
+    u16 sizeOdd;
+    u8 is32bMipmap;
+    u8 isCached;
+    u8 _pad[2];
+} GXTexRegion;
+
+enum {
+    GX_TEXCACHE_32K = 0,
+    GX_TEXCACHE_128K = 1,
+    GX_TEXCACHE_512K = 2,
+    GX_TEXCACHE_NONE = 3,
+};
+
+// Default region pool installed by GXInit (GXInit.c).
+static GXTexRegion gc_gx_tex_regions[8];
+static u32 gc_gx_next_tex_rgn;
+
+typedef GXTexRegion *(*GXTexRegionCallback)(GXTexObj *t_obj, u32 unused);
+static GXTexRegionCallback gc_gx_tex_region_cb;
+
+void GXInitTexCacheRegion(GXTexRegion *region, u8 is_32b_mipmap, u32 tmem_even, u32 size_even, u32 tmem_odd, u32 size_odd);
+static GXTexRegion *gc__gx_default_tex_region_cb(GXTexObj *t_obj, u32 unused);
+
+static const u8 gc_gx_tex_mode0_ids[8] = { 0x80, 0x81, 0x82, 0x83, 0xA0, 0xA1, 0xA2, 0xA3 };
+static const u8 gc_gx_tex_mode1_ids[8] = { 0x84, 0x85, 0x86, 0x87, 0xA4, 0xA5, 0xA6, 0xA7 };
+static const u8 gc_gx_tex_image0_ids[8] = { 0x88, 0x89, 0x8A, 0x8B, 0xA8, 0xA9, 0xAA, 0xAB };
+static const u8 gc_gx_tex_image1_ids[8] = { 0x8C, 0x8D, 0x8E, 0x8F, 0xAC, 0xAD, 0xAE, 0xAF };
+static const u8 gc_gx_tex_image2_ids[8] = { 0x90, 0x91, 0x92, 0x93, 0xB0, 0xB1, 0xB2, 0xB3 };
+static const u8 gc_gx_tex_image3_ids[8] = { 0x94, 0x95, 0x96, 0x97, 0xB4, 0xB5, 0xB6, 0xB7 };
 
 GXFifoObj *GXInit(void *base, u32 size) {
     (void)base;
@@ -277,6 +339,19 @@ GXFifoObj *GXInit(void *base, u32 size) {
     gc_gx_mat_color[1] = 0;
     gc_gx_cmode0 = 0;
     gc_gx_pe_ctrl = 0;
+
+    // Texture region defaults (GXInit.c).
+    gc_gx_next_tex_rgn = 0;
+    gc_gx_tex_region_cb = gc__gx_default_tex_region_cb;
+    for (i = 0; i < 8; i++) {
+        GXInitTexCacheRegion(&gc_gx_tex_regions[i], 0, i * 0x8000u, GX_TEXCACHE_32K, 0x80000u + i * 0x8000u, GX_TEXCACHE_32K);
+    }
+    gc_gx_tex_load_mode0_last = 0;
+    gc_gx_tex_load_mode1_last = 0;
+    gc_gx_tex_load_image0_last = 0;
+    gc_gx_tex_load_image1_last = 0;
+    gc_gx_tex_load_image2_last = 0;
+    gc_gx_tex_load_image3_last = 0;
 
     return &s_fifo_obj;
 }
@@ -808,24 +883,20 @@ enum {
     GX_CTF_Z16M = 0xD,
 };
 
-// Internal GXTexObj layout (0x20 bytes) from decomp_mario_party_4/src/dolphin/gx/GXTexture.c.
-// NOTE: Use 32-bit slots for pointers so host builds match the GameCube layout.
-typedef struct {
-    u32 mode0;
-    u32 mode1;
-    u32 image0;
-    u32 image3;
-    u32 userData;
-    u32 fmt;
-    u32 tlutName;
-    u16 loadCnt;
-    u8 loadFmt;
-    u8 flags;
-} GXTexObj;
-
 static inline u32 gx_some_set_reg_macro(u32 reg, u32 val) {
     // Mirror GXTexture.c SOME_SET_REG_MACRO (rlwinm(...,0,27,23) clears bits 24..26).
     return (reg & 0xF8FFFFFFu) | val;
+}
+
+static GXTexRegion *gc__gx_default_tex_region_cb(GXTexObj *t_obj, u32 unused) {
+    // Mirror decomp_mario_party_4/src/dolphin/gx/GXInit.c:__GXDefaultTexRegionCallback.
+    (void)unused;
+    // Non-CI formats (anything except C4/C8/C14X2) round-robin over 8 regions.
+    if (t_obj && t_obj->fmt != 0x8u && t_obj->fmt != 0x9u && t_obj->fmt != 0xAu) {
+        return &gc_gx_tex_regions[gc_gx_next_tex_rgn++ & 7u];
+    }
+    // CI path not needed yet; keep deterministic.
+    return &gc_gx_tex_regions[0];
 }
 
 void GXInitTexObj(GXTexObj *obj, void *image_ptr, u16 width, u16 height, u32 format, u32 wrap_s, u32 wrap_t, u8 mipmap) {
@@ -912,6 +983,75 @@ void GXInitTexObj(GXTexObj *obj, void *image_ptr, u16 width, u16 height, u32 for
         t->loadCnt = (u16)((rowC * colC) & 0x7FFFu);
     }
     t->flags |= 2u;
+}
+
+void GXInitTexCacheRegion(GXTexRegion *region, u8 is_32b_mipmap, u32 tmem_even, u32 size_even, u32 tmem_odd, u32 size_odd) {
+    // Mirror GXTexture.c:GXInitTexCacheRegion observable packing of image1/image2.
+    if (!region) return;
+
+    u32 WidthExp2;
+    switch (size_even) {
+    case GX_TEXCACHE_32K: WidthExp2 = 3; break;
+    case GX_TEXCACHE_128K: WidthExp2 = 4; break;
+    case GX_TEXCACHE_512K: WidthExp2 = 5; break;
+    default: WidthExp2 = 3; break;
+    }
+
+    region->image1 = 0;
+    region->image1 = set_field(region->image1, 15, 0, tmem_even >> 5);
+    region->image1 = set_field(region->image1, 3, 15, WidthExp2);
+    region->image1 = set_field(region->image1, 3, 18, WidthExp2);
+    region->image1 = set_field(region->image1, 1, 21, 0);
+
+    switch (size_odd) {
+    case GX_TEXCACHE_32K: WidthExp2 = 3; break;
+    case GX_TEXCACHE_128K: WidthExp2 = 4; break;
+    case GX_TEXCACHE_512K: WidthExp2 = 5; break;
+    case GX_TEXCACHE_NONE: WidthExp2 = 0; break;
+    default: WidthExp2 = 0; break;
+    }
+
+    region->image2 = 0;
+    region->image2 = set_field(region->image2, 15, 0, tmem_odd >> 5);
+    region->image2 = set_field(region->image2, 3, 15, WidthExp2);
+    region->image2 = set_field(region->image2, 3, 18, WidthExp2);
+    region->is32bMipmap = is_32b_mipmap;
+    region->isCached = 1;
+}
+
+void GXLoadTexObjPreLoaded(GXTexObj *obj, GXTexRegion *region, u32 id) {
+    // Mirror GXTexture.c:GXLoadTexObjPreLoaded (observable BP regs only).
+    if (!obj || !region) return;
+    if (id >= 8u) return;
+
+    obj->mode0 = set_field(obj->mode0, 8, 24, gc_gx_tex_mode0_ids[id]);
+    obj->mode1 = set_field(obj->mode1, 8, 24, gc_gx_tex_mode1_ids[id]);
+    obj->image0 = set_field(obj->image0, 8, 24, gc_gx_tex_image0_ids[id]);
+    region->image1 = set_field(region->image1, 8, 24, gc_gx_tex_image1_ids[id]);
+    region->image2 = set_field(region->image2, 8, 24, gc_gx_tex_image2_ids[id]);
+    obj->image3 = set_field(obj->image3, 8, 24, gc_gx_tex_image3_ids[id]);
+
+    // Deterministic observable output for tests.
+    gc_gx_tex_load_mode0_last = obj->mode0;
+    gc_gx_tex_load_mode1_last = obj->mode1;
+    gc_gx_tex_load_image0_last = obj->image0;
+    gc_gx_tex_load_image1_last = region->image1;
+    gc_gx_tex_load_image2_last = region->image2;
+    gc_gx_tex_load_image3_last = obj->image3;
+
+    gx_write_ras_reg(obj->mode0);
+    gx_write_ras_reg(obj->mode1);
+    gx_write_ras_reg(obj->image0);
+    gx_write_ras_reg(region->image1);
+    gx_write_ras_reg(region->image2);
+    gx_write_ras_reg(obj->image3);
+}
+
+void GXLoadTexObj(GXTexObj *obj, u32 id) {
+    // Mirror GXTexture.c:GXLoadTexObj: select region via callback then preload.
+    if (!gc_gx_tex_region_cb) gc_gx_tex_region_cb = gc__gx_default_tex_region_cb;
+    GXTexRegion *r = gc_gx_tex_region_cb(obj, id);
+    GXLoadTexObjPreLoaded(obj, r, id);
 }
 
 static void get_image_tile_count(u32 fmt, u16 wd, u16 ht, u32 *rowTiles, u32 *colTiles, u32 *cmpTiles) {

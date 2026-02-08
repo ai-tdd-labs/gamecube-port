@@ -368,3 +368,19 @@ Rules:
 - [PASS] 2026-02-06T19:13:30Z GX batch3/mp4_init_gx_001/gx_set_alpha_update expected=tests/sdk/gx/gx_set_alpha_update/expected/gx_set_alpha_update_mp4_init_gx_001.bin actual=tests/sdk/gx/gx_set_alpha_update/actual/gx_set_alpha_update_mp4_init_gx_001.bin
 - [PASS] 2026-02-06T19:13:30Z GX batch3/mp4_init_gx_001/gx_set_z_comp_loc expected=tests/sdk/gx/gx_set_z_comp_loc/expected/gx_set_z_comp_loc_mp4_init_gx_001.bin actual=tests/sdk/gx/gx_set_z_comp_loc/actual/gx_set_z_comp_loc_mp4_init_gx_001.bin
 - [PASS] 2026-02-06T19:13:30Z GX batch3/mp4_init_gx_001/gx_set_dither expected=tests/sdk/gx/gx_set_dither/expected/gx_set_dither_mp4_init_gx_001.bin actual=tests/sdk/gx/gx_set_dither/actual/gx_set_dither_mp4_init_gx_001.bin
+
+## GXLoadTexObj (MP4 wipe)
+
+Evidence:
+- MP4 callsite: `/Users/chrislamark/projects/gamecube/decomp_mario_party_4/src/game/wipe.c` (`WipeFrameStill`)
+- SDK reference:
+  - `/Users/chrislamark/projects/gamecube/decomp_mario_party_4/src/dolphin/gx/GXTexture.c` (`GXLoadTexObjPreLoaded` ID injection + 6 BP writes)
+  - `/Users/chrislamark/projects/gamecube/decomp_mario_party_4/src/dolphin/gx/GXInit.c` (`__GXDefaultTexRegionCallback` round-robin + `GXInitTexCacheRegion` init pattern)
+
+Test:
+- expected (PPC/Dolphin): `tests/sdk/gx/gx_load_tex_obj/expected/gx_load_tex_obj_mp4_wipe_texmap0_001.bin`
+- actual (host/sdk_port): `tests/sdk/gx/gx_load_tex_obj/actual/gx_load_tex_obj_mp4_wipe_texmap0_001.bin`
+
+Facts (confirmed by bit-exact expected vs actual):
+- `GXInitTexCacheRegion` packs `image1`/`image2` from TMEM (>>5) and widthExp2 fields, and `GXLoadTexObjPreLoaded` injects the BP register ID in bits 24..31 for `mode0/mode1/image0/image1/image2/image3`.
+- Default non-CI region selection uses round-robin `nextTexRgn++ & 7`.
