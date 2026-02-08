@@ -22,6 +22,8 @@ Rules:
   - `GXSetDrawSyncCallback` / `GXSetDrawSync` (from decomp `src/dolphin/gx/GXMisc.c`).
   - Suites: `tests/sdk/os/os_init_stopwatch`, `tests/sdk/gx/gx_set_draw_sync_callback`, `tests/sdk/gx/gx_set_draw_sync`.
   Evidence: `/tmp/mp4_rvz_osdisable_bp_0x80300000.bin` produced by `tools/ram_dump.py --breakpoint 0x800B723C` on `/Users/chrislamark/projects/recomp/gamecube_static_recomp/game_files/Mario Party 4 (USA).rvz`
+- MP4 RVZ breakpoint attempt at SDK `GXCopyTex` (`GXCopyTex = 0x800CBA0C`) did not hit within 60 seconds of boot (headless run).
+  Evidence: `tools/dump_expected_rvz_mem1_at_pc.sh` output "Breakpoint not hit before timeout."
 
 ### MP4 checkpoint smoke chain: mp4_pad_init_chain_001
 - Purpose: validate combined SDK effects for the HuPadInit-related subset (SI/VI/PAD + OS interrupt gating) as a checkpoint dump.
@@ -498,6 +500,7 @@ Notes:
 ## MP4 host workload: one main loop iteration (stubbed)
 - Purpose: reachability only. Executes one iteration of the MP4 `while (1)` loop with non-SDK calls stubbed, to keep surfacing SDK gaps as we extend coverage.
 - Scenario: `tests/workload/mp4/mp4_mainloop_one_iter_001_scenario.c`
+- Uses real MP4 decomp functions for low-risk calls where available: `HuPadRead()` (from `pad.c`) and `pfClsScr()` (from `pfinit_only.c`).
 - Build/run: `tools/run_host_scenario.sh tests/workload/mp4/mp4_mainloop_one_iter_001_scenario.c`
 - Output (marker only): `tests/actual/workload/mp4_mainloop_one_iter_001.bin` begins with `MP47` + `DEADBEEF`.
 

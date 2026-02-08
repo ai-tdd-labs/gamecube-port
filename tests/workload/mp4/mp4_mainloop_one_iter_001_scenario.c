@@ -15,6 +15,8 @@ void HuPadInit(void);
 void GWInit(void);
 void pfInit(void);
 void HuSprInit(void);
+void HuPadRead(void);
+void pfClsScr(void);
 
 // Host-only stubs (tests/workload/mp4/slices/post_sprinit_stubs.c)
 void Hu3DInit(void);
@@ -53,8 +55,6 @@ static void HuPerfEnd(int which) { (void)which; }
 static void HuSysBeforeRender(void) {}
 static void HuSysDoneRender(int retrace) { (void)retrace; }
 static void Hu3DPreProc(void) {}
-static void HuPadRead(void) {}
-static void pfClsScr(void) {}
 static void HuPrcCall(int which) { (void)which; }
 static void MGSeqMain(void) {}
 static void Hu3DExec(void) {}
@@ -208,4 +208,3 @@ void gc_scenario_run(GcRam *ram) {
     wr32be(p + 0x00, 0x4D503437u); // "MP47"
     wr32be(p + 0x04, 0xDEADBEEFu);
 }
-
