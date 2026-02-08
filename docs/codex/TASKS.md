@@ -37,7 +37,7 @@ evidence-based. Mark items DONE with a commit hash.
      Evidence: `tests/sdk/smoke/mp4_pad_init_chain_001/`
    - [x] HuDataInit: cover `DVDConvertPathToEntrynum` MP4 callsite behavior (minimal deterministic backend).
      Evidence: `tests/sdk/dvd/dvd_convert_path_to_entrynum/`
-   - [x] HuDataDirRead path: cover `DVDFastOpen` + `DVDReadAsync` + `DVDGetCommandBlockStatus` MP4 callsite behavior (minimal deterministic backend).
+   - [x] HuDataDirRead path: cover `DVDFastOpen` + `DVDReadAsync` + `DVDGetCommandBlockStatus` MP4 callsite behavior (minimal deterministic backend). (8037773)
      Evidence: `tests/sdk/dvd/dvd_fast_open/` and `tests/sdk/dvd/dvd_read_async/`
    - [ ] Next MP4 init step: determine the *actual next SDK blocker after HuDataInit* by tracing from `HuDataDirRead` into `HuDataReadNumHeapShortForce` and `HuDvdDataReadWait`.
      Output:
