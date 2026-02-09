@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Dump expected RAM region from running a DOL in Dolphin via GDB stub.
 # Usage:
-#   tools/dump_expected.sh <dol_path> <out_bin> [addr] [size] [run_seconds] [chunk]
+#   tools/dump_expected.sh <dol_path> <out_bin> [addr] [size] [run_seconds] [chunk] [halt_0_or_1] [wait_u32be_addr] [wait_u32be_value] [wait_timeout]
 
 DOL_PATH=${1:?dol_path required}
 OUT_BIN=${2:?out_bin required}
@@ -11,6 +11,10 @@ ADDR=${3:-0x80300000}
 SIZE=${4:-0x40}
 RUN=${5:-0.5}
 CHUNK=${6:-}
+HALT=${7:-1}
+WAIT_ADDR=${8:-}
+WAIT_VALUE=${9:-}
+WAIT_TIMEOUT=${10:-}
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 
@@ -38,7 +42,10 @@ for attempt in 1 2 3; do
       --size "$SIZE" \
       --out "$OUT_BIN" \
       --run "$RUN" \
-      --halt \
+      ${HALT:+$([[ "$HALT" == "1" ]] && echo --halt || true)} \
+      ${WAIT_ADDR:+--wait-u32be-addr "$WAIT_ADDR"} \
+      ${WAIT_VALUE:+--wait-u32be-value "$WAIT_VALUE"} \
+      ${WAIT_TIMEOUT:+--wait-timeout "$WAIT_TIMEOUT"} \
       ${CHUNK:+--chunk "$CHUNK"}
   then
     exit 0

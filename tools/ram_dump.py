@@ -492,6 +492,18 @@ Examples:
     parser.add_argument('--pc-step', type=float, default=0.02,
                         help='Seconds to run between halt polls while waiting for --pc-breakpoint (default: 0.02).')
 
+    # Some DOLs (especially smoke chains) do heavy work (e.g. clearing MEM1) and then
+    # write a deterministic "ready marker" to RAM. Dumping before that marker is set
+    # leads to flaky/half-initialized dumps.
+    parser.add_argument('--wait-u32be-addr', type=parse_int, default=None,
+                        help='Optional address to poll for a big-endian 32-bit ready marker before dumping.')
+    parser.add_argument('--wait-u32be-value', type=parse_int, default=None,
+                        help='Expected big-endian 32-bit marker value for --wait-u32be-addr.')
+    parser.add_argument('--wait-timeout', type=float, default=30.0,
+                        help='Seconds to wait for --wait-u32be-* marker (default: 30).')
+    parser.add_argument('--wait-poll', type=float, default=0.05,
+                        help='Seconds between marker polls (default: 0.05).')
+
     args = parser.parse_args()
 
     print(f"RAM Dump: 0x{args.addr:08X} - 0x{args.addr + args.size:08X} ({args.size} bytes)")
@@ -537,10 +549,44 @@ Examples:
             dolphin_proc.terminate()
         sys.exit(1)
 
+    if (args.wait_u32be_addr is None) ^ (args.wait_u32be_value is None):
+        print("If using --wait-u32be-addr, you must also provide --wait-u32be-value (and vice versa).")
+        if dolphin_proc:
+            dolphin_proc.terminate()
+        sys.exit(2)
+
     try:
         if args.breakpoint is not None and args.pc_breakpoint is not None:
             print("Choose either --breakpoint (Z0/Z1) or --pc-breakpoint (polling), not both.")
             sys.exit(2)
+
+        # If we were started in debugger mode, Dolphin can begin paused. If the user
+        # requested a ready-marker poll, make sure the CPU is running so the marker
+        # can be reached.
+        if args.wait_u32be_addr is not None:
+            print(
+                f"Waiting for ready marker @ 0x{args.wait_u32be_addr:08X} == 0x{args.wait_u32be_value:08X} "
+                f"(timeout {args.wait_timeout}s)..."
+            )
+            gdb.cont()
+            end = time.time() + args.wait_timeout
+            want = f"{args.wait_u32be_value & 0xFFFFFFFF:08x}"
+            seen = None
+            while time.time() < end:
+                hex_data = gdb.read_memory(args.wait_u32be_addr, 4)
+                if hex_data:
+                    got = hex_data.lower()
+                    seen = got
+                    if got == want:
+                        print("Ready marker observed; dumping.")
+                        break
+                time.sleep(args.wait_poll)
+            else:
+                if seen is None:
+                    print("Timed out waiting for ready marker (no reads succeeded).")
+                else:
+                    print(f"Timed out waiting for ready marker. Last value: 0x{seen}")
+                sys.exit(4)
 
         if args.breakpoint is not None:
             bp = args.breakpoint

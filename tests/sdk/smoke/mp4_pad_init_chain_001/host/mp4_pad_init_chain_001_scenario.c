@@ -35,8 +35,11 @@ static inline void store_u32be(uint8_t *p, uint32_t v) {
 
 enum { SNAPSHOT_ADDR = 0x80300100u };
 
-// Fixed "pointer token" so PPC-vs-host dumps can match.
-#define POST_CB ((VIRetraceCallback)(uintptr_t)0x80001234u)
+// Use a real function pointer so VIWaitForRetrace can safely invoke it, then
+// normalize the stored callback value in sdk_state to a stable token so
+// PPC-vs-host dumps can match bit-exact.
+enum { POST_CB_TOKEN = 0x80001234u };
+static void PostCB(uint32_t retraceCount) { (void)retraceCount; }
 
 static void emit_snapshot(GcRam *ram) {
   uint8_t *out = gc_ram_ptr(ram, SNAPSHOT_ADDR, 0x40);
@@ -82,7 +85,8 @@ int main(void) {
   SISetSamplingRate(0);
 
   int lvl = OSDisableInterrupts();
-  (void)VISetPostRetraceCallback(POST_CB);
+  (void)VISetPostRetraceCallback(PostCB);
+  gc_sdk_state_store_u32be(GC_SDK_OFF_VI_POST_CB_PTR, (uint32_t)POST_CB_TOKEN);
   OSRestoreInterrupts(lvl);
 
   VIWaitForRetrace();

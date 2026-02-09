@@ -51,8 +51,11 @@ static inline void store_u32be_ptr(volatile uint8_t *p, uint32_t v) {
   p[3] = (uint8_t)(v >> 0);
 }
 
-// Fixed "pointer token" so PPC-vs-host dumps can match.
-#define POST_CB ((VIRetraceCallback)(uintptr_t)0x80001234u)
+// Use a real function pointer so VIWaitForRetrace can safely invoke it.
+// Then normalize the stored pointer value in sdk_state to a stable token so
+// PPC-vs-host dumps can match bit-exact.
+enum { POST_CB_TOKEN = 0x80001234u };
+static void PostCB(uint32_t retraceCount) { (void)retraceCount; }
 
 static void emit_snapshot(void) {
   volatile uint8_t *out = (volatile uint8_t *)SNAPSHOT_ADDR;
@@ -106,7 +109,8 @@ int main(void) {
 
   // HuPadInit: disable -> set post cb -> restore
   int lvl = OSDisableInterrupts();
-  (void)VISetPostRetraceCallback(POST_CB);
+  (void)VISetPostRetraceCallback(PostCB);
+  gc_sdk_state_store_u32be(GC_SDK_OFF_VI_POST_CB_PTR, (uint32_t)POST_CB_TOKEN);
   OSRestoreInterrupts(lvl);
   gc_safepoint();
 
