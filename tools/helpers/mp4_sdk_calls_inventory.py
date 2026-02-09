@@ -53,6 +53,16 @@ def rest_to_snake(rest: str) -> str:
 
 def sdk_name_to_suite_dir(prefix: str, rest: str) -> str:
     # E.g. ("PAD","Read") -> "pad_read"
+    #
+    # Some GX immediate-mode helpers are conventionally named without underscores
+    # around the signedness/bitwidth chunk (e.g. gx_position_3s16, not
+    # gx_position_3_s_16). Mirror the existing suite naming so we can find
+    # coverage for MP4 callsite-style tests.
+    if prefix == "GX":
+        m = re.fullmatch(r"Position([0-9]+)([su])([0-9]+)", rest)
+        if m:
+            n, t, bits = m.group(1), m.group(2), m.group(3)
+            return f"gx_position_{n}{t}{bits}"
     return f"{prefix.lower()}_{rest_to_snake(rest)}" if rest else prefix.lower()
 
 

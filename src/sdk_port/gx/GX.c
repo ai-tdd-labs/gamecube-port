@@ -195,6 +195,8 @@ u32 gc_gx_pos3f32_z_bits;
 u32 gc_gx_pos1x16_last;
 u32 gc_gx_pos2s16_x;
 u32 gc_gx_pos2s16_y;
+u32 gc_gx_pos2u16_x;
+u32 gc_gx_pos2u16_y;
 u32 gc_gx_pos3s16_x;
 u32 gc_gx_pos3s16_y;
 u32 gc_gx_pos3s16_z;
@@ -2303,6 +2305,12 @@ void GXPosition2s16(s16 x, s16 y) {
     // promote s16 when doing comparisons/logging).
     gc_gx_pos2s16_x = (u32)(s32)x;
     gc_gx_pos2s16_y = (u32)(s32)y;
+}
+
+void GXPosition2u16(u16 x, u16 y) {
+    // Deterministic host model: keep last written values (zero-extended).
+    gc_gx_pos2u16_x = (u32)x;
+    gc_gx_pos2u16_y = (u32)y;
 }
 
 void GXPosition3s16(s16 x, s16 y, s16 z) {

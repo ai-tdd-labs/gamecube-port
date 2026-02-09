@@ -76,6 +76,16 @@ Rules:
 - These files are NOT compiled by the host workload runner yet (workloads still compile only `init.c`, `pad.c`, `process.c` + slices).
   Evidence: `tools/run_host_scenario.sh` workload `extra_srcs` list.
 
+### MP4 SDK call inventory (vendor slice)
+- Refreshed MP4 vendor SDK-call inventory after staging `printfunc.c`, `wipe.c`, `objmain.c`.
+  - Inventory file: `docs/sdk/mp4/MP4_sdk_calls_inventory.csv`
+  - Total discovered SDK-like call tokens: 115
+  Evidence: `tools/helpers/mp4_sdk_calls_inventory.py` run on the vendor slice.
+- Newly discovered SDK-like calls that required adding new callsite-style test suites:
+  - `GXPosition2s16` (used in `printfunc.c`) -> `tests/sdk/gx/gx_position_2s16` PASS
+  - `GXPosition2u16` (used in `wipe.c`) -> `tests/sdk/gx/gx_position_2u16` PASS
+  Evidence: `docs/sdk/mp4/MP4_sdk_calls_inventory.csv` rows for those functions now show `has_test_suite=y`.
+
 ### MP4 host workload: pfDrawFonts reachability stub
 - `pfDrawFonts()` is MP4 game-specific and GX-heavy; we keep it as a host-safe workload slice that only leaves deterministic breadcrumbs.
   Evidence: `tests/workload/mp4/slices/pfdrawfonts_stub.c`.
