@@ -109,3 +109,46 @@ for i in "${!NAMES[@]}"; do
 done
 
 echo "[rvz-probe] wrote $manifest"
+
+# Also emit a human-readable values file for quick comparisons.
+python3 - <<'PY' "$OUT_DIR/bootinfo_window.bin" "$OUT_DIR/os_heap_arena_window.bin" "$OUT_DIR/os_arena_hi_window.bin" "$OUT_DIR/pad_si_window.bin" >"$OUT_DIR/values.txt"
+import struct
+import sys
+
+boot = open(sys.argv[1], "rb").read()
+os_heap = open(sys.argv[2], "rb").read()
+os_ahi = open(sys.argv[3], "rb").read()
+pad_si = open(sys.argv[4], "rb").read()
+
+def be_u32(buf, off):
+    return struct.unpack(">I", buf[off:off+4])[0]
+
+# bootinfo_window base 0x80000020
+boot_arena_lo = be_u32(boot, 0x30 - 0x20)
+boot_arena_hi = be_u32(boot, 0x34 - 0x20)
+
+# os_heap_arena_window base 0x801D38A0
+__OSCurrHeap = be_u32(os_heap, 0x801D38B8 - 0x801D38A0)
+__OSArenaLo  = be_u32(os_heap, 0x801D38C0 - 0x801D38A0)
+
+# os_arena_hi_window base 0x801D42E0
+__OSArenaHi  = be_u32(os_ahi, 0x801D42F8 - 0x801D42E0)
+
+# pad_si_window base 0x801D44F0
+__PADSpec    = be_u32(pad_si, 0x801D450C - 0x801D44F0)
+__PADFixBits = be_u32(pad_si, 0x801D4620 - 0x801D44F0)
+SamplingRate = be_u32(pad_si, 0x801D4628 - 0x801D44F0)
+
+print("bootinfo:")
+print(f"  arenaLo=0x{boot_arena_lo:08X}")
+print(f"  arenaHi=0x{boot_arena_hi:08X}")
+print("symbols:")
+print(f"  __OSCurrHeap=0x{__OSCurrHeap:08X}")
+print(f"  __OSArenaLo =0x{__OSArenaLo:08X}")
+print(f"  __OSArenaHi =0x{__OSArenaHi:08X}")
+print(f"  __PADSpec   =0x{__PADSpec:08X}")
+print(f"  __PADFixBits=0x{__PADFixBits:08X}")
+print(f"  SamplingRate=0x{SamplingRate:08X}")
+PY
+
+echo "[rvz-probe] wrote $OUT_DIR/values.txt"
