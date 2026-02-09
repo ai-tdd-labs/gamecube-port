@@ -746,3 +746,22 @@ Notes:
 - Produced via: `tools/dump_expected_rvz_mem1_at_pc.sh <rvz> 0x800CF628 <out>`
 - Output (local-only, gitignored): `tests/oracles/rvz/mp4_mem1_at_gx_load_tex_mtx_imm_0x800CF628.bin`
 - SHA256: `054827a091f57b2f8941886078625b8d00cf1adf91aaeb64770b110f34be9c93`
+
+## 2026-02-09: Host MEM1 dump determinism (MP4 workload)
+- Scenario: `tests/workload/mp4/mp4_mainloop_one_iter_tick_001_scenario.c`
+- Host MEM1 dump (local-only, gitignored): `tests/oracles/host/mp4_mainloop_one_iter_tick_001_mem1.bin`
+- SHA256 (deterministic after fix below): `fbe781c70eb15e8f7db1d01dfaf891223000fd6e0d590898507884c01cb89fbe`
+
+### Determinism fix: VI post-retrace callback tokenization
+- Problem: `VISetPostRetraceCallback` stored raw host function pointers into RAM-backed `sdk_state` at `GC_SDK_OFF_VI_POST_CB_PTR` (0x817FE200).
+  - Host pointers are ASLR-dependent, so MEM1 dumps changed run-to-run.
+- Fix: in `src/sdk_port/vi/VI.c`, store a stable small token for real host pointers while still retaining the real function pointer for invocation.
+  - If the callback already looks like a PPC/MEM1 token (0x80000000..0x81800000), store it as-is (this is what unit tests use).
+  - Otherwise store `1..N` in first-seen order (sufficient for MP4 workloads).
+
+### RVZ vs host MEM1 diff: first mismatch is harness marker (not meaningful yet)
+- Comparing `tests/oracles/rvz/mp4_mem1_at_gx_load_tex_mtx_imm_0x800CF628.bin` vs `tests/oracles/host/mp4_mainloop_one_iter_tick_001_mem1.bin`:
+  - First mismatch at dump offset `0x00300000` (RAM address `0x80300000`).
+  - Cause: host workloads write harness markers (e.g. "MP4P" + 0xDEADBEEF) at `0x80300000`, while the retail RVZ run does not.
+- Conclusion: a raw MEM1-vs-MEM1 binary diff between RVZ and host is not an oracle yet.
+  - Use RVZ dumps as *evidence* (runtime snapshots) and compare only well-defined regions that have matching semantics in both worlds (to be defined).

@@ -33,6 +33,33 @@ typedef void (*VIRetraceCallback)(u32 retraceCount);
 static u32 gc_vi_post_cb_ptr;
 static VIRetraceCallback gc_vi_post_cb_fn;
 
+// For determinism in host MEM1 dumps, never store raw host function pointers in
+// RAM-backed sdk_state. Host pointers are ASLR-dependent and will differ run to
+// run. Instead, store:
+// - the PPC/MEM1 address as-is when the pointer already looks like a MEM1 token
+//   (0x8000_0000..0x8180_0000), which is what our unit tests use; or
+// - a stable small token allocated in first-seen order for real host pointers.
+static u32 vi_cb_tokenize(VIRetraceCallback cb) {
+    uintptr_t p = (uintptr_t)cb;
+    if (!cb) return 0;
+    if (p >= 0x80000000u && p < 0x81800000u) return (u32)p;
+
+    // Tiny stable mapping for the current process run.
+    // This is sufficient for workloads like MP4 that set only a few callbacks.
+    enum { MAX = 16 };
+    static VIRetraceCallback seen[MAX];
+    static u32 seen_n;
+    for (u32 i = 0; i < seen_n; i++) {
+        if (seen[i] == cb) return (u32)(i + 1u);
+    }
+    if (seen_n < MAX) {
+        seen[seen_n++] = cb;
+        return (u32)seen_n;
+    }
+    // Fallback: stable but lossy token if we ever exceed MAX.
+    return 0xFFFFFFFFu;
+}
+
 static int VI_DisableInterrupts(void) {
     u32 v = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_DISABLE_CALLS, gc_vi_disable_calls);
     v++;
@@ -54,7 +81,7 @@ VIRetraceCallback VISetPostRetraceCallback(VIRetraceCallback callback) {
     // Match SDK pattern: protect callback swap with interrupts disabled.
     int lvl = VI_DisableInterrupts();
     gc_vi_post_cb_fn = callback;
-    gc_vi_post_cb_ptr = (u32)(uintptr_t)callback;
+    gc_vi_post_cb_ptr = vi_cb_tokenize(callback);
     gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_POST_CB_PTR, &gc_vi_post_cb_ptr, gc_vi_post_cb_ptr);
     u32 calls = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_POST_CB_SET_CALLS, 0);
     calls++;
