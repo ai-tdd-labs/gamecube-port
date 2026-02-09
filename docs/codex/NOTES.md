@@ -24,6 +24,10 @@ Rules:
   Evidence: `/tmp/mp4_rvz_osdisable_bp_0x80300000.bin` produced by `tools/ram_dump.py --breakpoint 0x800B723C` on `/Users/chrislamark/projects/recomp/gamecube_static_recomp/game_files/Mario Party 4 (USA).rvz`
 - MP4 RVZ breakpoint attempt at SDK `GXCopyTex` (`GXCopyTex = 0x800CBA0C`) did not hit within 60 seconds of boot (headless run).
   Evidence: `tools/dump_expected_rvz_mem1_at_pc.sh` output "Breakpoint not hit before timeout."
+- Real MP4 RVZ probe checkpoints (small window dumps, not full MEM1):
+  - `VISetPostRetraceCallback` entry PC `0x800C0DD8`: `tests/oracles/mp4_rvz/probes/visetpostretracecallback_800C0DD8/values.txt`
+  - `SISetSamplingRate` entry PC `0x800DA3C8`: `tests/oracles/mp4_rvz/probes/sisetsamplingrate_800DA3C8/values.txt`
+  Evidence: `tools/dump_expected_rvz_probe_at_pc.sh` runs with `--breakpoint` and `Core.MMU=True`.
 
 ### MP4 checkpoint smoke chain: mp4_pad_init_chain_001
 - Purpose: validate combined SDK effects for the HuPadInit-related subset (SI/VI/PAD + OS interrupt gating) as a checkpoint dump.

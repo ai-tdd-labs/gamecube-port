@@ -18,6 +18,7 @@ EXEC_PATH=${1:?rvz_or_iso required}
 PC_ADDR=${2:?pc_addr_hex required}
 OUT_DIR=${3:?out_dir required}
 TIMEOUT=${4:-30}
+DELAY=${DOLPHIN_START_DELAY:-2}
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 
@@ -73,33 +74,47 @@ for i in "${!NAMES[@]}"; do
 
   echo "[rvz-probe] $name addr=$addr size=$size -> $out_bin"
 
-  # Kill stale headless Dolphin instances bound to the GDB port.
-  pkill -f "Dolphin -b -d" >/dev/null 2>&1 || true
+  rc=1
+  for attempt in 1 2 3; do
+    # Kill stale headless Dolphin instances bound to the GDB port.
+    pkill -f "Dolphin -b -d" >/dev/null 2>&1 || true
 
-  PYTHONUNBUFFERED=1 python3 -u tools/ram_dump.py \
-    --exec "$EXEC_PATH" \
-    --breakpoint "$PC_ADDR" \
-    --bp-timeout "$TIMEOUT" \
-    --addr "$addr" \
-    --size "$size" \
-    --out "$out_bin" \
-    --chunk "$CHUNK" \
-    --enable-mmu \
-    && true
-
-  rc=$?
-  if [[ $rc -eq 3 ]]; then
-    echo "[rvz-probe] breakpoint unsupported; falling back to PC polling" >&2
     PYTHONUNBUFFERED=1 python3 -u tools/ram_dump.py \
       --exec "$EXEC_PATH" \
-      --pc-breakpoint "$PC_ADDR" \
-      --pc-timeout "$TIMEOUT" \
+      --breakpoint "$PC_ADDR" \
+      --bp-timeout "$TIMEOUT" \
       --addr "$addr" \
       --size "$size" \
       --out "$out_bin" \
       --chunk "$CHUNK" \
-      --enable-mmu
-  elif [[ $rc -ne 0 ]]; then
+      --enable-mmu \
+      --delay "$DELAY"
+    rc=$?
+
+    if [[ $rc -eq 0 ]]; then
+      break
+    fi
+    if [[ $rc -eq 3 ]]; then
+      echo "[rvz-probe] breakpoint unsupported; falling back to PC polling" >&2
+      PYTHONUNBUFFERED=1 python3 -u tools/ram_dump.py \
+        --exec "$EXEC_PATH" \
+        --pc-breakpoint "$PC_ADDR" \
+        --pc-timeout "$TIMEOUT" \
+        --addr "$addr" \
+        --size "$size" \
+        --out "$out_bin" \
+        --chunk "$CHUNK" \
+        --enable-mmu \
+        --delay "$DELAY"
+      rc=$?
+      break
+    fi
+
+    echo "[rvz-probe] attempt $attempt failed (rc=$rc); retrying..." >&2
+    sleep 1
+  done
+
+  if [[ $rc -ne 0 ]]; then
     exit $rc
   fi
 
