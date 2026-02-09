@@ -38,6 +38,9 @@ HuSysInit,36,OSSetCurrentHeap,sdk,v,tests/sdk/os/os_set_current_heap,1/1,1,1,1,y
 HuSysInit,37,OSCreateHeap,sdk,v,tests/sdk/os/os_create_heap,1/1,1,1,1,y
 HuSysInit,38,VISetNextFrameBuffer,sdk,v,tests/sdk/vi/vi_set_next_frame_buffer,1/1,1,1,1,y
 HuSysInit,39,VIFlush,sdk,v,tests/sdk/vi/vi_flush,1/1,1,1,1,y
+HuPerf,1,OSStartStopwatch,sdk,,tests/sdk/os/os_stopwatch,1/1,1,1,1,y
+HuPerf,2,OSStopStopwatch,sdk,,tests/sdk/os/os_stopwatch,1/1,1,1,1,y
+HuPerf,3,OSCheckStopwatch,sdk,,tests/sdk/os/os_stopwatch,1/1,1,1,1,y
 HuSysInit,40,VIWaitForRetrace,sdk,v,tests/sdk/vi/vi_wait_for_retrace,1/1,1,1,1,y
 HuSysInit,41,GXSetViewportJitter,sdk,x,tests/sdk/gx/gx_set_viewport_jitter,1/1,1,1,1,y
 HuSysInit,42,VIGetNextField,sdk,v,tests/sdk/vi/vi_get_next_field,1/1,1,1,1,y

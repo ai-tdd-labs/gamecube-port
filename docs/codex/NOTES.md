@@ -666,3 +666,12 @@ Notes:
   - expected: Dolphin running DOL `tests/sdk/gx/gx_init_tex_obj_lod/dol/mp4/realistic_pfdrawfonts_001` and dumping 0x80300000.
   - actual: host scenario `tests/sdk/gx/gx_init_tex_obj_lod/host/gx_init_tex_obj_lod_mp4_pfdrawfonts_001_scenario.c` using `src/sdk_port/gx/GX.c`.
   - status: PASS (bit-exact expected.bin == actual.bin).
+
+## 2026-02-09: OSStopwatch Start/Stop/Check (MP4 HuPerf)
+- MP4 callsites: `decomp_mario_party_4/src/game/perf.c` uses OSStopwatch for perf bookkeeping.
+  - `HuPerfZero`: `OSStopStopwatch; OSResetStopwatch; OSStartStopwatch`
+  - `HuPerfBegin/End`: `OSStartStopwatch; OSCheckStopwatch; OSStopStopwatch; OSResetStopwatch`
+- Oracle test: `tests/sdk/os/os_stopwatch`
+  - expected: Dolphin DOL `tests/sdk/os/os_stopwatch/dol/mp4/realistic_huperf_001`
+  - actual: host scenario `tests/sdk/os/os_stopwatch/host/os_stopwatch_mp4_huperf_001_scenario.c` using `src/sdk_port/os/OSStopwatch.c`
+  - status: PASS (bit-exact expected.bin == actual.bin)
