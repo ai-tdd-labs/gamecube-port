@@ -989,6 +989,48 @@ void GXInitTexObj(GXTexObj *obj, void *image_ptr, u16 width, u16 height, u32 for
     t->flags |= 2u;
 }
 
+void GXInitTexObjLOD(GXTexObj *obj, u32 min_filt, u32 mag_filt, float min_lod, float max_lod, float lod_bias, u8 bias_clamp, u8 do_edge_lod, u32 max_aniso) {
+    // Mirror decomp_mario_party_4/src/dolphin/gx/GXTexture.c:GXInitTexObjLOD (observable packing only).
+    // This mutates the texobj's mode0/mode1 fields in-place.
+    static const u8 GX2HWFiltConv[6] = { 0x00, 0x04, 0x01, 0x05, 0x02, 0x06 };
+
+    if (!obj) return;
+
+    // Clamp lod_bias to [-4, 3.99] and pack as u8(32*bias) into mode0[9..16].
+    if (lod_bias < -4.0f) lod_bias = -4.0f;
+    else if (lod_bias >= 4.0f) lod_bias = 3.99f;
+    u8 lbias = (u8)(32.0f * lod_bias);
+    obj->mode0 = set_field(obj->mode0, 8, 9, (u32)lbias);
+
+    // Filters: mag_filt==GX_LINEAR sets bit4, min_filt maps through GX2HWFiltConv into bits 5..7.
+    obj->mode0 = set_field(obj->mode0, 1, 4, (mag_filt == 1u) ? 1u : 0u);
+    if (min_filt > 5u) min_filt = 0u; // keep deterministic if caller passes junk
+    obj->mode0 = set_field(obj->mode0, 3, 5, (u32)GX2HWFiltConv[min_filt]);
+
+    // do_edge_lod is inverted in mode0 bit8 (SDK writes 0 when true, 1 when false).
+    obj->mode0 = set_field(obj->mode0, 1, 8, do_edge_lod ? 0u : 1u);
+
+    // Fixed fields asserted by decomp are always zeroed here.
+    obj->mode0 = set_field(obj->mode0, 1, 17, 0u);
+    obj->mode0 = set_field(obj->mode0, 1, 18, 0u);
+
+    // Anisotropy into bits 19..20, bias_clamp into bit21.
+    obj->mode0 = set_field(obj->mode0, 2, 19, max_aniso & 3u);
+    obj->mode0 = set_field(obj->mode0, 1, 21, bias_clamp ? 1u : 0u);
+
+    // Clamp min/max lod to [0,10] and pack as u8(16*x) into mode1[0..7] and [8..15].
+    if (min_lod < 0.0f) min_lod = 0.0f;
+    else if (min_lod > 10.0f) min_lod = 10.0f;
+    u8 lmin = (u8)(16.0f * min_lod);
+
+    if (max_lod < 0.0f) max_lod = 0.0f;
+    else if (max_lod > 10.0f) max_lod = 10.0f;
+    u8 lmax = (u8)(16.0f * max_lod);
+
+    obj->mode1 = set_field(obj->mode1, 8, 0, (u32)lmin);
+    obj->mode1 = set_field(obj->mode1, 8, 8, (u32)lmax);
+}
+
 void GXInitTexCacheRegion(GXTexRegion *region, u8 is_32b_mipmap, u32 tmem_even, u32 size_even, u32 tmem_odd, u32 size_odd) {
     // Mirror GXTexture.c:GXInitTexCacheRegion observable packing of image1/image2.
     if (!region) return;

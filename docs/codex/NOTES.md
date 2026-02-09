@@ -660,3 +660,9 @@ Notes:
 - Deterministic test PASS (DOL expected vs host actual):
   - `tests/sdk/vi/vi_wait_for_retrace/expected/vi_wait_for_retrace_calls_post_cb_hupadinit_001.bin`
   - `tests/sdk/vi/vi_wait_for_retrace/actual/vi_wait_for_retrace_calls_post_cb_hupadinit_001.bin`
+## 2026-02-09: GXInitTexObjLOD (MP4 pfDrawFonts)
+- MP4 callsite: `decomp_mario_party_4/src/game/printfunc.c` calls `GXInitTexObjLOD(&font_tex, GX_NEAR, GX_NEAR, 0,0,0, GX_FALSE, GX_FALSE, GX_ANISO_1)`.
+- Oracle test: `tests/sdk/gx/gx_init_tex_obj_lod`.
+  - expected: Dolphin running DOL `tests/sdk/gx/gx_init_tex_obj_lod/dol/mp4/realistic_pfdrawfonts_001` and dumping 0x80300000.
+  - actual: host scenario `tests/sdk/gx/gx_init_tex_obj_lod/host/gx_init_tex_obj_lod_mp4_pfdrawfonts_001_scenario.c` using `src/sdk_port/gx/GX.c`.
+  - status: PASS (bit-exact expected.bin == actual.bin).
