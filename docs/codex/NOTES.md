@@ -739,3 +739,10 @@ Notes:
   - `tests/sdk/gx/gx_load_tex_mtx_imm/actual/gx_load_tex_mtx_imm_mp4_hsfdraw_2x4_001.bin`
   - `tests/sdk/gx/gx_load_tex_mtx_imm/expected/gx_load_tex_mtx_imm_mp4_hsfdraw_3x4_001.bin`
   - `tests/sdk/gx/gx_load_tex_mtx_imm/actual/gx_load_tex_mtx_imm_mp4_hsfdraw_3x4_001.bin`
+
+## 2026-02-09: MP4 RVZ MEM1 oracle dump at GXLoadTexMtxImm
+- RVZ specimen: `/Users/chrislamark/projects/recomp/gamecube_static_recomp/game_files/Mario Party 4 (USA).rvz`
+- Checkpoint PC: `0x800CF628` (GXLoadTexMtxImm) from `output_mp4/ppc_func_mapping.cpp`.
+- Produced via: `tools/dump_expected_rvz_mem1_at_pc.sh <rvz> 0x800CF628 <out>`
+- Output (local-only, gitignored): `tests/oracles/rvz/mp4_mem1_at_gx_load_tex_mtx_imm_0x800CF628.bin`
+- SHA256: `054827a091f57b2f8941886078625b8d00cf1adf91aaeb64770b110f34be9c93`
