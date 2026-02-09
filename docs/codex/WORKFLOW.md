@@ -142,6 +142,7 @@ Practical Dolphin note (MMU):
   Dolphin can warn/crash on these low-memory writes unless MMU is enabled.
   If you see errors like "Invalid write to 0x00000900" or "Unknown instruction at PC=00000900",
   rerun the dump with `tools/ram_dump.py --enable-mmu` (passes `-C Core.MMU=True`).
+  If you're launching Dolphin manually in the GUI, enable it via: `Config -> Advanced -> Enable MMU`.
 
 Smoke DOL build rule:
 - Do not `#include` multiple `src/sdk_port/*/*.c` files into a *single* DOL translation unit. Some modules define overlapping enums/macros (example: `VI_NTSC` in `VI.c` vs `SI.c`).
