@@ -238,6 +238,13 @@ u32 gc_gx_tex_load_image3_last;
 u32 gc_gx_light_loaded_mask;
 GXLightObj gc_gx_light_loaded[8];
 
+// Display list mirrors (GXDisplayList.c).
+u32 gc_gx_dl_base;
+u32 gc_gx_dl_size;
+u32 gc_gx_dl_count;
+u32 gc_gx_call_dl_list;
+u32 gc_gx_call_dl_nbytes;
+
 typedef struct {
     uint8_t _dummy;
 } GXFifoObj;
@@ -454,6 +461,34 @@ void GXLoadLightObjImm(GXLightObj *lt_obj, u32 light) {
     gc_gx_bp_sent_not = 1;
 }
 
+// -----------------------------------------------------------------------------
+// GXDisplayList (minimal deterministic mirror)
+//
+// Reference: decomp_mario_party_4/src/dolphin/gx/GXDisplayList.c
+// -----------------------------------------------------------------------------
+
+void GXBeginDisplayList(void *list, u32 size) {
+    // We do not model the real FIFO switching; we only mirror the observable mode.
+    gc_gx_dl_base = (u32)(uintptr_t)list;
+    gc_gx_dl_size = size;
+    gc_gx_dl_count = 0;
+    gc_gx_in_disp_list = 1;
+}
+
+u32 GXEndDisplayList(void) {
+    // Real SDK validates overflow and returns byte count written. Our sdk_port does not
+    // emit real FIFO bytes yet, so count remains 0 for now.
+    u32 count = gc_gx_dl_count;
+    gc_gx_in_disp_list = 0;
+    return count;
+}
+
+void GXCallDisplayList(const void *list, u32 nbytes) {
+    // Mirror the FIFO command payload (list pointer + byte count).
+    gc_gx_call_dl_list = (u32)(uintptr_t)list;
+    gc_gx_call_dl_nbytes = nbytes;
+}
+
 static inline void gx_write_xf_reg(u32 idx, u32 v) {
     if (idx < (sizeof(gc_gx_xf_regs) / sizeof(gc_gx_xf_regs[0]))) {
         gc_gx_xf_regs[idx] = v;
@@ -653,6 +688,79 @@ void GXLoadPosMtxImm(float mtx[3][4], u32 id) {
             } u = { mtx[r][c] };
             gc_gx_fifo_mtx_words[i++] = u.u;
         }
+    }
+}
+
+void GXLoadNrmMtxImm(float mtx[3][4], u32 id) {
+    // Mirror decomp_mario_party_4/src/dolphin/gx/GXTransform.c:GXLoadNrmMtxImm observable FIFO writes.
+    // Writes a 3x3 matrix derived from the top-left 3x3 of a 3x4 input.
+    const u32 addr = id * 3u + 0x400u;
+    const u32 reg = addr | 0x80000u;
+
+    gc_gx_fifo_u8_last = 0x10u;
+    gc_gx_fifo_u32_last = reg;
+
+    u32 i = 0;
+    u32 r, c;
+    for (r = 0; r < 3; r++) {
+        for (c = 0; c < 3; c++) {
+            union {
+                float f;
+                u32 u;
+            } u = { mtx[r][c] };
+            gc_gx_fifo_mtx_words[i++] = u.u;
+        }
+    }
+    for (; i < 12; i++) {
+        gc_gx_fifo_mtx_words[i] = 0;
+    }
+}
+
+void GXLoadTexMtxImm(float mtx[][4], u32 id, u32 type) {
+    // Mirror decomp_mario_party_4/src/dolphin/gx/GXTransform.c:GXLoadTexMtxImm observable FIFO writes.
+    // type: GX_MTX3x4 = 0, GX_MTX2x4 = 1 (GXEnum.h).
+    // id: GX_TEXMTX0.., GX_PTTEXMTX0 = 64 (GXEnum.h).
+    u32 addr;
+    if (id >= 64u) {
+        addr = (id - 64u) * 4u + 0x500u;
+        // SDK asserts (type == GX_MTX3x4) for post-transform matrices.
+    } else {
+        addr = id * 4u;
+    }
+
+    const u32 count = (type == 1u) ? 8u : 12u;
+    const u32 reg = addr | ((count - 1u) << 16);
+
+    gc_gx_fifo_u8_last = 0x10u;
+    gc_gx_fifo_u32_last = reg;
+
+    u32 i = 0;
+    u32 r, c;
+    if (type == 0u) {
+        // 3x4
+        for (r = 0; r < 3; r++) {
+            for (c = 0; c < 4; c++) {
+                union {
+                    float f;
+                    u32 u;
+                } u = { mtx[r][c] };
+                gc_gx_fifo_mtx_words[i++] = u.u;
+            }
+        }
+    } else {
+        // 2x4
+        for (r = 0; r < 2; r++) {
+            for (c = 0; c < 4; c++) {
+                union {
+                    float f;
+                    u32 u;
+                } u = { mtx[r][c] };
+                gc_gx_fifo_mtx_words[i++] = u.u;
+            }
+        }
+    }
+    for (; i < 12; i++) {
+        gc_gx_fifo_mtx_words[i] = 0;
     }
 }
 

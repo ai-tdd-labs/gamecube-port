@@ -713,3 +713,29 @@ Notes:
 - Test PASS (DOL expected vs host actual):
   - `tests/sdk/dvd/dvd_get_drive_status/expected/dvd_get_drive_status_realistic_hudvderrorwatch_001.bin`
   - `tests/sdk/dvd/dvd_get_drive_status/actual/dvd_get_drive_status_realistic_hudvderrorwatch_001.bin`
+
+## 2026-02-09: GXTransform FIFO packing (MP4 hsfdraw)
+
+### GXLoadNrmMtxImm
+- Decomp reference: `decomp_mario_party_4/src/dolphin/gx/GXTransform.c:GXLoadNrmMtxImm`.
+- Confirmed FIFO packing:
+  - `addr = id * 3 + 0x400`
+  - `reg = addr | 0x80000`
+  - payload = top-left 3x3 of the 3x4 input (9 floats).
+- Test PASS (DOL expected vs host actual):
+  - `tests/sdk/gx/gx_load_nrm_mtx_imm/expected/gx_load_nrm_mtx_imm_mp4_hsfdraw_001.bin`
+  - `tests/sdk/gx/gx_load_nrm_mtx_imm/actual/gx_load_nrm_mtx_imm_mp4_hsfdraw_001.bin`
+
+### GXLoadTexMtxImm
+- Decomp reference: `decomp_mario_party_4/src/dolphin/gx/GXTransform.c:GXLoadTexMtxImm`.
+- Confirmed FIFO packing:
+  - if `id >= GX_PTTEXMTX0 (64)`: `addr = (id - 64) * 4 + 0x500`
+  - else: `addr = id * 4`
+  - `count = (type == GX_MTX2x4) ? 8 : 12`
+  - `reg = addr | ((count - 1) << 16)`
+  - payload = 2x4 (8 floats) or 3x4 (12 floats), row-major.
+- Tests PASS (DOL expected vs host actual):
+  - `tests/sdk/gx/gx_load_tex_mtx_imm/expected/gx_load_tex_mtx_imm_mp4_hsfdraw_2x4_001.bin`
+  - `tests/sdk/gx/gx_load_tex_mtx_imm/actual/gx_load_tex_mtx_imm_mp4_hsfdraw_2x4_001.bin`
+  - `tests/sdk/gx/gx_load_tex_mtx_imm/expected/gx_load_tex_mtx_imm_mp4_hsfdraw_3x4_001.bin`
+  - `tests/sdk/gx/gx_load_tex_mtx_imm/actual/gx_load_tex_mtx_imm_mp4_hsfdraw_3x4_001.bin`

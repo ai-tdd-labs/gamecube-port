@@ -29,6 +29,17 @@ GAME=${GAME:-}
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 
+# Ensure devkitPPC is discoverable for DOL builds.
+# Many Makefiles assume `powerpc-eabi-gcc` is on PATH.
+if [[ -z "${DEVKITPRO:-}" && -d /opt/devkitpro ]]; then
+  export DEVKITPRO=/opt/devkitpro
+fi
+if ! command -v powerpc-eabi-gcc >/dev/null 2>&1; then
+  if [[ -n "${DEVKITPRO:-}" && -x "$DEVKITPRO/devkitPPC/bin/powerpc-eabi-gcc" ]]; then
+    export PATH="$DEVKITPRO/devkitPPC/bin:$DEVKITPRO/tools/bin:$PATH"
+  fi
+fi
+
 tests_root="$repo_root/tests/sdk"
 if [[ -n "$FILTER_ROOT" ]]; then
   # Allow passing either an absolute path or repo-relative.
