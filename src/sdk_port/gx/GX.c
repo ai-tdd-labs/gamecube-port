@@ -1,10 +1,59 @@
 #include <stdint.h>
+#include <math.h>
 
 typedef uint32_t u32;
 typedef uint16_t u16;
 typedef uint8_t u8;
 typedef int16_t s16;
 typedef int32_t s32;
+typedef float f32;
+
+typedef struct {
+    u8 r;
+    u8 g;
+    u8 b;
+    u8 a;
+} GXColor;
+
+// Light mask bits (GXEnum.h: GXLightID values). Kept here so GXLight helpers and
+// GXSetChanCtrl share one definition.
+enum {
+    GX_LIGHT0 = 1u << 0,
+    GX_LIGHT1 = 1u << 1,
+    GX_LIGHT2 = 1u << 2,
+    GX_LIGHT3 = 1u << 3,
+    GX_LIGHT4 = 1u << 4,
+    GX_LIGHT5 = 1u << 5,
+    GX_LIGHT6 = 1u << 6,
+    GX_LIGHT7 = 1u << 7,
+};
+
+// Public SDK declares this as u32 dummy[16] (64 bytes). We use the real layout from decomp.
+typedef struct {
+    u32 reserved[3];
+    u32 Color;
+    f32 a[3];
+    f32 k[3];
+    f32 lpos[3];
+    f32 ldir[3];
+} GXLightObj;
+
+typedef enum {
+    GX_SP_OFF,
+    GX_SP_FLAT,
+    GX_SP_COS,
+    GX_SP_COS2,
+    GX_SP_SHARP,
+    GX_SP_RING1,
+    GX_SP_RING2,
+} GXSpotFn;
+
+typedef enum {
+    GX_DA_OFF,
+    GX_DA_GENTLE,
+    GX_DA_MEDIUM,
+    GX_DA_STEEP,
+} GXDistAttnFn;
 
 // RAM-backed state (big-endian in MEM1) for dump comparability.
 #include "../sdk_state.h"
@@ -185,6 +234,10 @@ u32 gc_gx_tex_load_image1_last;
 u32 gc_gx_tex_load_image2_last;
 u32 gc_gx_tex_load_image3_last;
 
+// GXLight observable state (we mirror "last loaded" light object fields by index).
+u32 gc_gx_light_loaded_mask;
+GXLightObj gc_gx_light_loaded[8];
+
 typedef struct {
     uint8_t _dummy;
 } GXFifoObj;
@@ -220,6 +273,185 @@ void GXSetDrawSync(u16 token) {
     gc_gx_last_draw_sync_token = token;
     // GXFlush() is a no-op in this host model; we only keep the bpSentNot mirror.
     gc_gx_bp_sent_not = 0;
+}
+
+// -----------------------------------------------------------------------------
+// GXLight (SDK behavior, mirrored for deterministic testing)
+//
+// Reference: decomp_mario_party_4/src/dolphin/gx/GXLight.c
+// -----------------------------------------------------------------------------
+
+void GXInitLightAttn(GXLightObj *lt_obj, f32 a0, f32 a1, f32 a2, f32 k0, f32 k1, f32 k2) {
+    GXLightObj *obj = lt_obj;
+    obj->a[0] = a0;
+    obj->a[1] = a1;
+    obj->a[2] = a2;
+    obj->k[0] = k0;
+    obj->k[1] = k1;
+    obj->k[2] = k2;
+}
+
+void GXInitLightAttnK(GXLightObj *lt_obj, f32 k0, f32 k1, f32 k2) {
+    GXLightObj *obj = lt_obj;
+    obj->k[0] = k0;
+    obj->k[1] = k1;
+    obj->k[2] = k2;
+}
+
+void GXInitLightSpot(GXLightObj *lt_obj, f32 cutoff, GXSpotFn spot_func) {
+    f32 a0, a1, a2;
+    f32 d;
+    f32 cr;
+    GXLightObj *obj = lt_obj;
+
+    if (cutoff <= 0.0f || cutoff > 90.0f) {
+        spot_func = GX_SP_OFF;
+    }
+
+    cr = cosf((3.1415927f * cutoff) / 180.0f);
+    switch (spot_func) {
+        case GX_SP_FLAT:
+            a0 = -1000.0f * cr;
+            a1 = 1000.0f;
+            a2 = 0.0f;
+            break;
+        case GX_SP_COS:
+            a0 = -cr / (1.0f - cr);
+            a1 = 1.0f / (1.0f - cr);
+            a2 = 0.0f;
+            break;
+        case GX_SP_COS2:
+            a0 = 0.0f;
+            a1 = -cr / (1.0f - cr);
+            a2 = 1.0f / (1.0f - cr);
+            break;
+        case GX_SP_SHARP:
+            d = (1.0f - cr) * (1.0f - cr);
+            a0 = (cr * (cr - 2.0f)) / d;
+            a1 = 2.0f / d;
+            a2 = -1.0f / d;
+            break;
+        case GX_SP_RING1:
+            d = (1.0f - cr) * (1.0f - cr);
+            a0 = (-4.0f * cr) / d;
+            a1 = (4.0f * (1.0f + cr)) / d;
+            a2 = -4.0f / d;
+            break;
+        case GX_SP_RING2:
+            d = (1.0f - cr) * (1.0f - cr);
+            a0 = 1.0f - ((2.0f * cr * cr) / d);
+            a1 = (4.0f * cr) / d;
+            a2 = -2.0f / d;
+            break;
+        case GX_SP_OFF:
+        default:
+            a0 = 1.0f;
+            a1 = 0.0f;
+            a2 = 0.0f;
+            break;
+    }
+    obj->a[0] = a0;
+    obj->a[1] = a1;
+    obj->a[2] = a2;
+}
+
+void GXInitLightDistAttn(GXLightObj *lt_obj, f32 ref_dist, f32 ref_br, GXDistAttnFn dist_func) {
+    f32 k0, k1, k2;
+    GXLightObj *obj = lt_obj;
+
+    if (ref_dist < 0.0f) {
+        dist_func = GX_DA_OFF;
+    }
+    if (ref_br <= 0.0f || ref_br >= 1.0f) {
+        dist_func = GX_DA_OFF;
+    }
+
+    switch (dist_func) {
+        case GX_DA_GENTLE:
+            k0 = 1.0f;
+            k1 = (1.0f - ref_br) / (ref_br * ref_dist);
+            k2 = 0.0f;
+            break;
+        case GX_DA_MEDIUM:
+            k0 = 1.0f;
+            k1 = (0.5f * (1.0f - ref_br)) / (ref_br * ref_dist);
+            k2 = (0.5f * (1.0f - ref_br)) / (ref_br * ref_dist * ref_dist);
+            break;
+        case GX_DA_STEEP:
+            k0 = 1.0f;
+            k1 = 0.0f;
+            k2 = (1.0f - ref_br) / (ref_br * ref_dist * ref_dist);
+            break;
+        case GX_DA_OFF:
+        default:
+            k0 = 1.0f;
+            k1 = 0.0f;
+            k2 = 0.0f;
+            break;
+    }
+
+    obj->k[0] = k0;
+    obj->k[1] = k1;
+    obj->k[2] = k2;
+}
+
+void GXInitLightPos(GXLightObj *lt_obj, f32 x, f32 y, f32 z) {
+    GXLightObj *obj = lt_obj;
+    obj->lpos[0] = x;
+    obj->lpos[1] = y;
+    obj->lpos[2] = z;
+}
+
+void GXInitLightDir(GXLightObj *lt_obj, f32 nx, f32 ny, f32 nz) {
+    GXLightObj *obj = lt_obj;
+    obj->ldir[0] = -nx;
+    obj->ldir[1] = -ny;
+    obj->ldir[2] = -nz;
+}
+
+void GXInitSpecularDir(GXLightObj *lt_obj, f32 nx, f32 ny, f32 nz) {
+    f32 mag;
+    f32 vx;
+    f32 vy;
+    f32 vz;
+    GXLightObj *obj = lt_obj;
+
+    vx = -nx;
+    vy = -ny;
+    vz = -nz + 1.0f;
+    mag = 1.0f / sqrtf((vx * vx) + (vy * vy) + (vz * vz));
+    obj->ldir[0] = vx * mag;
+    obj->ldir[1] = vy * mag;
+    obj->ldir[2] = vz * mag;
+    obj->lpos[0] = -nx * 1048576.0f;
+    obj->lpos[1] = -ny * 1048576.0f;
+    obj->lpos[2] = -nz * 1048576.0f;
+}
+
+void GXInitLightColor(GXLightObj *lt_obj, GXColor color) {
+    GXLightObj *obj = lt_obj;
+    obj->Color = ((u32)color.r << 24) | ((u32)color.g << 16) | ((u32)color.b << 8) | (u32)color.a;
+}
+
+static u32 light_id_to_idx(u32 light) {
+    switch (light) {
+        case GX_LIGHT0: return 0;
+        case GX_LIGHT1: return 1;
+        case GX_LIGHT2: return 2;
+        case GX_LIGHT3: return 3;
+        case GX_LIGHT4: return 4;
+        case GX_LIGHT5: return 5;
+        case GX_LIGHT6: return 6;
+        case GX_LIGHT7: return 7;
+        default: return 0;
+    }
+}
+
+void GXLoadLightObjImm(GXLightObj *lt_obj, u32 light) {
+    u32 idx = light_id_to_idx(light);
+    gc_gx_light_loaded[idx] = *lt_obj;
+    gc_gx_light_loaded_mask |= (1u << idx);
+    gc_gx_bp_sent_not = 1;
 }
 
 static inline void gx_write_xf_reg(u32 idx, u32 v) {
@@ -847,10 +1079,6 @@ void GXDrawDone(void) {
     gc_gx_draw_done_calls++;
 }
 
-typedef struct {
-    u8 r, g, b, a;
-} GXColor;
-
 void GXSetTexCopySrc(u16 left, u16 top, u16 wd, u16 ht) {
     // Mirror GXFrameBuf.c:GXSetTexCopySrc (observable packed regs).
     // Note: wd/ht are stored as (wd-1)/(ht-1).
@@ -1473,17 +1701,6 @@ enum {
     GX_ALPHA1 = 3,
     GX_COLOR0A0 = 4,
     GX_COLOR1A1 = 5,
-};
-
-enum {
-    GX_LIGHT0 = 1u << 0,
-    GX_LIGHT1 = 1u << 1,
-    GX_LIGHT2 = 1u << 2,
-    GX_LIGHT3 = 1u << 3,
-    GX_LIGHT4 = 1u << 4,
-    GX_LIGHT5 = 1u << 5,
-    GX_LIGHT6 = 1u << 6,
-    GX_LIGHT7 = 1u << 7,
 };
 
 void GXSetChanCtrl(u32 chan, u8 enable, u32 amb_src, u32 mat_src, u32 light_mask, u32 diff_fn, u32 attn_fn) {

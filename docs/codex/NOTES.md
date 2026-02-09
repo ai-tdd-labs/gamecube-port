@@ -208,6 +208,19 @@ Rules:
 - MP4 callsite-style testcase (expected.bin only for now; host port pending).
   Evidence: tests/sdk/gx/gx_set_num_tev_stages/expected/gx_set_num_tev_stages_mp4_init_gx_001.bin
 
+### GXLight (GXInitLight* + GXLoadLightObjImm)
+- SDK-private `GXLightObj` layout is 64 bytes and contains: Color (u32), `a[3]`, `k[3]`, `lpos[3]`, `ldir[3]`.
+  Evidence: `decomp_mario_party_4/src/dolphin/gx/GXLight.c` (`__GXLightObjInt_struct`).
+- Deterministic PPC-vs-host coverage exists for:
+  - `GXInitLightSpot` (MP4 hsfdraw callsite: cutoff=20.0, GX_SP_COS)
+    Evidence: `tests/sdk/gx/gx_init_light_spot/expected/gx_init_light_spot_mp4_hsfdraw_001.bin` and matching `actual/`.
+  - `GXInitLightDistAttn` (generic coeff case)
+    Evidence: `tests/sdk/gx/gx_init_light_dist_attn/expected/gx_init_light_dist_attn_generic_001.bin` and matching `actual/`.
+  - `GXInitSpecularDir` (generic vector case)
+    Evidence: `tests/sdk/gx/gx_init_specular_dir/expected/gx_init_specular_dir_generic_001.bin` and matching `actual/`.
+  - `GXLoadLightObjImm` mirror (loads into `gc_gx_light_loaded[]`)
+    Evidence: `tests/sdk/gx/gx_load_light_obj_imm/expected/gx_load_light_obj_imm_generic_001.bin` and matching `actual/`.
+
 ### GXSetTevOp
 - Contract: expands a "mode" into calls to `GXSetTevColorIn/AlphaIn` and then sets `GXSetTevColorOp/AlphaOp` (stage 0: `GX_REPLACE` uses TEX).
   Evidence: decomp_mario_party_4/src/dolphin/gx/GXTev.c (`GXSetTevOp`).
