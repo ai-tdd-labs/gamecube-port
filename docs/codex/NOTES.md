@@ -115,6 +115,12 @@ Rules:
   - `__PADSpec` is `0x00000000` by design: `PADSetSpec` always clears `__PADSpec` and stores the current spec in `Spec` (not exposed via symbols here).
   Evidence: `decomp_mario_party_4/src/dolphin/pad/Pad.c` (`PADSetSpec`).
 
+#### RVZ vs host semantic check (HuPadInit entry)
+- Fact: Host workload state right before `HuPadInit` matches the RVZ probe semantics at PC `0x80005A5C`.
+  Evidence (RVZ): `tests/oracles/mp4_rvz/probes/hupadinit_pc_80005A5C_v2/values.txt`
+  Evidence (host): `tests/oracles/mp4_rvz/probes/host_hupadinit_mp4_huprcinit_001_v2/values.txt` (from `tests/workload/mp4/mp4_huprcinit_001_scenario.c`)
+  Evidence (compare): `python3 tools/helpers/compare_rvz_host_probe_values.py <rvz_values> <host_values>` prints all `OK`.
+
 ### RVZ probes (post-GWInit init steps) + matching host checkpoints
 - Purpose: confirm the same *semantic* invariants hold deeper into MP4 init without doing raw RVZ-vs-host full-MEM1 diffs.
 - RVZ image: `/Users/chrislamark/projects/recomp/gamecube_static_recomp/game_files/Mario Party 4 (USA).rvz`
