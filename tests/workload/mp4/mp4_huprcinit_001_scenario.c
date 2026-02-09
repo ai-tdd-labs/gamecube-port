@@ -68,8 +68,6 @@ uint32_t frand(void) { return 0; }
 // pad.c/process.c are compiled into the workload; provide stub symbols for linking.
 void msmSysRegularProc(void) {}
 int HuDvdErrWait = 0;
-s32 gcsetjmp(jmp_buf *jump) { (void)jump; return 0; }
-s32 gclongjmp(jmp_buf *jump, s32 status) { (void)jump; (void)status; return 0; }
 
 const char *gc_scenario_label(void) { return "workload/mp4_huprcinit_001"; }
 const char *gc_scenario_out_path(void) { return "../../actual/workload/mp4_huprcinit_001.bin"; }
@@ -83,4 +81,3 @@ void gc_scenario_run(GcRam *ram) {
     wr32be(p + 0x00, 0x4D503432u); // "MP42"
     wr32be(p + 0x04, 0xDEADBEEFu);
 }
-

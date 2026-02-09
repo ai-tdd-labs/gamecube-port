@@ -56,6 +56,17 @@ Rules:
   - sha256: `9130214e62b4c4abade670307d903bb9e8329145ca631e73057ea4e7eead0c0e`
   Evidence: `tools/dump_expected_rvz_mem1_at_pc.sh` run with breakpoint `0x800308B8` and MMU enabled.
 
+### MP4 host workload: HuPrc scheduler semantics (deterministic scenarios)
+- Host-only context switch implementation for MP4 HuPrc* scenarios uses `GC_HOST_JMP_IMPL=asm`.
+  Implementation detail: host `gcsetjmp/gclongjmp` are leaf AArch64 assembly to ensure the saved SP is the *callsite* SP (saving the SP of a C wrapper corrupts optimized builds on resume).
+  Evidence: `tests/workload/mp4/slices/jmp_aarch64.S` (`_gcsetjmp`/`_gclongjmp`); `tests/workload/include/game/jmp.h` (host jmp_buf layout comment).
+- Scenario `mp4_process_scheduler_001` validates basic priority order (B then A) and process end cleanup.
+  Evidence: `tests/workload/mp4/mp4_process_scheduler_001_scenario.c`; output `tests/actual/workload/mp4_process_scheduler_001.bin` (marker `PRCS`, seq `[0xB0B0B0B0, 0xA0A0A0A0]`, A=1, B=1).
+- Scenario `mp4_process_sleep_001` validates `HuPrcSleep(2)` yields and resumes after 2 ticks.
+  Evidence: `tests/workload/mp4/mp4_process_sleep_001_scenario.c`; output `tests/actual/workload/mp4_process_sleep_001.bin` (marker `PRCS`, seq `[0xB0000001, 0xA0000001, 0xA0000002]`, A=2, B=1).
+- Scenario `mp4_process_vsleep_001` validates `HuPrcVSleep()` yields until the next scheduler call and resumes.
+  Evidence: `tests/workload/mp4/mp4_process_vsleep_001_scenario.c`; output `tests/actual/workload/mp4_process_vsleep_001.bin` (marker `PRCS`, seq `[0xB0000001, 0xA0000001, 0xA0000002]`, A=2, B=1).
+
 ### MP4 host workload: pfDrawFonts reachability stub
 - `pfDrawFonts()` is MP4 game-specific and GX-heavy; we keep it as a host-safe workload slice that only leaves deterministic breadcrumbs.
   Evidence: `tests/workload/mp4/slices/pfdrawfonts_stub.c`.

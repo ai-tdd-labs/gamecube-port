@@ -66,6 +66,7 @@ case "$subsystem" in
       "$repo_root/src/game_workload/mp4/vendor/src/game/init.c"
       "$repo_root/src/game_workload/mp4/vendor/src/game/pad.c"
       "$repo_root/src/game_workload/mp4/vendor/src/game/process.c"
+      "$repo_root/tests/workload/mp4/slices/memory_heap_host.c"
       "$repo_root/tests/workload/mp4/slices/gwinit_only.c"
       "$repo_root/tests/workload/mp4/slices/pfinit_only.c"
       "$repo_root/tests/workload/mp4/slices/husprinit_only.c"
@@ -77,6 +78,28 @@ case "$subsystem" in
       "$repo_root/tests/workload/mp4/slices/husoftresetbuttoncheck_only.c"
       "$repo_root/tests/workload/mp4/slices/msmmusfdoutend_only.c"
     )
+
+    # Coroutine/context-switch implementation for HuPrc* on host.
+    #
+    # Options:
+    # - ucontext (default): portable and "good enough" for our deterministic host workloads
+    # - asm: aarch64 save/restore experiment (currently unstable)
+    GC_HOST_JMP_IMPL=${GC_HOST_JMP_IMPL:-ucontext}
+    case "$GC_HOST_JMP_IMPL" in
+      ucontext)
+        extra_srcs+=("$repo_root/tests/workload/mp4/slices/jmp_ucontext.c")
+        ;;
+      asm)
+        extra_srcs+=(
+          "$repo_root/tests/workload/mp4/slices/jmp_host.c"
+          "$repo_root/tests/workload/mp4/slices/jmp_aarch64.S"
+        )
+        ;;
+      *)
+        echo "fatal: unknown GC_HOST_JMP_IMPL=$GC_HOST_JMP_IMPL (expected ucontext|asm)" >&2
+        exit 2
+        ;;
+    esac
 
     # Only link heavy-module stubs for scenarios that explicitly need them.
     case "$scenario_base" in
@@ -109,6 +132,7 @@ case "$subsystem" in
       -DVERSION=0
       -DVERSION_PAL=0
       -DVERSION_NTSC=1
+      -DGC_HOST_WORKLOAD=1
     )
     subsystem="os+dvd+vi+pad+gx"
     ;;
@@ -220,7 +244,14 @@ case "$(uname -s)" in
   *) ld_gc_flags+=(-Wl,--gc-sections) ;;
 esac
 
-cc -O2 -g0 -ffunction-sections -fdata-sections \
+# Debug mode for host scenarios (keeps behavior identical, just changes debugability).
+opt_flags=(-O2 -g0)
+if [[ "${GC_HOST_DEBUG:-0}" == "1" ]]; then
+  opt_flags=(-O0 -g)
+fi
+
+cc "${opt_flags[@]}" -ffunction-sections -fdata-sections \
+  -D_XOPEN_SOURCE=700 \
   "${extra_cflags[@]+${extra_cflags[@]}}" \
   -I"$repo_root/tests" \
   -I"$repo_root/tests/harness" \
@@ -245,7 +276,23 @@ if [[ "$is_workload" -eq 1 ]]; then
     run_env+=("GC_HOST_BOOT_ARENA_HI=0x817FDEA0")
   fi
 fi
+if [[ -n "${GC_JMP_DEBUG:-}" ]]; then
+  run_env+=("GC_JMP_DEBUG=$GC_JMP_DEBUG")
+fi
+if [[ -n "${GC_PRC_DEBUG:-}" ]]; then
+  run_env+=("GC_PRC_DEBUG=$GC_PRC_DEBUG")
+fi
 
-(cd "$scenario_dir" && env "${run_env[@]+${run_env[@]}}" "$exe")
+(cd "$scenario_dir" && \
+  if [[ "${GC_HOST_LLDB:-0}" == "1" ]]; then
+    lldb --batch \
+      -o "settings set target.env-vars ${run_env[*]-}" \
+      -o run \
+      -o "register read pc lr sp x0 x1 x18 x19 x20" \
+      -o bt \
+      -- "$exe"
+  else
+    env "${run_env[@]+${run_env[@]}}" "$exe"
+  fi)
 
 rm -f "$exe" >/dev/null 2>&1 || true

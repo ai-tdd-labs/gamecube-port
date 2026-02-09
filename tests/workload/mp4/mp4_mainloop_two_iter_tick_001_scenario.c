@@ -14,6 +14,7 @@
 // MP4 decomp/workload functions (compiled in via extra_srcs in tools/run_host_scenario.sh)
 void HuSysInit(GXRenderModeObj *mode);
 void HuPrcInit(void);
+void HuPrcCall(int tick);
 void HuPadInit(void);
 void GWInit(void);
 void pfInit(void);
@@ -62,7 +63,6 @@ void GXReadMemMetric(uint32_t *cp_req, uint32_t *tc_req, uint32_t *cpu_rd_req, u
 static void HuPerfZero(void) {}
 static void HuPerfBegin(int which) { (void)which; }
 static void HuPerfEnd(int which) { (void)which; }
-static void HuPrcCall(int which) { (void)which; }
 static void MGSeqMain(void) {}
 static void Hu3DExec(void) {}
 void WipeExecAlways(void);

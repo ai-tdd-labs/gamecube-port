@@ -75,6 +75,25 @@ Naming:
 - Prefer `<function>_<case_id>` for the built `.dol` base name so expected bins do not collide.
 - Use per-game folders for realistic callsite tests. Add `generic/` only when needed.
 
+## Host Workloads (MP4 Decomp Slices)
+
+Besides per-function SDK tests, we also run **MP4 workload scenarios** on host to validate
+that larger chunks of the MP4 init/mainloop code are reachable and deterministic when
+linked against `src/sdk_port`.
+
+Location:
+- `tests/workload/mp4/*_scenario.c` (each scenario produces one `tests/actual/workload/*.bin`)
+
+Runner:
+- `bash tools/run_host_scenario.sh tests/workload/mp4/<scenario>_scenario.c`
+
+Important (HuPrc cooperative scheduler on host):
+- Use `GC_HOST_JMP_IMPL=asm` for HuPrc* workloads.
+- Host `gcsetjmp/gclongjmp` must save the **callsite SP**; saving a wrapper-function SP corrupts
+  optimized builds on resume. Therefore the asm implementation provides `gcsetjmp/gclongjmp`
+  as leaf AArch64 assembly.
+  Evidence: `tests/workload/mp4/slices/jmp_aarch64.S` (`_gcsetjmp`/`_gclongjmp`).
+
 ## MP4 Chain Tracking
 
 MP4 init chain status is tracked in:
