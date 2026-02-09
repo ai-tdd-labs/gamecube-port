@@ -64,6 +64,14 @@ Rules:
   - `0x80300024`: marker `0x464F4E54` (`'FONT'`)
   Evidence: `tests/actual/workload/mp4_mainloop_one_iter_tick_001.bin` (count=1) and `tests/actual/workload/mp4_mainloop_two_iter_tick_001.bin` (count=2).
 
+### MP4 smoke chain: mp4_pfdrawfonts_chain_001 (sdk_port PPC vs host)
+- Purpose: validate combined/deterministic behavior of the sdk_port GX immediate-mode mirrors used by MP4 `pfDrawFonts()` call patterns.
+  Evidence: `decomp_mario_party_4/src/game/printfunc.c` (pfDrawFonts callsite patterns).
+- Oracle: run the same scenario against sdk_port on PPC (DOL in Dolphin) and on host (virtual RAM), then compare full MEM1 dump bit-exact.
+  Evidence: `tests/sdk/smoke/mp4_pfdrawfonts_chain_001/expected/mp4_pfdrawfonts_chain_001_mem1.bin` and `tests/sdk/smoke/mp4_pfdrawfonts_chain_001/actual/mp4_pfdrawfonts_chain_001_mem1.bin`.
+- Status: PASS (bit-exact MEM1).
+  Evidence: `tools/diff_bins_smoke.sh` output for the two bins above.
+
 ### RVZ vs host MEM1 dump (GWInit checkpoint)
 - RVZ oracle: MEM1 dump at retail MP4 PC `0x800308B8` (`GWInit`) exists as `tests/oracles/mp4_rvz/mem1_at_pc_800308B8_gwinit.bin` (24 MiB).
   Evidence: `tools/dump_expected_rvz_mem1_at_pc.sh` run (recorded earlier in this file under "GWInit reachability").
