@@ -67,6 +67,15 @@ Rules:
 - Scenario `mp4_process_vsleep_001` validates `HuPrcVSleep()` yields until the next scheduler call and resumes.
   Evidence: `tests/workload/mp4/mp4_process_vsleep_001_scenario.c`; output `tests/actual/workload/mp4_process_vsleep_001.bin` (marker `PRCS`, seq `[0xB0000001, 0xA0000001, 0xA0000002]`, A=2, B=1).
 
+### MP4 vendor import: next translation units staged (not yet linked in workloads)
+- Imported additional MP4 decomp translation units into the vendor slice for future incremental replacement of stubs:
+  - `src/game_workload/mp4/vendor/src/game/printfunc.c`
+  - `src/game_workload/mp4/vendor/src/game/wipe.c`
+  - `src/game_workload/mp4/vendor/src/game/objmain.c`
+  Evidence: file copies from `/Users/chrislamark/projects/recomp/gamecube_static_recomp/decomp_mario_party_4/src/game/`.
+- These files are NOT compiled by the host workload runner yet (workloads still compile only `init.c`, `pad.c`, `process.c` + slices).
+  Evidence: `tools/run_host_scenario.sh` workload `extra_srcs` list.
+
 ### MP4 host workload: pfDrawFonts reachability stub
 - `pfDrawFonts()` is MP4 game-specific and GX-heavy; we keep it as a host-safe workload slice that only leaves deterministic breadcrumbs.
   Evidence: `tests/workload/mp4/slices/pfdrawfonts_stub.c`.
