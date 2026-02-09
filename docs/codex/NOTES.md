@@ -106,6 +106,13 @@ Rules:
   - `SamplingRate` @ `0x801D4628` = `0x00000000`
   - `__PADSpec`    @ `0x801D450C` = `0x00000000`
 
+#### RVZ vs host semantic check (GWInit checkpoint)
+- Fact: Host workload state right before `GWInit` matches the RVZ probe semantics at PC `0x800308B8` for BootInfo + OS arena + SamplingRate.
+  Note: `__PADSpec` is intentionally ignored here because retail uses a different `Spec` storage pattern; host uses `sdk_state.pad_spec` for determinism.
+  Evidence (RVZ): `tests/oracles/mp4_rvz/probes/gwinit_pc_800308B8_v2/values.txt`
+  Evidence (host): `tests/oracles/mp4_rvz/probes/host_gwinit_mp4_hupadinit_001_v2/values.txt` (from `tests/workload/mp4/mp4_hupadinit_001_scenario.c`)
+  Evidence (compare): `python3 tools/helpers/compare_rvz_host_probe_values.py <rvz_values> <host_values> --ignore __PADSpec`
+
 ### RVZ probe (HuPadInit entry) for SDK globals
 - RVZ: same image at PC `0x80005A5C` (`HuPadInit` entry).
 - Output dir: `tests/oracles/mp4_rvz/probes/hupadinit_pc_80005A5C/` (see `manifest.sha256`).

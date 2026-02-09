@@ -27,12 +27,20 @@ def parse_values(path: Path) -> dict[str, int]:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 3:
-        print("usage: compare_rvz_host_probe_values.py <rvz_values.txt> <host_values.txt>", file=sys.stderr)
+    ignore: set[str] = set()
+    if len(argv) not in (3, 5):
+        print(
+            "usage: compare_rvz_host_probe_values.py <rvz_values.txt> <host_values.txt> [--ignore RVZ_KEY,OTHER_KEY]",
+            file=sys.stderr,
+        )
         return 2
 
     rvz_path = Path(argv[1])
     host_path = Path(argv[2])
+    if len(argv) == 5:
+        if argv[3] != "--ignore":
+            return 2
+        ignore = {s.strip() for s in argv[4].split(",") if s.strip()}
     rvz = parse_values(rvz_path)
     host = parse_values(host_path)
 
@@ -50,6 +58,9 @@ def main(argv: list[str]) -> int:
 
     failed = False
     for rvz_k, host_k in checks:
+        if rvz_k in ignore:
+            print(f"SKIP ignored RVZ key: {rvz_k}")
+            continue
         if rvz_k not in rvz:
             print(f"SKIP missing RVZ key: {rvz_k}")
             continue
@@ -69,4 +80,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv))
-
