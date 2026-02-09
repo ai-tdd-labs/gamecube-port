@@ -219,7 +219,10 @@ int main(void) {
   emit_snapshot();
 
   while (1) {
-    __asm__ volatile("nop");
+    // Keep the decrementer far in the future and EE disabled. Some called code
+    // may re-arm DEC or re-enable interrupts, and Dolphin will trap to 0x900 if
+    // the decrementer exception fires before any handlers are installed.
+    gc_safepoint();
   }
   return 0;
 }

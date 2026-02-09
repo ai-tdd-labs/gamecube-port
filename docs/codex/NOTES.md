@@ -96,6 +96,20 @@ Rules:
   - `__PADSpec` is `0x00000000` by design: `PADSetSpec` always clears `__PADSpec` and stores the current spec in `Spec` (not exposed via symbols here).
   Evidence: `decomp_mario_party_4/src/dolphin/pad/Pad.c` (`PADSetSpec`).
 
+### RVZ probes (post-GWInit init steps) + matching host checkpoints
+- Purpose: confirm the same *semantic* invariants hold deeper into MP4 init without doing raw RVZ-vs-host full-MEM1 diffs.
+- RVZ image: `/Users/chrislamark/projects/recomp/gamecube_static_recomp/game_files/Mario Party 4 (USA).rvz`
+- Tool: `tools/dump_expected_rvz_probe_at_pc.sh`
+- Checkpoints (PC -> function -> RVZ dir -> host checkpoint scenario):
+  - `0x8000D348` -> `HuSprInit` entry -> `tests/oracles/mp4_rvz/probes/husprinit_pc_8000D348/` -> host uses `tests/workload/mp4/mp4_gwinit_001_scenario.c` (state right before `HuSprInit`).
+  - `0x8001F9AC` -> `Hu3DInit` entry -> `tests/oracles/mp4_rvz/probes/hu3dinit_pc_8001F9AC/` -> host uses `tests/workload/mp4/mp4_husprinit_001_scenario.c` (state right before `Hu3DInit`).
+  - `0x80006E38` -> `HuDataInit` entry -> `tests/oracles/mp4_rvz/probes/hudatainit_pc_80006E38/` -> host uses `tests/workload/mp4/mp4_hu3dinit_001_scenario.c` (state right before `HuDataInit`).
+  - `0x8002E74C` -> `HuPerfInit` entry -> `tests/oracles/mp4_rvz/probes/huperfinit_pc_8002E74C/` -> host uses `tests/workload/mp4/mp4_hudatainit_001_scenario.c` (state right before `HuPerfInit`).
+- Verified invariant at these checkpoints:
+  - BootInfo: `arenaLo` (0x80000030) = `0x00000000`, `arenaHi` (0x80000034) = `0x817FDEA0` (RVZ matches host workloads).
+  Evidence (RVZ): corresponding `*/bootinfo_window.bin` in each probe dir.
+  Evidence (host): `tools/dump_actual_host_probe_at_scenario.sh <scenario> <out_dir>` writes `values.txt` with the same BootInfo values.
+
 #### RVZ vs host semantic check (GWInit checkpoint)
 - We do **not** compare retail `.bss` addresses to host directly (host stores SDK state in the RAM-backed `sdk_state` page).
 - RVZ at GWInit:

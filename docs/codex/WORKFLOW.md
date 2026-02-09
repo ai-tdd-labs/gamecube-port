@@ -160,6 +160,9 @@ Tool:
 - `tools/dump_expected_rvz_probe_at_pc.sh <rvz> <pc_hex> <out_dir> [timeout]`
 - `tools/dump_actual_host_probe_at_scenario.sh <scenario_c> <out_dir>`
 
+Important:
+- Do not run multiple RVZ probe scripts concurrently. They use `pkill -f "Dolphin -b -d"` to keep the GDB stub deterministic; parallel runs will race and cause `connection refused`.
+
 `dump_actual_host_probe_at_scenario.sh` runs the host scenario once, dumps the full 32 MiB
 host RAM buffer, then slices out:
 - a BootInfo window (0x80000020..0x80000060)
