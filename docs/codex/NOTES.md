@@ -685,3 +685,10 @@ Notes:
   - `tests/sdk/gx/gx_tex_coord_2f32` (stores last s/t as f32 bit patterns)
   - `tests/sdk/gx/gx_position_2f32` (stores last x/y as f32 bit patterns)
   - `tests/sdk/gx/gx_color_3u8` (stores last RGB packed as 0x00RRGGBB)
+
+## 2026-02-09: DVDInit default drive status (MP4 HuDvdErrorWatch)
+- MP4 callsite: `decomp_mario_party_4/src/game/dvd.c:HuDvdErrorWatch` polls `DVDGetDriveStatus()` during normal boot.
+- Deterministic contract we model for boot: `DVDInit(); DVDGetDriveStatus();` returns `0` (idle).
+- Test PASS (DOL expected vs host actual):
+  - `tests/sdk/dvd/dvd_get_drive_status/expected/dvd_get_drive_status_realistic_hudvderrorwatch_001.bin`
+  - `tests/sdk/dvd/dvd_get_drive_status/actual/dvd_get_drive_status_realistic_hudvderrorwatch_001.bin`

@@ -18,7 +18,9 @@ u32 gc_dvd_last_read_off;
 
 void DVDInit(void) {
     gc_sdk_state_store_u32_mirror(GC_SDK_OFF_DVD_INITIALIZED, &gc_dvd_initialized, 1u);
-    gc_sdk_state_store_u32_mirror(GC_SDK_OFF_DVD_DRIVE_STATUS, &gc_dvd_drive_status, 0x12345678u);
+    // Deterministic default for "idle" boot: no executing command block.
+    // MP4 polls this during HuDvdErrorWatch.
+    gc_sdk_state_store_u32_mirror(GC_SDK_OFF_DVD_DRIVE_STATUS, &gc_dvd_drive_status, 0u);
 }
 
 u32 DVDGetDriveStatus(void) {
