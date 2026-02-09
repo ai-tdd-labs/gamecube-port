@@ -675,3 +675,13 @@ Notes:
   - expected: Dolphin DOL `tests/sdk/os/os_stopwatch/dol/mp4/realistic_huperf_001`
   - actual: host scenario `tests/sdk/os/os_stopwatch/host/os_stopwatch_mp4_huperf_001_scenario.c` using `src/sdk_port/os/OSStopwatch.c`
   - status: PASS (bit-exact expected.bin == actual.bin)
+
+## 2026-02-09: GX immediate-mode helpers (MP4 pfDrawFonts)
+- Context: MP4 `pfDrawFonts` emits immediate-mode vertex/color/texcoord streams. On real hardware these go to the GP FIFO and are not directly observable in MEM1 without a full FIFO model.
+- Decision: model these helpers deterministically in `src/sdk_port/gx/GX.c` as "last written" mirrors, and assert them via DOL expected vs host actual dumps at 0x80300000.
+- Tests (DOL expected vs host actual) PASS:
+  - `tests/sdk/gx/gx_position_3s16` (stores last x/y/z as sign-extended u32)
+  - `tests/sdk/gx/gx_color_1x8` (stores last 8-bit value)
+  - `tests/sdk/gx/gx_tex_coord_2f32` (stores last s/t as f32 bit patterns)
+  - `tests/sdk/gx/gx_position_2f32` (stores last x/y as f32 bit patterns)
+  - `tests/sdk/gx/gx_color_3u8` (stores last RGB packed as 0x00RRGGBB)

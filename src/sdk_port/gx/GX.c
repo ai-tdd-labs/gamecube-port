@@ -146,6 +146,15 @@ u32 gc_gx_pos3f32_z_bits;
 u32 gc_gx_pos1x16_last;
 u32 gc_gx_pos2s16_x;
 u32 gc_gx_pos2s16_y;
+u32 gc_gx_pos3s16_x;
+u32 gc_gx_pos3s16_y;
+u32 gc_gx_pos3s16_z;
+u32 gc_gx_pos2f32_x_bits;
+u32 gc_gx_pos2f32_y_bits;
+u32 gc_gx_texcoord2f32_s_bits;
+u32 gc_gx_texcoord2f32_t_bits;
+u32 gc_gx_color1x8_last;
+u32 gc_gx_color3u8_last;
 
 // Token / draw sync state (GXManage).
 uintptr_t gc_gx_token_cb_ptr;
@@ -1969,6 +1978,35 @@ void GXPosition2s16(s16 x, s16 y) {
     // promote s16 when doing comparisons/logging).
     gc_gx_pos2s16_x = (u32)(s32)x;
     gc_gx_pos2s16_y = (u32)(s32)y;
+}
+
+void GXPosition3s16(s16 x, s16 y, s16 z) {
+    // Deterministic host model: keep last written values (sign-extended).
+    gc_gx_pos3s16_x = (u32)(s32)x;
+    gc_gx_pos3s16_y = (u32)(s32)y;
+    gc_gx_pos3s16_z = (u32)(s32)z;
+}
+
+void GXPosition2f32(float x, float y) {
+    // Deterministic host model: keep last written values as raw f32 bits.
+    gc_gx_pos2f32_x_bits = f32_bits(x);
+    gc_gx_pos2f32_y_bits = f32_bits(y);
+}
+
+void GXTexCoord2f32(float s, float t) {
+    // Deterministic host model: keep last written values as raw f32 bits.
+    gc_gx_texcoord2f32_s_bits = f32_bits(s);
+    gc_gx_texcoord2f32_t_bits = f32_bits(t);
+}
+
+void GXColor1x8(u8 c) {
+    // Deterministic host model: record last 8-bit color value.
+    gc_gx_color1x8_last = (u32)c;
+}
+
+void GXColor3u8(u8 r, u8 g, u8 b) {
+    // Deterministic host model: record last RGB triple packed as 0x00RRGGBB.
+    gc_gx_color3u8_last = ((u32)r << 16) | ((u32)g << 8) | (u32)b;
 }
 
 void GXSetTevColorIn(u32 stage, u32 a, u32 b, u32 c, u32 d) {

@@ -188,3 +188,8 @@ WipeFrameStill,5,GXSetTevColor,sdk,,tests/sdk/gx/gx_set_tev_color,1/1,1,1,1,y
 WipeFrameStill,6,GXInitTexObj,sdk,,tests/sdk/gx/gx_init_tex_obj,1/1,1,1,1,y
 WipeFrameStill,7,GXLoadTexObj,sdk,,tests/sdk/gx/gx_load_tex_obj,1/1,1,1,1,y
 pfDrawFonts,1,GXInitTexObjLOD,sdk,,tests/sdk/gx/gx_init_tex_obj_lod,1/1,1,1,1,y
+pfDrawFonts,2,GXPosition3s16,sdk,,tests/sdk/gx/gx_position_3s16,1/1,1,1,1,y
+pfDrawFonts,3,GXColor1x8,sdk,,tests/sdk/gx/gx_color_1x8,1/1,1,1,1,y
+pfDrawFonts,4,GXTexCoord2f32,sdk,,tests/sdk/gx/gx_tex_coord_2f32,1/1,1,1,1,y
+pfDrawFonts,5,GXPosition2f32,sdk,,tests/sdk/gx/gx_position_2f32,1/1,1,1,1,y
+pfDrawFonts,6,GXColor3u8,sdk,,tests/sdk/gx/gx_color_3u8,1/1,1,1,1,y
