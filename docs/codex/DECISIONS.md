@@ -56,3 +56,20 @@ Why:
 What to do instead (until loader exists):
 - Use the deterministic oracle as primary: `sdk_port` on PPC (Dolphin DOL) vs `sdk_port` on host (virtual RAM).
 - For RVZ sanity checks, probe **specific symbol addresses** (e.g. `__OSArenaLo`, `__OSArenaHi`, SI/VI state) and compare derived invariants, not the entire MEM1 image.
+
+## MP4 vendor import: next files after initial boot slice
+
+Decision:
+- The next MP4 decomp translation units to import into `src/game_workload/mp4/vendor/` are:
+  - `printfunc.c` (pfInit/pfClsScr/pfDrawFonts)
+  - `wipe.c` (WipeInit/WipeExecAlways)
+  - `objmain.c` (omMasterInit + overlay/object manager entrypoints)
+
+Why:
+- These functions are invoked during MP4 init + every mainloop iteration (`main.c`), so they are the first large MP4-specific “real code” that we currently stub in host workload scenarios.
+- Importing these TUs increases *reachability* (we can run more real MP4 code on host) and surfaces the next missing SDK/game-only dependencies deterministically (via compile/link errors and runtime asserts).
+- SDK correctness remains enforced separately via `tests/sdk/*` and PPC-vs-host smoke chains; this import is about “can we run further”, not “is it correct”.
+
+Scope / guardrails:
+- Import corresponding headers from `decomp_mario_party_4/include/game/` as-needed into `tests/workload/include/game/` (host-safe subset), not the full decomp include tree.
+- If a TU drags in large subsystems (audio, overlays, etc.), keep it linkable by adding minimal game-only stubs in `tests/workload/mp4/slices/` until we deliberately expand that subsystem.
