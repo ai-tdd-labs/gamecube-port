@@ -23,6 +23,12 @@ decomp_*/
 **/decomp_*
 **/decomp_*/
 
+# Allow repo-local symlinks that point to git submodules under external/.
+!decomp_mario_party_4
+!decomp_wind_waker
+!decomp_twilight_princess
+!decomp_animal_crossing
+
 # Build artifacts
 **/*.o
 **/*.obj

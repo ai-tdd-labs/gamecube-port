@@ -1,0 +1,12 @@
+[submodule "external/tww-decomp"]
+	path = external/tww-decomp
+	url = https://github.com/zeldaret/tww.git
+[submodule "external/ac-decomp"]
+	path = external/ac-decomp
+	url = https://github.com/ACreTeam/ac-decomp.git
+[submodule "external/tp-decomp"]
+	path = external/tp-decomp
+	url = https://github.com/zeldaret/tp.git
+[submodule "external/mp4-decomp"]
+	path = external/mp4-decomp
+	url = https://github.com/mariopartyrd/marioparty4.git

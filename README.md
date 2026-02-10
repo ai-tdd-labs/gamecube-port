@@ -102,10 +102,17 @@ Do not commit them here.
 
 Two supported approaches:
 
-1. **Symlinks (local-only, simplest)**:
-   - Create `decomp_mario_party_4`, `decomp_wind_waker`, etc. as symlinks in the repo root.
-2. **Git submodules (optional)**:
-   - Add your decomp repos as submodules under `external/` (private is recommended).
+1. **Git submodules (recommended)**:
+   - This repo uses submodules under `external/`.
+   - Initialize them after clone:
+
+     ```bash
+     git submodule update --init --recursive
+     ```
+
+2. **Symlinks (supported)**:
+   - The repo root contains symlinks like `decomp_mario_party_4 -> external/mp4-decomp`.
+   - If you keep your own local trees elsewhere, you can repoint the symlinks locally.
 
 The docs use placeholders like `<DECOMP_MP4_ROOT>` and `<MP4_RVZ_PATH>` so the repo
 is publishable without containing your local paths.
@@ -121,4 +128,3 @@ See:
 
 This repo is intended to be publishable without copyrighted game assets.
 Do not add ROMs, ISOs, RVZs, or proprietary decomp sources to git.
-
