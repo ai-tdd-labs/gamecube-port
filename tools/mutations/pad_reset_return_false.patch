@@ -1,17 +1,11 @@
 diff --git a/src/sdk_port/pad/PAD.c b/src/sdk_port/pad/PAD.c
-index 3a6bb3e..b3c2f3a 100644
 --- a/src/sdk_port/pad/PAD.c
 +++ b/src/sdk_port/pad/PAD.c
-@@ -133,6 +133,7 @@
- BOOL PADReset(u32 mask) {
-+    // MUTANT: return FALSE even though reset bookkeeping was performed.
-     // Seed modeled internal globals from RAM-backed sdk_state so host trace-replay
-     // scenarios can exactly mirror retail pre-state.
-     ResettingBits = gc_sdk_state_load_u32_or(GC_SDK_OFF_PAD_RESETTING_BITS, ResettingBits);
-@@ -159,5 +160,5 @@ BOOL PADReset(u32 mask) {
+@@ -158,6 +158,6 @@
+     gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_RESETTING_BITS, ResettingBits);
      gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_RESETTING_CHAN, (u32)ResettingChan);
      gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_RECALIBRATE_BITS, RecalibrateBits);
      gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_RESET_CB_PTR, ResetCallbackPtr);
 -    return TRUE;
-+    return FALSE;
++    return FALSE; // MUTANT
  }
