@@ -5,6 +5,8 @@
 
 Join our Discord community for discussions, questions, and collaboration:  
 [![Discord](https://img.shields.io/discord/1470805944136106056?color=7289DA&label=Discord&logo=discord&logoColor=white)](https://discord.gg/WgCa8QDJ)
+
+
 This repo is an AI-assisted reverse-engineering + porting project for Nintendo
 GameCube games.
 
