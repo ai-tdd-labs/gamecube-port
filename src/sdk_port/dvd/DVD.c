@@ -15,6 +15,7 @@ u32 gc_dvd_read_calls;
 u32 gc_dvd_close_calls;
 u32 gc_dvd_last_read_len;
 u32 gc_dvd_last_read_off;
+u32 gc_dvd_async_busy_seen;
 
 void DVDInit(void) {
     gc_sdk_state_store_u32_mirror(GC_SDK_OFF_DVD_INITIALIZED, &gc_dvd_initialized, 1u);
@@ -145,6 +146,7 @@ s32 DVDReadAsync(DVDFileInfo *file, void *addr, s32 len, s32 offset, DVDCallback
 
     // Mark "busy", do the copy immediately, then mark idle.
     file->cb.state = 1;
+    gc_dvd_async_busy_seen = 1;
     int n = DVDRead(file, addr, (int)len, (int)offset);
     file->cb.state = 0;
 

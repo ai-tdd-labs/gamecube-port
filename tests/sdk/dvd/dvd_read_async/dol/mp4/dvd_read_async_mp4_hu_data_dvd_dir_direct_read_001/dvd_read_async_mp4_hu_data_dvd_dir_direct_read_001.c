@@ -1,6 +1,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include <ogc/cache.h>
+
 typedef uint32_t u32;
 typedef int32_t s32;
 
@@ -32,6 +34,8 @@ static const uint8_t k_file[0x40] = {
 };
 
 #ifndef GC_HOST_TEST
+static u32 s_busy_seen;
+
 static int DVDGetCommandBlockStatus(DVDCommandBlock *block) {
   if (!block) return 0;
   return block->state;
@@ -56,6 +60,7 @@ static s32 DVDReadAsync(DVDFileInfo* file, void* addr, s32 len, s32 offset, DVDC
   if (off + n > (u32)sizeof(k_file)) n = (u32)sizeof(k_file) - off;
 
   file->cb.state = 1;
+  s_busy_seen = 1;
   memcpy(addr, k_file + off, n);
   file->cb.state = 0;
   if (cb) cb((s32)n, file);
@@ -76,17 +81,23 @@ int main(void) {
   uint8_t *dest = (uint8_t *)0x80400000u;
   for (u32 i = 0; i < 0x40; i++) dest[i] = 0xAA;
 
+  s_busy_seen = 0;
   s32 r = DVDReadAsync(&fi, dest, 0x20, 0x10, NULL);
   int st = DVDGetCommandBlockStatus(&fi.cb);
 
+  for (u32 i = 0; i < 16; i++) OUT[i] = 0;
   OUT[0] = 0xDEADBEEFu;
   OUT[1] = (u32)ok;
   OUT[2] = (u32)r;
   OUT[3] = (u32)st;
   OUT[4] = *(volatile u32 *)(0x80400000u); // first 4 bytes of dest
   OUT[5] = *(volatile u32 *)(0x80400010u); // bytes 0x10..0x13 of dest
+  OUT[6] = s_busy_seen;
+
+  // Make the debugger's RAM reads deterministic.
+  DCFlushRange((void *)0x80400000u, 0x40);
+  DCFlushRange((void *)0x80300000u, 0x40);
 
   for (;;) {}
   return 0;
 }
-
