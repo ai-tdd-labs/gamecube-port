@@ -62,11 +62,15 @@ void gc_scenario_run(GcRam *ram) {
 
     int r = DVDRead(&fi, dest, 0x20, 0x10);
 
-    uint8_t *p = gc_ram_ptr(ram, 0x80300000u, 0x14);
+    // Include gc_dvd_last_read_len/off so mutation tests can detect
+    // swapped arguments even if the copied bytes look correct.
+    uint8_t *p = gc_ram_ptr(ram, 0x80300000u, 0x1Cu);
     if (!p) die("gc_ram_ptr failed");
     wr32be(p + 0x00, 0xDEADBEEFu);
     wr32be(p + 0x04, (uint32_t)ok);
     wr32be(p + 0x08, (uint32_t)r);
     wr32be(p + 0x0C, fi.length);
     wr32be(p + 0x10, rd32be(dest + 0x00));
+    wr32be(p + 0x14, gc_dvd_last_read_len);
+    wr32be(p + 0x18, gc_dvd_last_read_off);
 }

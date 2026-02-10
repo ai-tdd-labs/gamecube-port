@@ -26,8 +26,6 @@ repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$repo_root"
 
 source "$repo_root/tools/helpers/lock.sh"
-acquire_lock "gc-trace-replay" 600
-export GC_LOCK_HELD=1
 
 if [[ ! -f "$patch_file" ]]; then
   echo "fatal: patch not found: $patch_file" >&2
@@ -55,6 +53,9 @@ cleanup() {
   release_lock
 }
 trap cleanup EXIT
+
+acquire_lock "gc-trace-replay" 600
+export GC_LOCK_HELD=1
 
 # Apply mutant patch.
 git apply "$patch_file"
