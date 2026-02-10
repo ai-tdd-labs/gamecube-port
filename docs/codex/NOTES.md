@@ -890,6 +890,86 @@ Notes:
     - `GC_SDK_OFF_PAD_RECALIBRATE_BITS`
     - `GC_SDK_OFF_PAD_RESET_CB_PTR`
 
+## 2026-02-10: Retail RVZ trace replay (MP4 PADInit)
+
+### PADInit
+- Retail entry PC: `0x800C4978` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Trace dir (local-only, gitignored): `tests/traces/pad_init/mp4_rvz_v1/` (2 unique cases)
+- Replay harness (committed):
+  - Scenario: `tests/sdk/pad/pad_init/host/pad_init_rvz_trace_replay_001_scenario.c`
+  - Replay: `tools/replay_trace_case_pad_init.sh <trace_case_dir>`
+- Result: replay PASS for both captured cases (bit-exact vs retail `out_sdk_state.bin` + return value).
+
+## 2026-02-10: Retail RVZ trace replay (MP4 PADSetSpec)
+
+### PADSetSpec
+- Retail entry PC: `0x800C4FD8` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Trace dir (local-only, gitignored): `tests/traces/pad_set_spec/mp4_rvz_v3/` (1 unique case)
+- Replay harness (committed):
+  - Scenario: `tests/sdk/pad/pad_set_spec/host/pad_set_spec_rvz_trace_replay_001_scenario.c`
+  - Replay: `tools/replay_trace_case_pad_set_spec.sh <trace_case_dir>`
+- Confirmed retail side effects (from trace dumps + decomp `external/mp4-decomp/src/dolphin/pad/Pad.c`):
+  - `__PADSpec` @ `0x801D450C` is cleared to 0.
+  - `Spec` @ `0x801D3924` is set to the input `spec`.
+  - `MakeStatus` @ `0x801D3928` points to `SPEC2_MakeStatus` (`0x800C5320`) for `PAD_SPEC_5` (MP4 boot case).
+- Result: replay PASS for the captured case (bit-exact vs retail global dumps).
+
+
+## 2026-02-10: Retail RVZ trace replay (MP4 OSDisableInterrupts)
+
+### OSDisableInterrupts
+- Retail entry PC: `0x800B723C` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Trace dir (local-only, gitignored): `tests/traces/os_disable_interrupts/mp4_rvz_v1/` (10 unique cases)
+- Replay harness (committed):
+  - Scenario: `tests/sdk/os/os_disable_interrupts/host/os_disable_interrupts_rvz_trace_replay_001_scenario.c`
+  - Replay: `tools/replay_trace_case_os_disable_interrupts.sh <trace_case_dir>`
+  - 1-button: `tools/harvest_and_replay_os_disable_interrupts.sh`
+- Observed in these MP4 boot traces: return value = 0 (interrupts already disabled at entry in all collected cases).
+- Result: replay PASS for all 10 unique cases (bit-exact).
+
+
+## 2026-02-10: Retail RVZ trace replay (MP4 VISetPostRetraceCallback)
+
+### VISetPostRetraceCallback
+- Retail entry PC: `0x800C0DD8` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Retail global: `PostCB` @ `0x801D443C` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Trace dir (local-only, gitignored): `tests/traces/vi_set_post_retrace_callback/mp4_rvz_v2/` (1 unique case)
+- Replay harness (committed):
+  - Scenario: `tests/sdk/vi/vi_set_post_retrace_callback/host/vi_set_post_retrace_callback_rvz_trace_replay_001_scenario.c`
+  - Replay: `tools/replay_trace_case_vi_set_post_retrace_callback.sh <trace_case_dir>`
+  - 1-button: `tools/harvest_and_replay_vi_set_post_retrace_callback.sh`
+- Observed MP4 boot case: old callback `0x00000000`, new callback `0x80005CB4` (PadReadVSync).
+- Result: replay PASS for the captured case (bit-exact).
+
+
+## 2026-02-10: Retail RVZ trace replay (MP4 SISetSamplingRate)
+
+### SISetSamplingRate
+- Retail entry PC: `0x800DA3C8` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Trace dir (local-only, gitignored): `tests/traces/si_set_sampling_rate/mp4_rvz_si_ctrl/` (10 unique cases)
+- Replay harness (committed):
+  - Scenario: `tests/sdk/si/si_set_sampling_rate/host/si_set_sampling_rate_rvz_trace_replay_001_scenario.c`
+  - Replay: `tools/replay_trace_case_si_set_sampling_rate.sh <trace_case_dir>`
+  - 1-button: `tools/harvest_and_replay_si_set_sampling_rate.sh` (replay-only; uses existing trace corpus)
+- Result: replay PASS for all 10 unique cases (bit-exact).
+
+
+## 2026-02-10: Retail RVZ trace replay (MP4 PADControlMotor)
+
+### PADControlMotor
+- Retail entry PC: `0x800C4F34` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Trace dir (local-only, gitignored): `tests/traces/pad_control_motor/mp4_rvz_v1/` (2 unique cases)
+- Replay harness (committed):
+  - Scenario: `tests/sdk/pad/pad_control_motor/host/pad_control_motor_rvz_trace_replay_001_scenario.c`
+  - Replay: `tools/replay_trace_case_pad_control_motor.sh <trace_case_dir>`
+  - 1-button: `tools/harvest_and_replay_pad_control_motor.sh`
+- Observed cases: chan=0 cmd=2
+- Result: replay PASS for both captured cases (bit-exact).
+
+
+
+
+
 ## 2026-02-10: Retail RVZ trace replay (MP4 SITransfer)
 
 ### SITransfer
@@ -904,3 +984,64 @@ Notes:
   - When an immediate transfer succeeds, `Packet[chan]` and `Alarm[chan]` remain unchanged.
   - When an immediate transfer fails, it queues `Packet[chan]` fields and sets `packet->fire = XferTime[chan] + delay`.
   - When `now < fire`, it also arms `Alarm[chan]` (handler pointer + fire time).
+
+## 2026-02-10: Retail RVZ trace replay (MP4 SIGetResponse)
+
+### SIGetResponse
+- Retail entry PC: `0x800D9B74` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Decomp reference: `external/mp4-decomp/src/dolphin/si/SIBios.c` (`SIGetResponseRaw` + `SIGetResponse`)
+- Trace dir (local-only, gitignored): `tests/traces/si_get_response/mp4_rvz_v1/`
+- Replay harness (committed):
+  - Scenario: `tests/sdk/si/si_get_response/host/si_get_response_rvz_trace_replay_001_scenario.c`
+  - Replay: `tools/replay_trace_case_si_get_response.sh <trace_case_dir>`
+- Result: 10 replay cases PASS (bit-exact).
+
+Observed trace format note:
+- `tools/trace_pc_entry_exit.py` writes `out_regs.json` with the post-call register file under `"args"` (not `"rets"`).
+  - For this function, the return value is `out_regs.json: args.r3`.
+
+Confirmed behaviors (as observed in traces + decomp):
+- `SIGetResponse()` always calls `SIGetResponseRaw(chan)` under interrupts-disabled critical section.
+- When the return is `TRUE`, it copies two `u32` words into `data` and clears `InputBufferValid[chan]` back to `FALSE`.
+- In the observed MP4 init case `hit_000001_*`, the caller's `data` buffer changes from `00000000 801A6F98` to `00808080 80800000`.
+
+Implementation note (sdk_port model):
+- Host trace replay cannot read SI MMIO (`__SIRegs`). For deterministic replay we seed:
+  - per-channel status (`SI_ERROR_RDST` bit)
+  - per-channel response words
+- Seed entrypoints: `gc_si_set_status_seed()` + `gc_si_set_resp_words_seed()` in `src/sdk_port/si/SI.c`.
+
+## 2026-02-10: MP4 decomp scan: unique Nintendo SDK functions used by MP4 (game sources)
+
+Goal: estimate how much of the Nintendo SDK surface MP4 needs by scanning the MP4 decomp *game* sources
+for SDK API usage, excluding SDK sources themselves.
+
+Method (reproducible):
+1) Build a set of SDK API names from the MP4 decomp Dolphin headers:
+   - Source: `/Users/chrislamark/projects/recomp/gamecube_static_recomp/decomp_mario_party_4/include/dolphin/**/*.h`
+   - Extract prototypes matching SDK prefixes:
+     `OS,GX,VI,PAD,DVD,SI,EXI,AI,AX,AR,ARQ,CARD,MTX,PS,DB,DSP,THP,DEMO`
+2) Scan MP4 decomp `src/**/*.c` excluding `src/dolphin/**` for callsites to names in that API set.
+
+Result (current snapshot):
+- SDK API names extracted from headers: 694
+- Unique SDK functions referenced by MP4 game sources (excluding `src/dolphin`): 273
+- Per-subsystem unique usage (from the scan):
+  - GX: 121
+  - OS: 48
+  - PS: 28
+  - CARD: 17
+  - VI: 12
+  - DVD: 10
+  - AR: 10
+  - AI: 8
+  - PAD: 7
+  - THP: 6
+  - ARQ: 2
+  - DEMO: 2
+  - DB: 1
+  - SI: 1
+
+Notes:
+- This is distinct from `docs/sdk/mp4/MP4_sdk_calls_inventory.csv` which inventories SDK-like callsites
+  in `src/game_workload/mp4/vendor/src/game/*.c` only.
