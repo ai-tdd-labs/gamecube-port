@@ -57,7 +57,11 @@ cleanup() {
 trap cleanup EXIT INT TERM HUP
 
 # Apply mutant patch.
-git apply "$patch_file"
+if ! git apply "$patch_file" >/dev/null 2>&1; then
+  echo "fatal: failed to apply mutation patch: $patch_file" >&2
+  echo "hint: patch likely out-of-date with current code; regenerate or update the patch." >&2
+  exit 2
+fi
 
 # Run commands (split by "::" separator). Each command must fail.
 any_ran=0
@@ -72,8 +76,15 @@ run_cmd_expect_fail() {
   set +e
   # Replay scripts normally refuse to run on a dirty worktree. During mutation
   # checks we intentionally dirty the tree (apply a patch), so allow a bypass.
-  # Scenario-based tests also need an oracle (expected vs actual) to kill mutants.
-  GC_ALLOW_DIRTY=1 GC_SCENARIO_COMPARE=1 "${c[@]}"
+  #
+  # Only scenario runners need the extra oracle compare. Trace-replay scripts
+  # already encode a predicate and should not enable GC_SCENARIO_COMPARE, because
+  # their underlying scenarios often use dynamic out paths.
+  if [[ "${c[0]}" == *"/run_host_scenario.sh" ]]; then
+    GC_ALLOW_DIRTY=1 GC_SCENARIO_COMPARE=1 "${c[@]}"
+  else
+    GC_ALLOW_DIRTY=1 GC_SCENARIO_COMPARE=0 "${c[@]}"
+  fi
   rc=$?
   set -e
   if [[ $rc -eq 0 ]]; then

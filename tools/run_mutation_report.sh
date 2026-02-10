@@ -50,6 +50,21 @@ timed=0
 pick_suite_arg() {
   local base="$1"
   local cmdline="$2"
+  local base_norm="$base"
+
+  # Normalize common prefixes so suite inference works for scripts like:
+  #   os_dc_invalidate_range_*  -> dc_invalidate_range
+  #   gx_*                      -> <gx suite>
+  # (Bash 3.2 compatible: no arrays/assoc)
+  case "$base_norm" in
+    os_*) base_norm="${base_norm#os_}" ;;
+    dvd_*) base_norm="${base_norm#dvd_}" ;;
+    gx_*) base_norm="${base_norm#gx_}" ;;
+    vi_*) base_norm="${base_norm#vi_}" ;;
+    pad_*) base_norm="${base_norm#pad_}" ;;
+    si_*) base_norm="${base_norm#si_}" ;;
+    mtx_*) base_norm="${base_norm#mtx_}" ;;
+  esac
 
   # Build suite lists once and reuse (bash 3.2 compatible).
   if [[ -z "${GC_MUT_SDK_SUITES_LOADED:-}" ]]; then
@@ -89,17 +104,47 @@ pick_suite_arg() {
     local suite
     suite="$(best_prefix_match "$base" "$GC_MUT_TRACE_SUITES")"
     if [[ -z "${suite:-}" ]]; then
+      suite="$(best_prefix_match "$base_norm" "$GC_MUT_TRACE_SUITES")"
+    fi
+    if [[ -z "${suite:-}" ]]; then
       echo ""
       return 0
     fi
     local trace_root="$GC_MAIN_REPO_ROOT/tests/traces/$suite"
     if [[ -d "$trace_root" ]]; then
+      # Some trace suites contain partially-written cases. Pick the first one
+      # that has the files the replay script expects.
+      local required=()
+      case "$suite" in
+        os_disable_interrupts) required=(in_regs.json) ;;
+        pad_clamp) required=(in_regs.json) ;;
+        pad_control_motor) required=(in_regs.json) ;;
+        pad_init) required=(in_regs.json) ;;
+        pad_read) required=(in_regs.json) ;;
+        pad_reset) required=(in_regs.json in_pad_type.bin) ;;
+        pad_set_spec) required=(in_regs.json) ;;
+        si_get_response) required=(in_regs.json) ;;
+        si_set_sampling_rate) required=(in_regs.json out_si_ctrl.bin) ;;
+        si_transfer) required=(in_regs.json) ;;
+        vi_set_post_retrace_callback) required=(in_regs.json) ;;
+      esac
+
       local hit
-      hit="$(find "$trace_root" -type d -name 'hit_*' 2>/dev/null | sort | head -n 1 || true)"
-      if [[ -n "${hit:-}" ]]; then
-        echo "$hit"
-        return 0
-      fi
+      while IFS= read -r hit; do
+        [[ -z "$hit" ]] && continue
+        local ok=1
+        local f
+        for f in "${required[@]+${required[@]}}"; do
+          if [[ ! -f "$hit/$f" ]]; then
+            ok=0
+            break
+          fi
+        done
+        if [[ $ok -eq 1 ]]; then
+          echo "$hit"
+          return 0
+        fi
+      done < <(find "$trace_root" -type d -name 'hit_*' 2>/dev/null | sort)
     fi
     echo ""
     return 0
@@ -109,6 +154,9 @@ pick_suite_arg() {
   if echo "$cmdline" | rg -q "run_host_scenario\\.sh"; then
     local suite
     suite="$(best_prefix_match "$base" "$GC_MUT_SDK_SUITES")"
+    if [[ -z "${suite:-}" ]]; then
+      suite="$(best_prefix_match "$base_norm" "$GC_MUT_SDK_SUITES")"
+    fi
     if [[ -z "${suite:-}" ]]; then
       echo ""
       return 0
