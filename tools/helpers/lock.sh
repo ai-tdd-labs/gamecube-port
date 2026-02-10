@@ -16,6 +16,12 @@ acquire_lock() {
   local name=${1:?lock name required}
   local timeout_s=${2:-300}
 
+  # Allow callers to hold a lock and spawn subcommands that would otherwise
+  # re-acquire the same lock (avoid deadlocks in mutation runners).
+  if [[ "${GC_LOCK_HELD:-0}" == "1" ]]; then
+    return 0
+  fi
+
   local repo_root
   repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
@@ -48,4 +54,3 @@ release_lock() {
     LOCK_DIR=""
   fi
 }
-
