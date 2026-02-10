@@ -1,0 +1,14 @@
+diff --git a/src/sdk_port/si/SI.c b/src/sdk_port/si/SI.c
+index e5c5d25..c8b8f0a 100644
+--- a/src/sdk_port/si/SI.c
++++ b/src/sdk_port/si/SI.c
+@@ -82,8 +82,8 @@ void SISetSamplingRate(u32 msec) {
+ 
+     // __VIRegs[54] & 1 selects 1x vs 2x multiplier (interlace state).
+     u16 vi54 = gc_sdk_state_load_u16be_or(GC_SDK_OFF_VI_REGS_U16BE + (54u * 2u), 0);
+-    u32 factor = (vi54 & 1u) ? 2u : 1u;
++    u32 factor = 1u; // MUTANT: ignore VI54 bit0 (always use 1x).
+ 
+     SISetXY(factor * (u32)xy[msec].line, xy[msec].count);
+     OSRestoreInterrupts(enabled);
+ }

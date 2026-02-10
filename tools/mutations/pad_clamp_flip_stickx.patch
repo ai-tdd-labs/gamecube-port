@@ -1,0 +1,14 @@
+diff --git a/src/sdk_port/pad/PAD.c b/src/sdk_port/pad/PAD.c
+index 3a6bb3e..4e62f3a 100644
+--- a/src/sdk_port/pad/PAD.c
++++ b/src/sdk_port/pad/PAD.c
+@@ -124,7 +124,11 @@
+ void PADClamp(PADStatus *status) {
+-    (void)status;
++    // MUTANT: corrupt a field that should remain stable.
++    if (status) {
++        status[0].stickX ^= 0x7F;
++    }
+     gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_CLAMP_CALLS,
+                              gc_sdk_state_load_u32_or(GC_SDK_OFF_PAD_CLAMP_CALLS, 0) + 1u);
+ }

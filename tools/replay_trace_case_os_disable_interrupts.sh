@@ -74,4 +74,6 @@ en_before = u32be(0x0C)
 en_after = u32be(0x10)
 disable_calls = u32be(0x14)
 print(f"case={p.name} marker=0x{marker:08X} expected_ret={expected} actual_ret={actual} enabled_before=0x{en_before:08X} enabled_after=0x{en_after:08X} disable_calls={disable_calls}")
+if marker != 0xDEADBEEF:
+    raise SystemExit(1)
 PY

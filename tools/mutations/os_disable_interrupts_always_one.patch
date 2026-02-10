@@ -1,0 +1,19 @@
+diff --git a/src/sdk_port/os/OSInterrupts.c b/src/sdk_port/os/OSInterrupts.c
+index 9efb1f1..f0e2c1a 100644
+--- a/src/sdk_port/os/OSInterrupts.c
++++ b/src/sdk_port/os/OSInterrupts.c
+@@ -13,6 +13,7 @@
+ static uint32_t gc_os_ints_enabled = 1; // default: enabled
+ 
+ int OSDisableInterrupts(void) {
++    // MUTANT: always claim interrupts were enabled.
+     uint32_t enabled = gc_sdk_state_load_u32_or(GC_SDK_OFF_OS_INTS_ENABLED, gc_os_ints_enabled);
+     uint32_t calls = gc_sdk_state_load_u32_or(GC_SDK_OFF_OS_DISABLE_CALLS, 0);
+     calls++;
+@@ -22,5 +23,5 @@ int OSDisableInterrupts(void) {
+ 
+     gc_os_ints_enabled = 0;
+     gc_sdk_state_store_u32_mirror(GC_SDK_OFF_OS_INTS_ENABLED, &gc_os_ints_enabled, 0);
+-    return (enabled != 0);
++    return 1;
+ }
