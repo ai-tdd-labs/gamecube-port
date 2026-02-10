@@ -169,6 +169,12 @@ enum {
   GC_SDK_OFF_PAD_RECALIBRATE_CALLS = 0x390,   // u32
   GC_SDK_OFF_PAD_RECALIBRATE_MASK = 0x394,    // u32
 
+  // PAD internal state (subset; enough to replay retail RVZ PADReset snapshots).
+  GC_SDK_OFF_PAD_RESETTING_BITS = 0x398,      // u32
+  GC_SDK_OFF_PAD_RESETTING_CHAN = 0x39C,      // u32 (0..32; 32 means none)
+  GC_SDK_OFF_PAD_RECALIBRATE_BITS = 0x3A0,    // u32
+  GC_SDK_OFF_PAD_RESET_CB_PTR = 0x3A4,        // u32 (function pointer)
+
   // PAD motor commands (minimal subset for HuPadInit)
-  GC_SDK_OFF_PAD_MOTOR_CMD_BASE = 0x3A0,    // 4 * u32
+  GC_SDK_OFF_PAD_MOTOR_CMD_BASE = 0x3B0,    // 4 * u32
 };

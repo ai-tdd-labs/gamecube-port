@@ -26,6 +26,9 @@ u16 gc_os_wireless_pad_fix_mode;
 u32 gc_pad_motor_cmd[4];
 
 static u32 RecalibrateBits;
+static u32 ResettingBits;
+static s32 ResettingChan = 32;
+static u32 ResetCallbackPtr;
 
 #define SI_MAX_CHAN 4
 #define PAD_CHAN0_BIT 0x80000000u
@@ -128,10 +131,34 @@ void PADClamp(PADStatus *status) {
 }
 
 BOOL PADReset(u32 mask) {
+    // Seed modeled internal globals from RAM-backed sdk_state so host trace-replay
+    // scenarios can exactly mirror retail pre-state.
+    ResettingBits = gc_sdk_state_load_u32_or(GC_SDK_OFF_PAD_RESETTING_BITS, ResettingBits);
+    ResettingChan = (s32)gc_sdk_state_load_u32_or(GC_SDK_OFF_PAD_RESETTING_CHAN, (u32)ResettingChan);
+    RecalibrateBits = gc_sdk_state_load_u32_or(GC_SDK_OFF_PAD_RECALIBRATE_BITS, RecalibrateBits);
+    ResetCallbackPtr = gc_sdk_state_load_u32_or(GC_SDK_OFF_PAD_RESET_CB_PTR, ResetCallbackPtr);
+
     gc_pad_reset_mask = mask;
     gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_RESET_MASK, mask);
     gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_RESET_CALLS,
                              gc_sdk_state_load_u32_or(GC_SDK_OFF_PAD_RESET_CALLS, 0) + 1u);
+
+    // Minimal modeled behavior for retail MP4 snapshots:
+    // The real SDK queues a reset by OR-ing ResettingBits, then immediately runs
+    // one DoReset() step which:
+    // - sets ResettingChan = cntlzw(ResettingBits)
+    // - clears the corresponding bit from ResettingBits
+    // We don't emulate the async SITransfer, only these observable globals.
+    ResettingBits |= mask;
+    ResettingChan = (ResettingBits == 0) ? 32 : (s32)__builtin_clz(ResettingBits);
+    if (ResettingChan != 32) {
+        u32 chanBit = PAD_CHAN0_BIT >> (u32)ResettingChan;
+        ResettingBits &= ~chanBit;
+    }
+    gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_RESETTING_BITS, ResettingBits);
+    gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_RESETTING_CHAN, (u32)ResettingChan);
+    gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_RECALIBRATE_BITS, RecalibrateBits);
+    gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_RESET_CB_PTR, ResetCallbackPtr);
     return TRUE;
 }
 
@@ -140,6 +167,7 @@ BOOL PADRecalibrate(u32 mask) {
     gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_RECALIBRATE_MASK, mask);
     gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_RECALIBRATE_CALLS,
                              gc_sdk_state_load_u32_or(GC_SDK_OFF_PAD_RECALIBRATE_CALLS, 0) + 1u);
+    gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_RECALIBRATE_BITS, RecalibrateBits);
     return TRUE;
 }
 

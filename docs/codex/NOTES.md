@@ -862,3 +862,30 @@ Notes:
   Evidence (expected): `tests/sdk/smoke/mp4_perf_chain_001/expected/mp4_perf_chain_001_mem1.bin`
   Evidence (actual): `tests/sdk/smoke/mp4_perf_chain_001/actual/mp4_perf_chain_001_mem1.bin`
   Evidence (diff): `tools/diff_bins_smoke.sh <expected> <actual>` (includes marker/snapshot + `sdk_state` page)
+
+## 2026-02-10: Retail RVZ trace replays (MP4 PADClamp + PADReset)
+
+### PADClamp
+- Retail entry PC: `0x800C3E0C` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Trace harvesting: `tools/trace_pc_entry_exit.py` (entry PC + LR breakpoint) dumping `status:@r3:0x30`
+- Host replay harness (committed):
+  - Scenario: `tests/sdk/pad/pad_clamp/host/pad_clamp_rvz_trace_replay_001_scenario.c`
+  - Replay: `tools/replay_trace_case_pad_clamp.sh <trace_case_dir>`
+- Result: 6 unique cases replay PASS (bit-exact vs retail `out_status.bin`).
+
+### PADReset
+- Retail entry PC: `0x800C4774` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Observed retail behavior for MP4 boot case (mask `0x70000000`):
+  - return `r3 = 1`
+  - `ResettingBits: 0x00000000 -> 0x30000000`
+  - `ResettingChan: 32 -> 1`
+- Trace harvesting output is local-only (gitignored) under `tests/traces/pad_reset/mp4_rvz_v2/`.
+- Host replay harness (committed):
+  - Scenario: `tests/sdk/pad/pad_reset/host/pad_reset_rvz_trace_replay_001_scenario.c`
+  - Replay: `tools/replay_trace_case_pad_reset.sh <trace_case_dir>`
+- Implementation note: `src/sdk_port/pad/PAD.c` models the immediate `DoReset()` step (OR bits, `cntlzw`, clear one bit).
+  - Seed + observable state stored in `sdk_state` offsets:
+    - `GC_SDK_OFF_PAD_RESETTING_BITS`
+    - `GC_SDK_OFF_PAD_RESETTING_CHAN`
+    - `GC_SDK_OFF_PAD_RECALIBRATE_BITS`
+    - `GC_SDK_OFF_PAD_RESET_CB_PTR`

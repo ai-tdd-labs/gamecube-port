@@ -210,6 +210,15 @@ python3 tools/trace_pc_entry_exit.py \
   --out-dir tests/traces/os_disable_interrupts/mp4_rvz
 ```
 
+After harvesting a trace case directory (`hit_.../`), prefer turning it into a deterministic
+host replay using a small scenario + replay wrapper script, so it becomes a one-command check:
+
+```bash
+tools/replay_trace_case_pad_read.sh  tests/traces/pad_read/mp4_rvz/<hit_dir>
+tools/replay_trace_case_pad_clamp.sh tests/traces/pad_clamp/mp4_rvz/<hit_dir>
+tools/replay_trace_case_pad_reset.sh tests/traces/pad_reset/mp4_rvz_v2/<hit_dir>
+```
+
 Notes:
 - Output under `tests/traces/**` is local-only (gitignored). Commit only *derived facts* and testcases.
 - If you see `Connection refused`, increase `--delay` (Dolphin needs time to open the GDB stub).
