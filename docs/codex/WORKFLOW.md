@@ -97,7 +97,11 @@ Important (HuPrc cooperative scheduler on host):
 ## MP4 Chain Tracking
 
 MP4 init chain status is tracked in:
-- `docs/sdk/mp4/MP4_chain_all.csv`
+- `docs/sdk/mp4/MP4_chain_all.csv` (local/private)
+
+Note:
+- By default we only keep `docs/codex/**` tracked/publishable. Any `docs/sdk/**` files are local-only.
+  If you want to publish chain tables, put a sanitized copy under `docs/codex/`.
 
 Update the `expected_bins/actual_bins/pass_bins/covered` columns by scanning MP4-only cases (`dol/mp4/*`) with:
 - `python3 tools/helpers/update_mp4_chain_csv.py docs/sdk/mp4/MP4_chain_all.csv`
