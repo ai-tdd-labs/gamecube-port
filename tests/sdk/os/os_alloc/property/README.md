@@ -32,6 +32,10 @@ run on 64-bit hosts without `-m32`.
 # Default: 200 runs, 200 steps each
 tools/run_property_test.sh
 
+# Run a focused operation suite (leaf DL ops / specific API ops)
+tools/run_property_test.sh --op=DLInsert --num-runs=500 -v
+tools/run_property_test.sh --op=OSFreeToHeap --num-runs=200 --steps=500 -v
+
 # More runs
 tools/run_property_test.sh --num-runs=2000 --steps=200 -v
 
@@ -51,3 +55,12 @@ GC_HOST_DEBUG=1 tools/run_property_test.sh --seed=42
 | `tools/run_property_test.sh` | Build + run script |
 | `src/sdk_port/os/OSAlloc.c` | Port under test |
 
+## Ops
+
+`--op=...` selects which suite to run:
+
+- `DLAddFront`, `DLExtract`, `DLInsert`, `DLLookup` (leaf list operations)
+- `OSAllocFromHeap` (alloc-only sequence + free-bytes parity)
+- `OSFreeToHeap` (free-heavy sequence + coalescing/free-bytes parity)
+- `OSDestroyHeap`, `OSAddToHeap` (API behavior checks)
+- `full` (alloc/free mix + free-bytes parity after each step)

@@ -8,11 +8,12 @@ set -euo pipefail
 # - Port:   sdk_port OSAlloc (emulated big-endian via gc_mem)
 #
 # Usage:
-#   tools/run_property_test.sh [--seed=N] [--num-runs=N] [--steps=N] [-v]
+#   tools/run_property_test.sh [--op=NAME] [--seed=N] [--num-runs=N] [--steps=N] [-v]
 #
 # Examples:
 #   tools/run_property_test.sh                         # default runs
 #   tools/run_property_test.sh --seed=12345            # single seed
+#   tools/run_property_test.sh --op=DLInsert -v        # focused suite
 #   tools/run_property_test.sh --num-runs=2000 -v      # verbose + more runs
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
