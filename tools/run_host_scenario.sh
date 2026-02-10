@@ -304,7 +304,7 @@ if [[ "${GC_SCENARIO_COMPARE:-0}" == "1" ]]; then
   # robust across formatting by scanning forward for the first `return "..."`.
   out_rel="$(
     awk '
-      /gc_scenario_out_path[[:space:]]*\\(/ { in_fn=1 }
+      /gc_scenario_out_path[[:space:]]*[(]/ { in_fn=1 }
       in_fn && /return[[:space:]]*"/ {
         match($0, /return[[:space:]]*"[^"]+"/)
         if (RSTART > 0) {
