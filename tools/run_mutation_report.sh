@@ -87,33 +87,34 @@ pick_suite_arg() {
 
 run_one() {
   local script=$1
-  local base cmdline arg start end rc status note secs
+  local base cmdline arg start end rc status note secs tmp
   base="$(basename "$script" .sh)"
   cmdline="$(sed -n '1,120p' "$script" 2>/dev/null || true)"
   arg="$(pick_suite_arg "$base" "$cmdline")"
 
   start="$(date +%s)"
+  tmp="$(mktemp -t gc-mut.XXXXXX)"
   set +e
   if command -v gtimeout >/dev/null 2>&1; then
     if [[ -n "${arg:-}" ]]; then
-      gtimeout "${timeout_s}" bash "$script" "$arg" >/dev/null 2>&1
+      gtimeout "${timeout_s}" bash "$script" "$arg" >/dev/null 2>"$tmp"
     else
-      gtimeout "${timeout_s}" bash "$script" >/dev/null 2>&1
+      gtimeout "${timeout_s}" bash "$script" >/dev/null 2>"$tmp"
     fi
     rc=$?
   elif command -v timeout >/dev/null 2>&1; then
     if [[ -n "${arg:-}" ]]; then
-      timeout "${timeout_s}" bash "$script" "$arg" >/dev/null 2>&1
+      timeout "${timeout_s}" bash "$script" "$arg" >/dev/null 2>"$tmp"
     else
-      timeout "${timeout_s}" bash "$script" >/dev/null 2>&1
+      timeout "${timeout_s}" bash "$script" >/dev/null 2>"$tmp"
     fi
     rc=$?
   else
     # macOS default: no timeout.
     if [[ -n "${arg:-}" ]]; then
-      bash "$script" "$arg" >/dev/null 2>&1
+      bash "$script" "$arg" >/dev/null 2>"$tmp"
     else
-      bash "$script" >/dev/null 2>&1
+      bash "$script" >/dev/null 2>"$tmp"
     fi
     rc=$?
   fi
@@ -121,7 +122,12 @@ run_one() {
   end="$(date +%s)"
   secs=$((end - start))
 
-  note=""
+  note="$(rg -n '^fatal:' "$tmp" 2>/dev/null | head -n 1 | sed 's/^.*fatal: //' || true)"
+  if [[ -z "${note:-}" ]]; then
+    note="$(tail -n 1 "$tmp" 2>/dev/null || true)"
+  fi
+  rm -f "$tmp" >/dev/null 2>&1 || true
+
   if [[ $rc -eq 124 ]]; then
     status="TIMEOUT"
     timed=$((timed + 1))
@@ -162,4 +168,3 @@ echo "[mut-report] total=$total killed=$killed survived=$survived infra=$infra t
 if [[ $survived -ne 0 ]]; then
   exit 1
 fi
-
