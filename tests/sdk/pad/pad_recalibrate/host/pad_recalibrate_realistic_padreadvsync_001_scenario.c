@@ -17,11 +17,13 @@ void gc_scenario_run(GcRam *ram) {
 
     uint32_t calls = gc_sdk_state_load_u32be(GC_SDK_OFF_PAD_RECALIBRATE_CALLS);
     uint32_t got_mask = gc_sdk_state_load_u32be(GC_SDK_OFF_PAD_RECALIBRATE_MASK);
+    uint32_t bits = gc_sdk_state_load_u32be(GC_SDK_OFF_PAD_RECALIBRATE_BITS);
 
-    uint8_t *p = gc_ram_ptr(ram, 0x80300000u, 0x10);
+    uint8_t *p = gc_ram_ptr(ram, 0x80300000u, 0x14);
     if (!p) die("gc_ram_ptr failed");
     wr32be(p + 0x00, 0xDEADBEEFu);
     wr32be(p + 0x04, ok);
     wr32be(p + 0x08, calls);
     wr32be(p + 0x0C, got_mask);
+    wr32be(p + 0x10, bits);
 }
