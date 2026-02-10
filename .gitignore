@@ -17,6 +17,12 @@ docs/*
 # Optional vendored game workloads (local convenience only)
 src/game_workload/*/vendor/
 
+# Local decomp trees / symlinks (never publish)
+decomp_*
+decomp_*/
+**/decomp_*
+**/decomp_*/
+
 # Build artifacts
 **/*.o
 **/*.obj
