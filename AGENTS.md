@@ -32,6 +32,11 @@ Template for an SDK function chain (keep these as separate bd issues, linked by 
 6) Run host scenario -> `actual.bin`
 7) Diff bit-exact + write notes
 
+Mutation check rule (quality gate):
+- After adding or modifying a trace replay suite, add at least one mutation under `tools/mutations/`
+  and run it. The mutation must cause the suite to fail (prove the tests are non-trivial).
+- Use `tools/run_mutation_check.sh` (patch-based mutants; do not add `#ifdef` mutants to code).
+
 =====================
 GOAL
 =====================

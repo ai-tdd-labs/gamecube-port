@@ -79,6 +79,21 @@ These traces are local-only (`tests/traces/**` is gitignored). We then:
 - derive invariants (e.g. MSR bits and return values for `OSDisableInterrupts`)
 - and/or convert representative cases into deterministic PPC-vs-host unit tests
 
+## Mutation Checks (Prevent "Weak Green" Tests)
+
+When a test suite passes, it might still be missing assertions. We run **mutation checks**
+to ensure tests fail when we introduce a small intentional bug.
+
+- Mutations live under `tools/mutations/` as patch files.
+- Runner: `tools/run_mutation_check.sh` applies the patch, runs one or more commands that
+  must FAIL, and always reverts the patch.
+- Safety: the runner refuses to start if your git worktree is dirty, and cleans up via `trap`.
+
+Example (SITransfer mutant, must FAIL under the mutant):
+```bash
+tools/mutations/si_transfer_fire_plus1.sh tests/traces/si_transfer/mp4_rvz_v4/hit_000002_pc_800D9CC4_lr_800DA26C
+```
+
 ## Quickstart (Run One Test)
 
 Prereqs:

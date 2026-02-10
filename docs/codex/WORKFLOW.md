@@ -158,6 +158,27 @@ Definition: a "1-button loop" is **one command** that:
 2) runs Dolphin and dumps `expected/*.bin`
 3) runs the host scenario and dumps `actual/*.bin`
 4) diffs and reports PASS/FAIL (first mismatch offset)
+
+## Mutation Checks (Guard Against Weak Tests)
+
+Problem: a test suite can be "green" while still missing important assertions.
+
+Solution: run a **mutation check** that introduces a small bug (a "mutant") and
+verify that at least one test **fails**. If the mutant survives (tests still pass),
+the suite is too weak and must be strengthened.
+
+Implementation in this repo:
+- Mutants live under `tools/mutations/` as patch files (no `#ifdef` in production code).
+- Runner: `tools/run_mutation_check.sh <patch> -- <cmd> [:: <cmd2> ...]`
+  - Requires a **clean** worktree before starting.
+  - Applies the patch, runs commands that must FAIL, then always reverts the patch.
+  - During the mutation run it sets `GC_ALLOW_DIRTY=1` so replay scripts can run while
+    the patch is applied.
+
+Example:
+```bash
+tools/mutations/si_transfer_fire_plus1.sh tests/traces/si_transfer/mp4_rvz_v4/hit_000002_pc_800D9CC4_lr_800DA26C
+```
 5) optionally appends facts/evidence links to `docs/codex/NOTES.md`
 6) optionally commits (when a task is complete)
 
