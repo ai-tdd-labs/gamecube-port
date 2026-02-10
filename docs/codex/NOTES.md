@@ -914,6 +914,20 @@ Notes:
   - `MakeStatus` @ `0x801D3928` points to `SPEC2_MakeStatus` (`0x800C5320`) for `PAD_SPEC_5` (MP4 boot case).
 - Result: replay PASS for the captured case (bit-exact vs retail global dumps).
 
+
+## 2026-02-10: Retail RVZ trace replay (MP4 OSDisableInterrupts)
+
+### OSDisableInterrupts
+- Retail entry PC: `0x800B723C` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Trace dir (local-only, gitignored): `tests/traces/os_disable_interrupts/mp4_rvz_v1/` (10 unique cases)
+- Replay harness (committed):
+  - Scenario: `tests/sdk/os/os_disable_interrupts/host/os_disable_interrupts_rvz_trace_replay_001_scenario.c`
+  - Replay: `tools/replay_trace_case_os_disable_interrupts.sh <trace_case_dir>`
+  - 1-button: `tools/harvest_and_replay_os_disable_interrupts.sh`
+- Observed in these MP4 boot traces: return value = 0 (interrupts already disabled at entry in all collected cases).
+- Result: replay PASS for all 10 unique cases (bit-exact).
+
+
 ## 2026-02-10: Retail RVZ trace replay (MP4 SITransfer)
 
 ### SITransfer
