@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1112,7 +1112,7 @@
+ u32 gc_gx_poke_zmode_update_enable;
+ 
+ void GXSetDstAlpha(u8 enable, u8 alpha) {
+-    gc_gx_dst_alpha_enable = (u32)enable;
++    gc_gx_dst_alpha_enable = (u32)alpha; // MUTANT
+     gc_gx_dst_alpha = (u32)alpha;
+ }
+ 

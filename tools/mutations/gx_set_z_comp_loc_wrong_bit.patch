@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2047,7 +2047,7 @@
+ 
+ void GXSetZCompLoc(u8 before_tex) {
+     // GXPixel.c: peCtrl bit 6.
+-    gc_gx_pe_ctrl = set_field(gc_gx_pe_ctrl, 1, 6, (u32)(before_tex != 0));
++    gc_gx_pe_ctrl = set_field(gc_gx_pe_ctrl, 1, 7, (u32)(before_tex != 0)); // MUTANT
+     gx_write_ras_reg(gc_gx_pe_ctrl);
+     gc_gx_bp_sent_not = 0;
+ }

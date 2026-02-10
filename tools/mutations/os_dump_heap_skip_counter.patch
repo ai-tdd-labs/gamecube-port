@@ -1,0 +1,9 @@
+diff --git a/src/sdk_port/os/OSAlloc.c b/src/sdk_port/os/OSAlloc.c
+--- a/src/sdk_port/os/OSAlloc.c
++++ b/src/sdk_port/os/OSAlloc.c
+@@ -255,3 +255,4 @@
+ void OSDumpHeap(void) {
+-    gc_os_dump_heap_calls++;
++    // MUTANT: skip incrementing call counter
++    (void)0;
+ }

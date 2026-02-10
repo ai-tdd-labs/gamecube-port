@@ -1,0 +1,10 @@
+diff --git a/src/sdk_port/vi/VI.c b/src/sdk_port/vi/VI.c
+--- a/src/sdk_port/vi/VI.c
++++ b/src/sdk_port/vi/VI.c
+@@ -29,2 +29,5 @@
+-void VISetNextFrameBuffer(void *fb) { (void)fb; }
++void VISetNextFrameBuffer(void *fb) {
++    (void)fb;
++    gc_vi_flush_calls++; // MUTANT: spurious side-effect corrupts flush counter
++}
+

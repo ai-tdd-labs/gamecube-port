@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1625,7 +1625,7 @@
+ void GXSetCurrentMtx(u32 id) {
+     // Mirror GXTransform.c:GXSetCurrentMtx + __GXSetMatrixIndex(GX_VA_PNMTXIDX).
+     // We model only the matIdxA update and the XF reg write (24).
+-    gc_gx_mat_idx_a = set_field(gc_gx_mat_idx_a, 6, 0, id);
++    gc_gx_mat_idx_a = set_field(gc_gx_mat_idx_a, 5, 0, id); // MUTANT
+     gx_write_xf_reg(24, gc_gx_mat_idx_a);
+     gc_gx_bp_sent_not = 1;
+ }

@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1117,7 +1117,7 @@
+ }
+ 
+ void GXSetFieldMask(u8 even, u8 odd) {
+-    gc_gx_field_mask_even = (u32)even;
++    gc_gx_field_mask_even = (u32)odd; // MUTANT
+     gc_gx_field_mask_odd = (u32)odd;
+ }
+ 

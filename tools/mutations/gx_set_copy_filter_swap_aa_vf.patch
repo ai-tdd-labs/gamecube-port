@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1055,7 +1055,7 @@
+ }
+ 
+ void GXSetCopyFilter(u8 aa, const u8 sample_pattern[12][2], u8 vf, const u8 vfilter[7]) {
+-    gc_gx_copy_filter_aa = (u32)aa;
++    gc_gx_copy_filter_aa = (u32)vf; // MUTANT
+     gc_gx_copy_filter_vf = (u32)vf;
+     gc_gx_copy_filter_sample_hash = hash_bytes(sample_pattern, 12u * 2u);
+     gc_gx_copy_filter_vfilter_hash = hash_bytes(vfilter, 7u);

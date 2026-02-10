@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -800,7 +800,7 @@
+ 
+ void GXSetNumTexGens(u8 nTexGens) {
+     // GXAttr.c: genMode[0..3] = nTexGens; dirtyState |= 4
+-    gc_gx_gen_mode = set_field(gc_gx_gen_mode, 4, 0, (u32)nTexGens);
++    gc_gx_gen_mode = set_field(gc_gx_gen_mode, 3, 0, (u32)nTexGens); // MUTANT
+     gc_gx_dirty_state |= 4u;
+ }
+ 

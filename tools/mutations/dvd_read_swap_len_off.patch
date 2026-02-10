@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/dvd/DVD.c b/src/sdk_port/dvd/DVD.c
+--- a/src/sdk_port/dvd/DVD.c
++++ b/src/sdk_port/dvd/DVD.c
+@@ -118,6 +118,6 @@
+     gc_dvd_read_calls = gc_sdk_state_load_u32_or(GC_SDK_OFF_DVD_READ_CALLS, gc_dvd_read_calls) + 1u;
+     gc_sdk_state_store_u32be(GC_SDK_OFF_DVD_READ_CALLS, gc_dvd_read_calls);
+-    gc_dvd_last_read_len = (u32)len;
+-    gc_dvd_last_read_off = (u32)offset;
++    gc_dvd_last_read_len = (u32)offset; // MUTANT: swapped len and offset
++    gc_dvd_last_read_off = (u32)len;
+     gc_sdk_state_store_u32be(GC_SDK_OFF_DVD_LAST_READ_LEN, gc_dvd_last_read_len);
+     gc_sdk_state_store_u32be(GC_SDK_OFF_DVD_LAST_READ_OFF, gc_dvd_last_read_off);

@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1980,7 +1980,7 @@
+ 
+     switch (mode) {
+     case 0: // GX_MODULATE
+-        GXSetTevColorIn(id, 0u, 8u, carg, 0u);
++        GXSetTevColorIn(id, 0u, 9u, carg, 0u); // MUTANT
+         GXSetTevAlphaIn(id, 0u, 4u, aarg, 0u);
+         break;
+     case 1: // GX_DECAL

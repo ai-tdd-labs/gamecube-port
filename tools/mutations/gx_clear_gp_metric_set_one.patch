@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2065,7 +2065,7 @@
+ }
+ 
+ void GXClearGPMetric(void) {
+-    gc_gx_gp_perf0 = 0;
++    gc_gx_gp_perf0 = 1; // MUTANT
+     gc_gx_gp_perf1 = 0;
+ }
+ 

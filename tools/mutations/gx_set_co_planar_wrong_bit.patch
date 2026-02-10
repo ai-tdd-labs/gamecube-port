@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -927,7 +927,7 @@
+ 
+ void GXSetCoPlanar(u32 enable) {
+     // GXGeometry.c: genMode[19] = enable; writes RAS regs
+-    gc_gx_gen_mode = set_field(gc_gx_gen_mode, 1, 19, (u32)(enable != 0));
++    gc_gx_gen_mode = set_field(gc_gx_gen_mode, 1, 18, (u32)(enable != 0)); // MUTANT
+ }
+ 
+ void GXSetCullMode(u32 mode) {

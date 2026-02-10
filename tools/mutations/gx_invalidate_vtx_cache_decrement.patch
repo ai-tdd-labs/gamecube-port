@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1178,7 +1178,7 @@
+ }
+ 
+ void GXInvalidateVtxCache(void) {
+-    gc_gx_invalidate_vtx_cache_calls++;
++    gc_gx_invalidate_vtx_cache_calls--; // MUTANT
+ }
+ 
+ void GXInvalidateTexAll(void) {

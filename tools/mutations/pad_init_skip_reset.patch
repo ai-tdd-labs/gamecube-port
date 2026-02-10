@@ -1,0 +1,10 @@
+diff --git a/src/sdk_port/pad/PAD.c b/src/sdk_port/pad/PAD.c
+--- a/src/sdk_port/pad/PAD.c
++++ b/src/sdk_port/pad/PAD.c
+@@ -204,5 +204,5 @@
+     PAD_SIRefreshSamplingRate();
+     OSRegisterResetFunction(0);
+
+-    return PADResetInternal(PAD_CHAN0_BIT | PAD_CHAN1_BIT | PAD_CHAN2_BIT | PAD_CHAN3_BIT);
++    return TRUE; // MUTANT: skip calling PADResetInternal during init
+ }

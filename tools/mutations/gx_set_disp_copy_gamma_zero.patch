@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1072,7 +1072,7 @@
+ }
+ 
+ void GXSetDispCopyGamma(u32 gamma) {
+-    gc_gx_copy_gamma = gamma;
++    gc_gx_copy_gamma = 0; // MUTANT
+ }
+ 
+ // ---- GXInit tail setters (used by MP4 init chain after GXSetDither) ----

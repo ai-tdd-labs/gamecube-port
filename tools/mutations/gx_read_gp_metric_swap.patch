@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2070,7 +2070,7 @@
+ }
+ 
+ void GXReadGPMetric(u32 *met0, u32 *met1) {
+-    if (met0) *met0 = gc_gx_gp_perf0;
++    if (met0) *met0 = gc_gx_gp_perf1; // MUTANT
+     if (met1) *met1 = gc_gx_gp_perf1;
+ }
+ 

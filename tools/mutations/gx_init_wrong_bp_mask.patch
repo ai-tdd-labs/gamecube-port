@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -557,7 +557,7 @@
+     gc_gx_in_disp_list = 0;
+     gc_gx_dl_save_context = 1;
+     gc_gx_gen_mode = 0;
+-    gc_gx_bp_mask = 0xFF;
++    gc_gx_bp_mask = 0xFE; // MUTANT
+ 
+     // Keep deterministic defaults for higher-level GX state tracked by our tests.
+     gc_gx_bp_sent_not = 0;

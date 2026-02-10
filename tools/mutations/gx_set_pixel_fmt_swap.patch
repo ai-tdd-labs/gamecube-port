@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1062,7 +1062,7 @@
+ }
+ 
+ void GXSetPixelFmt(u32 pix_fmt, u32 z_fmt) {
+-    gc_gx_pixel_fmt = pix_fmt;
++    gc_gx_pixel_fmt = z_fmt; // MUTANT
+     gc_gx_z_fmt = z_fmt;
+ }
+ 

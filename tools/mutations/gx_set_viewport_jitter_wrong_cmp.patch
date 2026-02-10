@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -768,7 +768,7 @@
+ 
+ void GXSetViewportJitter(float left, float top, float wd, float ht, float nearz, float farz, u32 field) {
+     // We only model the software-visible state that our tests assert.
+-    if (field == 0) top -= 0.5f;
++    if (field == 1) top -= 0.5f; // MUTANT
+     gc_gx_vp_left = left;
+     gc_gx_vp_top = top;
+     gc_gx_vp_wd = wd;

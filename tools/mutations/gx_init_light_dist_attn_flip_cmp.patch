@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -368,7 +368,7 @@
+     f32 k0, k1, k2;
+     GXLightObj *obj = lt_obj;
+ 
+-    if (ref_dist < 0.0f) {
++    if (ref_dist > 0.0f) { // MUTANT
+         dist_func = GX_DA_OFF;
+     }
+     if (ref_br <= 0.0f || ref_br >= 1.0f) {

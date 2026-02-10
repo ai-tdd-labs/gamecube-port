@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1158,7 +1158,7 @@
+ }
+ 
+ void GXPokeAlphaMode(u32 func, u8 threshold) {
+-    gc_gx_poke_alpha_mode_func = func;
++    gc_gx_poke_alpha_mode_func = (u32)threshold; // MUTANT
+     gc_gx_poke_alpha_mode_thresh = (u32)threshold;
+ }
+ 

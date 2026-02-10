@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -696,7 +696,7 @@
+ void GXLoadNrmMtxImm(float mtx[3][4], u32 id) {
+     // Mirror decomp_mario_party_4/src/dolphin/gx/GXTransform.c:GXLoadNrmMtxImm observable FIFO writes.
+     // Writes a 3x3 matrix derived from the top-left 3x3 of a 3x4 input.
+-    const u32 addr = id * 3u + 0x400u;
++    const u32 addr = id * 4u + 0x400u; // MUTANT
+     const u32 reg = addr | 0x80000u;
+ 
+     gc_gx_fifo_u8_last = 0x10u;

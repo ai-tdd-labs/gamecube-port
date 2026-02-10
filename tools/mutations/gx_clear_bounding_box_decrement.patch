@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1135,7 +1135,7 @@
+ }
+ 
+ void GXClearBoundingBox(void) {
+-    gc_gx_clear_bounding_box_calls++;
++    gc_gx_clear_bounding_box_calls--; // MUTANT
+ }
+ 
+ void GXPokeColorUpdate(u8 enable) {

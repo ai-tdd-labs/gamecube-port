@@ -1,0 +1,14 @@
+diff --git a/src/sdk_port/os/OSArena.c b/src/sdk_port/os/OSArena.c
+--- a/src/sdk_port/os/OSArena.c
++++ b/src/sdk_port/os/OSArena.c
+@@ -35,8 +35,9 @@
+ void OSSetArenaHi(void *addr) {
+     uint32_t v = (uint32_t)(uintptr_t)addr;
+     if (!gc_sdk_state_ptr(GC_SDK_OFF_OS_ARENA_HI, 4)) {
+         g_os_arena_hi_fallback = addr;
+         return;
+     }
+-    gc_sdk_state_store_u32be(GC_SDK_OFF_OS_ARENA_HI, v);
++    // MUTANT: skip the actual store to RAM-backed state
++    (void)v;
+ }

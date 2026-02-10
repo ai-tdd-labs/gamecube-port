@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1634,7 +1634,7 @@
+     // Mirror GXMisc.c:GXSetDrawDone observable write.
+     // Real SDK also touches interrupt state + DrawDone flag; we keep it deterministic.
+     gc_gx_set_draw_done_calls++;
+-    gx_write_ras_reg(0x45000002u);
++    gx_write_ras_reg(0x45000001u); // MUTANT
+     gc_gx_draw_done_flag = 0;
+ }
+ 

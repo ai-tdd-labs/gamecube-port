@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2276,7 +2276,7 @@
+     // Mirror SDK: attr==NBT aliases to NRM.
+     if (attr == GX_VA_NBT) attr = GX_VA_NRM;
+     if (attr < GX_VA_POS) return;
+-    u32 cp_attr = attr - GX_VA_POS;
++    u32 cp_attr = attr; // MUTANT
+     if (cp_attr >= 32) return;
+     u32 phy_addr = (u32)(uintptr_t)base_ptr & 0x3FFFFFFFu;
+     gc_gx_array_base[cp_attr] = phy_addr;

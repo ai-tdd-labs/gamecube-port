@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1139,7 +1139,7 @@
+ }
+ 
+ void GXPokeColorUpdate(u8 enable) {
+-    gc_gx_poke_color_update_enable = (u32)enable;
++    gc_gx_poke_color_update_enable = (u32)!enable; // MUTANT
+ }
+ 
+ void GXPokeAlphaUpdate(u8 enable) {

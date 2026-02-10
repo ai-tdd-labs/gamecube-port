@@ -1,0 +1,11 @@
+diff --git a/src/sdk_port/os/OSRtc.c b/src/sdk_port/os/OSRtc.c
+--- a/src/sdk_port/os/OSRtc.c
++++ b/src/sdk_port/os/OSRtc.c
+@@ -35,5 +35,6 @@
+
+     sram = __OSLockSramHACK();
+-    mode = (sram->flags & 0x80u) >> 7;
++    // MUTANT: wrong shift amount (6 instead of 7) produces 0 or 2
++    mode = (sram->flags & 0x80u) >> 6;
+     __OSUnlockSram(FALSE);
+     return mode;

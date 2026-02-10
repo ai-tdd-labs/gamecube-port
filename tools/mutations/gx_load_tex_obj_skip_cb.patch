@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1443,7 +1443,7 @@
+ void GXLoadTexObj(GXTexObj *obj, u32 id) {
+     // Mirror GXTexture.c:GXLoadTexObj: select region via callback then preload.
+     if (!gc_gx_tex_region_cb) gc_gx_tex_region_cb = gc__gx_default_tex_region_cb;
+-    GXTexRegion *r = gc_gx_tex_region_cb(obj, id);
++    GXTexRegion *r = &gc_gx_tex_regions[0]; // MUTANT
+     GXLoadTexObjPreLoaded(obj, r, id);
+ }
+ 

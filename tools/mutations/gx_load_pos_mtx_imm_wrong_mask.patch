@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -675,7 +675,7 @@
+ void GXLoadPosMtxImm(float mtx[3][4], u32 id) {
+     // Mirror decomp_mario_party_4/src/dolphin/gx/GXTransform.c:GXLoadPosMtxImm observable FIFO writes.
+     const u32 addr = id * 4u;
+-    const u32 reg = addr | 0xB0000u;
++    const u32 reg = addr | 0xC0000u; // MUTANT
+ 
+     gc_gx_fifo_u8_last = 0x10u;
+     gc_gx_fifo_u32_last = reg;

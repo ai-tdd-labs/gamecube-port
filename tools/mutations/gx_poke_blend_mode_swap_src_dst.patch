@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1152,7 +1152,7 @@
+ 
+ void GXPokeBlendMode(u32 type, u32 src_factor, u32 dst_factor, u32 op) {
+     gc_gx_poke_blend_type = type;
+-    gc_gx_poke_blend_src = src_factor;
++    gc_gx_poke_blend_src = dst_factor; // MUTANT
+     gc_gx_poke_blend_dst = dst_factor;
+     gc_gx_poke_blend_op = op;
+ }

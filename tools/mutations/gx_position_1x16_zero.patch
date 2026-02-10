@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2296,7 +2296,7 @@
+ }
+ 
+ void GXPosition1x16(u16 x) {
+-    gc_gx_pos1x16_last = (u32)x;
++    gc_gx_pos1x16_last = 0; // MUTANT
+ }
+ 
+ void GXPosition2s16(s16 x, s16 y) {

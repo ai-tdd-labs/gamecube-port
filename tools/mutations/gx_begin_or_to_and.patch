@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -838,7 +838,7 @@
+ 
+ void GXBegin(u8 type, u8 vtxfmt, u16 nverts) {
+     // Mirror decomp_mario_party_4/src/dolphin/gx/GXGeometry.c:GXBegin observable FIFO header writes.
+-    gc_gx_fifo_begin_u8 = (u32)(vtxfmt | type);
++    gc_gx_fifo_begin_u8 = (u32)(vtxfmt & type); // MUTANT
+     gc_gx_fifo_begin_u16 = (u32)nverts;
+ }
+ 

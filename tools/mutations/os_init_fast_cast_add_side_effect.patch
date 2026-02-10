@@ -1,0 +1,14 @@
+diff --git a/src/sdk_port/os/OSFastCast.c b/src/sdk_port/os/OSFastCast.c
+index 1234567..abcdefg 100644
+--- a/src/sdk_port/os/OSFastCast.c
++++ b/src/sdk_port/os/OSFastCast.c
+@@ -4,4 +4,8 @@
+ // MP4 calls OSInitFastCast() once during init. The real SDK implementation is a
+ // Metrowerks-only inline that programs GQR2-5 for paired-single quantization.
+ // Our host tests only require that the symbol exists and is safe to call.
+-void OSInitFastCast(void) {}
++// MUTANT: write garbage to a global to cause observable side effect
++uint32_t gc_os_fast_cast_init_calls;
++void OSInitFastCast(void) {
++    gc_os_fast_cast_init_calls = 0xDEADBEEF;
++}
