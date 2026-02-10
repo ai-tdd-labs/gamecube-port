@@ -177,4 +177,9 @@ enum {
 
   // PAD motor commands (minimal subset for HuPadInit)
   GC_SDK_OFF_PAD_MOTOR_CMD_BASE = 0x3B0,    // 4 * u32
+
+  // SI trace-replay seeds (used by SIGetResponse retail replay).
+  // These model the minimal MMIO-derived inputs needed to reproduce SIGetResponseRaw().
+  GC_SDK_OFF_SI_STATUS_BASE = 0x3C0,        // 4 * u32 (chan 0..3)
+  GC_SDK_OFF_SI_RESP_WORDS_BASE = 0x3D0,    // 4 * 2 * u32 (chan-major, word0/word1)
 };

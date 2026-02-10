@@ -222,6 +222,10 @@ Use `tools/trace_pc_entry_exit.py` to:
 4) dump a small RAM window at entry and exit (default: `sdk_state`)
 5) dedupe by input snapshot hash and write an index (`trace.jsonl`)
 
+Trace format note:
+- `in_regs.json` and `out_regs.json` store register files under the `"args"` key.
+- For most functions, the return value is `out_regs.json: args.r3` (because at return PC, r3 holds the return).
+
 Example (MP4 retail, OSDisableInterrupts):
 ```
 python3 tools/trace_pc_entry_exit.py \

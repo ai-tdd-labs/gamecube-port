@@ -905,6 +905,32 @@ Notes:
   - When an immediate transfer fails, it queues `Packet[chan]` fields and sets `packet->fire = XferTime[chan] + delay`.
   - When `now < fire`, it also arms `Alarm[chan]` (handler pointer + fire time).
 
+## 2026-02-10: Retail RVZ trace replay (MP4 SIGetResponse)
+
+### SIGetResponse
+- Retail entry PC: `0x800D9B74` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Decomp reference: `external/mp4-decomp/src/dolphin/si/SIBios.c` (`SIGetResponseRaw` + `SIGetResponse`)
+- Trace dir (local-only, gitignored): `tests/traces/si_get_response/mp4_rvz_v1/`
+- Replay harness (committed):
+  - Scenario: `tests/sdk/si/si_get_response/host/si_get_response_rvz_trace_replay_001_scenario.c`
+  - Replay: `tools/replay_trace_case_si_get_response.sh <trace_case_dir>`
+- Result: 10 replay cases PASS (bit-exact).
+
+Observed trace format note:
+- `tools/trace_pc_entry_exit.py` writes `out_regs.json` with the post-call register file under `"args"` (not `"rets"`).
+  - For this function, the return value is `out_regs.json: args.r3`.
+
+Confirmed behaviors (as observed in traces + decomp):
+- `SIGetResponse()` always calls `SIGetResponseRaw(chan)` under interrupts-disabled critical section.
+- When the return is `TRUE`, it copies two `u32` words into `data` and clears `InputBufferValid[chan]` back to `FALSE`.
+- In the observed MP4 init case `hit_000001_*`, the caller's `data` buffer changes from `00000000 801A6F98` to `00808080 80800000`.
+
+Implementation note (sdk_port model):
+- Host trace replay cannot read SI MMIO (`__SIRegs`). For deterministic replay we seed:
+  - per-channel status (`SI_ERROR_RDST` bit)
+  - per-channel response words
+- Seed entrypoints: `gc_si_set_status_seed()` + `gc_si_set_resp_words_seed()` in `src/sdk_port/si/SI.c`.
+
 ## 2026-02-10: MP4 decomp scan: unique Nintendo SDK functions used by MP4 (game sources)
 
 Goal: estimate how much of the Nintendo SDK surface MP4 needs by scanning the MP4 decomp *game* sources
