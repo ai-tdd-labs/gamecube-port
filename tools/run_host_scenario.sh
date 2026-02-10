@@ -300,8 +300,24 @@ fi
 # a predicate that fails when output changes. We derive the output/expected paths
 # from the scenario source.
 if [[ "${GC_SCENARIO_COMPARE:-0}" == "1" ]]; then
-  # Extract the literal string returned by gc_scenario_out_path().
-  out_rel="$(sed -n 's/.*gc_scenario_out_path[[:space:]]*(.*)[[:space:]]*{[[:space:]]*return[[:space:]]*\"\\([^\"]*\\)\".*/\\1/p' "$SCENARIO_SRC" | head -n 1 || true)"
+  # Extract the literal string returned by gc_scenario_out_path(). Keep this
+  # robust across formatting by scanning forward for the first `return "..."`.
+  out_rel="$(
+    awk '
+      /gc_scenario_out_path[[:space:]]*\\(/ { in_fn=1 }
+      in_fn && /return[[:space:]]*"/ {
+        match($0, /return[[:space:]]*"[^"]+"/)
+        if (RSTART > 0) {
+          s=substr($0, RSTART, RLENGTH)
+          sub(/^return[[:space:]]*"/, "", s)
+          sub(/"$/, "", s)
+          print s
+          exit 0
+        }
+      }
+      in_fn && /}/ { in_fn=0 }
+    ' "$SCENARIO_SRC" 2>/dev/null | head -n 1
+  )"
   if [[ -z "${out_rel:-}" ]]; then
     echo "fatal: could not infer gc_scenario_out_path() from: $SCENARIO_SRC" >&2
     exit 2

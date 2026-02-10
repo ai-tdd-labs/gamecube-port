@@ -51,10 +51,47 @@ pick_suite_arg() {
   local base="$1"
   local cmdline="$2"
 
+  # Build suite lists once and reuse (bash 3.2 compatible).
+  if [[ -z "${GC_MUT_SDK_SUITES_LOADED:-}" ]]; then
+    GC_MUT_SDK_SUITES_LOADED=1
+    export GC_MUT_SDK_SUITES_LOADED
+    GC_MUT_SDK_SUITES="$(
+      find "$repo_root/tests/sdk" -mindepth 2 -maxdepth 2 -type d 2>/dev/null | awk -F/ '{print $NF}' | sort -u
+    )"
+    export GC_MUT_SDK_SUITES
+    GC_MUT_TRACE_SUITES="$(
+      find "$GC_MAIN_REPO_ROOT/tests/traces" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | awk -F/ '{print $NF}' | sort -u
+    )"
+    export GC_MUT_TRACE_SUITES
+  fi
+
+  best_prefix_match() {
+    local b="$1"
+    local list="$2"
+    local best=""
+    local s
+    while IFS= read -r s; do
+      [[ -z "$s" ]] && continue
+      case "$b" in
+        "$s"|"$s"_*) # exact or prefix+underscore
+          if [[ ${#s} -gt ${#best} ]]; then
+            best="$s"
+          fi
+          ;;
+      esac
+    done <<<"$list"
+    echo "$best"
+  }
+
   # If this mutant replays a retail trace, pick the first available trace case.
-  if echo "$cmdline" | rg -q "replay_trace_case_"; then
+  # Heuristic: the script mentions replay_trace_case_* OR its usage expects trace_case_dir.
+  if echo "$cmdline" | rg -q "replay_trace_case_" || echo "$cmdline" | rg -q "trace_case_dir"; then
     local suite
-    suite="$(echo "$base" | sed -E 's/_(always_one|skip_.*|swap_.*|wrong_.*|return_.*|off_by_one|zero|negate|decrement|corrupt|flip_.*|no_.*)$//')"
+    suite="$(best_prefix_match "$base" "$GC_MUT_TRACE_SUITES")"
+    if [[ -z "${suite:-}" ]]; then
+      echo ""
+      return 0
+    fi
     local trace_root="$GC_MAIN_REPO_ROOT/tests/traces/$suite"
     if [[ -d "$trace_root" ]]; then
       local hit
@@ -71,7 +108,11 @@ pick_suite_arg() {
   # Scenario-based: choose the first host scenario for the suite.
   if echo "$cmdline" | rg -q "run_host_scenario\\.sh"; then
     local suite
-    suite="$(echo "$base" | sed -E 's/_(always_one|skip_.*|swap_.*|wrong_.*|return_.*|off_by_one|zero|negate|decrement|corrupt|flip_.*|no_.*)$//')"
+    suite="$(best_prefix_match "$base" "$GC_MUT_SDK_SUITES")"
+    if [[ -z "${suite:-}" ]]; then
+      echo ""
+      return 0
+    fi
     local scen
     scen="$(find "$repo_root/tests/sdk" -type f -path "*/${suite}/host/*_scenario.c" 2>/dev/null | sort | head -n 1 || true)"
     if [[ -n "${scen:-}" ]]; then
