@@ -107,6 +107,16 @@ tools/run_property_test.sh --seed=0xDEADBEEF -v
 GC_HOST_DEBUG=1 tools/run_property_test.sh --seed=42
 ```
 
+## macOS note (important)
+
+This v2 harness requires compiling and linking a **32-bit** binary via `-m32`.
+On modern macOS (especially Apple Silicon), 32-bit userland linking is typically
+not supported. In that case, `tools/run_property_test.sh` will print a clear
+SKIP message and exit.
+
+If you want to run these property tests, use a Linux x86_64 environment with
+32-bit multilib installed, a VM, or a container that supports 32-bit builds.
+
 ## Available `--op` values
 
 | Op | Level | Description |

@@ -27,6 +27,24 @@ mkdir -p "$build_dir"
 
 exe="$build_dir/osalloc_property_test"
 
+# Probe whether this toolchain can actually build 32-bit (-m32) binaries.
+# On modern macOS (especially Apple Silicon), 32-bit targets are generally unsupported.
+supports_m32() {
+  local tmp_dir tmp_c tmp_out
+  tmp_dir="$(mktemp -d 2>/dev/null || mktemp -d -t gc-m32-probe)"
+  tmp_c="$tmp_dir/probe.c"
+  tmp_out="$tmp_dir/probe"
+  cat >"$tmp_c" <<'EOF'
+int main(void) { return 0; }
+EOF
+  if "$CC" -m32 "$tmp_c" -o "$tmp_out" >/dev/null 2>&1; then
+    rm -rf "$tmp_dir"
+    return 0
+  fi
+  rm -rf "$tmp_dir"
+  return 1
+}
+
 # Debug mode: set GC_HOST_DEBUG=1 for -O0 -g.
 opt_flags=(-O2 -g0)
 if [[ "${GC_HOST_DEBUG:-0}" == "1" ]]; then
@@ -52,6 +70,24 @@ if [[ -z "$CC" ]]; then
 fi
 if [[ -z "$CC" ]]; then
   echo "fatal: no C compiler found (set CC=)" >&2
+  exit 2
+fi
+
+if ! supports_m32; then
+  cat >&2 <<'EOF'
+[property-build] SKIP: this toolchain cannot build 32-bit (-m32) binaries.
+
+This OSAlloc v2 property test intentionally relies on -m32 so the oracle
+(decomp copy) has GameCube-identical struct sizes and pointer arithmetic.
+
+Common reasons:
+- macOS (especially Apple Silicon) does not support 32-bit userland linking.
+
+Options:
+1) Run this test on Linux x86_64 with multilib (gcc/clang + 32-bit libc).
+2) Run inside a container/VM that supports 32-bit builds.
+3) Rework the harness to use 32-bit offset pointers instead of -m32 (v1-style).
+EOF
   exit 2
 fi
 
