@@ -65,7 +65,9 @@ run_cmd_expect_fail() {
   any_ran=1
   echo "[mut] expect FAIL: ${c[*]}" >&2
   set +e
-  "${c[@]}"
+  # Replay scripts normally refuse to run on a dirty worktree. During mutation
+  # checks we intentionally dirty the tree (apply a patch), so allow a bypass.
+  GC_ALLOW_DIRTY=1 "${c[@]}"
   rc=$?
   set -e
   if [[ $rc -eq 0 ]]; then

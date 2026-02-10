@@ -2,7 +2,8 @@
 set -euo pipefail
 
 # Safety: refuse to run if the worktree is dirty.
-if ! git diff --quiet || ! git diff --cached --quiet; then
+# Mutation checks intentionally dirty the worktree; allow bypass when GC_ALLOW_DIRTY=1.
+if [[ "${GC_ALLOW_DIRTY:-0}" != "1" ]] && ( ! git diff --quiet || ! git diff --cached --quiet ); then
   echo "fatal: git worktree has uncommitted changes; commit/stash first" >&2
   git status --porcelain=v1 >&2 || true
   exit 2
@@ -93,4 +94,3 @@ fi
 
 "$repo_root/tools/diff_bins.sh" "$expected_bin" "$actual_bin"
 echo "[ok] $case_id (old=$(printf '0x%X' "$SEED_OLD") new=$(printf '0x%X' "$SEED_NEW"))"
-
