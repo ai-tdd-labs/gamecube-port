@@ -61,6 +61,24 @@ And then enforced by tests:
 For retail semantics we also use an optional second oracle:
 - run the real game image locally in Dolphin, stop at a checkpoint PC, dump RAM.
 
+## Harvesting Retail Testcases (RVZ Breakpoints)
+
+Besides "PPC DOL vs host" tests, we can also **harvest real-game call instances** from a retail
+RVZ/ISO without modifying the game:
+
+1. Run retail RVZ in Dolphin headless with the GDB stub
+2. Break at a target function's entry PC (from `symbols.txt`)
+3. Read LR and set a temporary breakpoint at the return address
+4. Record a small snapshot (registers + a RAM window) at entry and exit
+5. Dedupe unique inputs and write an index (`trace.jsonl`)
+
+Tool:
+- `tools/trace_pc_entry_exit.py`
+
+These traces are local-only (`tests/traces/**` is gitignored). We then:
+- derive invariants (e.g. MSR bits and return values for `OSDisableInterrupts`)
+- and/or convert representative cases into deterministic PPC-vs-host unit tests
+
 ## Quickstart (Run One Test)
 
 Prereqs:
