@@ -38,6 +38,8 @@ REG_LR = 0x43
 REG_CTR = 0x44
 REG_XER = 0x45
 REG_R1 = 0x01
+REG_ARG_FIRST = 0x03  # r3
+REG_ARG_LAST = 0x0A   # r10
 
 
 def parse_int(s: str) -> int:
@@ -90,6 +92,23 @@ def dump_range(gdb: DolphinGDB, addr: int, size: int, out_path: Path, chunk: int
     os.replace(tmp, out_path)
 
 
+def parse_dump_spec(s: str) -> tuple[str, int, int]:
+    """
+    Parse --dump name:addr:size (addr/size accept 0x...).
+    """
+    parts = s.split(":")
+    if len(parts) != 3:
+        raise argparse.ArgumentTypeError("dump spec must be name:addr:size")
+    name, addr_s, size_s = parts
+    if not name or any(c not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_" for c in name):
+        raise argparse.ArgumentTypeError("dump name must be [A-Za-z0-9_]+")
+    addr = parse_int(addr_s)
+    size = parse_int(size_s)
+    if addr < 0 or size <= 0:
+        raise argparse.ArgumentTypeError("dump addr must be >=0 and size must be >0")
+    return name, addr, size
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Trace function entry/exit snapshots in Dolphin RVZ")
     ap.add_argument("--rvz", required=True, help="Path to RVZ/ISO to run in Dolphin")
@@ -101,8 +120,15 @@ def main() -> None:
     ap.add_argument("--timeout", type=float, default=60.0, help="Overall time limit in seconds")
     ap.add_argument("--gdb-host", default="127.0.0.1", help="Dolphin GDB host")
     ap.add_argument("--gdb-port", type=int, default=9090, help="Dolphin GDB port")
-    ap.add_argument("--sdk-state-addr", type=parse_int, default=0x817FE000, help="sdk_state base address")
-    ap.add_argument("--sdk-state-size", type=parse_int, default=0x2000, help="sdk_state size")
+    ap.add_argument(
+        "--dump",
+        type=parse_dump_spec,
+        action="append",
+        default=[],
+        help="Dump window: name:addr:size (repeatable). If omitted, dumps sdk_state only.",
+    )
+    ap.add_argument("--sdk-state-addr", type=parse_int, default=0x817FE000, help="(deprecated) sdk_state base address")
+    ap.add_argument("--sdk-state-size", type=parse_int, default=0x2000, help="(deprecated) sdk_state size")
     ap.add_argument("--chunk", type=parse_int, default=0x1000, help="RAM dump chunk size")
     ap.add_argument("--enable-mmu", action="store_true", help="Enable Dolphin MMU via -C override")
     args = ap.parse_args()
@@ -131,6 +157,10 @@ def main() -> None:
         raise SystemExit(1)
 
     entry_pc = int(args.entry_pc)
+    dumps: list[tuple[str, int, int]] = list(args.dump)
+    if not dumps:
+        # Backwards-compatible default: dump sdk_state only.
+        dumps = [("sdk_state", int(args.sdk_state_addr), int(args.sdk_state_size))]
 
     # We'll use real breakpoints (Z0/Z1). If that fails, the right fallback is
     # ram_dump.py's PC polling mode, but for trace harvesting we require real BPs.
@@ -170,6 +200,11 @@ def main() -> None:
             ctr = gdb_read_reg_u32(gdb, REG_CTR)
             xer = gdb_read_reg_u32(gdb, REG_XER)
             r1 = gdb_read_reg_u32(gdb, REG_R1)
+            args_in: dict[str, str] = {}
+            for regno in range(REG_ARG_FIRST, REG_ARG_LAST + 1):
+                v = gdb_read_reg_u32(gdb, regno)
+                if v is not None:
+                    args_in[f"r{regno}"] = f"0x{v:08X}"
 
             if lr is None:
                 gdb.cont()
@@ -179,12 +214,17 @@ def main() -> None:
             case_dir = out_dir / case_id
             case_dir.mkdir(parents=True, exist_ok=True)
 
-            in_bin = case_dir / "in_sdk_state.bin"
-            out_bin = case_dir / "out_sdk_state.bin"
             in_regs = case_dir / "in_regs.json"
             out_regs = case_dir / "out_regs.json"
 
-            dump_range(gdb, args.sdk_state_addr, args.sdk_state_size, in_bin, args.chunk)
+            in_bins: dict[str, Path] = {}
+            out_bins: dict[str, Path] = {}
+            for name, addr, size in dumps:
+                in_p = case_dir / f"in_{name}.bin"
+                out_p = case_dir / f"out_{name}.bin"
+                dump_range(gdb, addr, size, in_p, args.chunk)
+                in_bins[name] = in_p
+                out_bins[name] = out_p
             write_json(
                 in_regs,
                 {
@@ -195,14 +235,22 @@ def main() -> None:
                     "ctr": None if ctr is None else f"0x{ctr:08X}",
                     "xer": None if xer is None else f"0x{xer:08X}",
                     "r1": None if r1 is None else f"0x{r1:08X}",
+                    "args": args_in,
                 },
             )
 
-            # Dedupe by (sdk_state bytes + key regs).
+            # Dedupe by (all dump bytes + key regs/args).
+            # This keeps disk use bounded when the game loops and repeats identical inputs.
+            in_shas = {name: sha256_file(p) for name, p in in_bins.items()}
             dedupe_key = (
-                sha256_file(in_bin)
+                sha256_bytes(json.dumps(in_shas, sort_keys=True).encode())
                 + "|"
-                + sha256_bytes(json.dumps({"pc": pc, "lr": lr, "msr": msr, "cr": cr, "ctr": ctr, "xer": xer}).encode())
+                + sha256_bytes(
+                    json.dumps(
+                        {"pc": pc, "lr": lr, "msr": msr, "cr": cr, "ctr": ctr, "xer": xer, "args": args_in},
+                        sort_keys=True,
+                    ).encode()
+                )
             )
             if dedupe_key in seen_inputs:
                 # Don't expand disk usage for repeated identical inputs.
@@ -230,12 +278,18 @@ def main() -> None:
                 continue
 
             # Capture output snapshot at return site.
-            dump_range(gdb, args.sdk_state_addr, args.sdk_state_size, out_bin, args.chunk)
+            for name, addr, size in dumps:
+                dump_range(gdb, addr, size, out_bins[name], args.chunk)
             msr2 = gdb_read_reg_u32(gdb, REG_MSR)
             cr2 = gdb_read_reg_u32(gdb, REG_CR)
             ctr2 = gdb_read_reg_u32(gdb, REG_CTR)
             xer2 = gdb_read_reg_u32(gdb, REG_XER)
             r12 = gdb_read_reg_u32(gdb, REG_R1)
+            args_out: dict[str, str] = {}
+            for regno in range(REG_ARG_FIRST, REG_ARG_LAST + 1):
+                v = gdb_read_reg_u32(gdb, regno)
+                if v is not None:
+                    args_out[f"r{regno}"] = f"0x{v:08X}"
             write_json(
                 out_regs,
                 {
@@ -246,6 +300,7 @@ def main() -> None:
                     "ctr": None if ctr2 is None else f"0x{ctr2:08X}",
                     "xer": None if xer2 is None else f"0x{xer2:08X}",
                     "r1": None if r12 is None else f"0x{r12:08X}",
+                    "args": args_out,
                 },
             )
 
@@ -256,8 +311,8 @@ def main() -> None:
                 "entry_pc": f"0x{entry_pc:08X}",
                 "pc": f"0x{pc:08X}",
                 "lr": f"0x{lr:08X}",
-                "in_sdk_state_sha256": sha256_file(in_bin),
-                "out_sdk_state_sha256": sha256_file(out_bin),
+                "in_sha256": in_shas,
+                "out_sha256": {name: sha256_file(p) for name, p in out_bins.items()},
                 "dedupe_key": dedupe_key,
             }
             with trace_index.open("a", encoding="utf-8") as f:
