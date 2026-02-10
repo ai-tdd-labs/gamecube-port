@@ -213,6 +213,9 @@ python3 tools/trace_pc_entry_exit.py \
 Notes:
 - Output under `tests/traces/**` is local-only (gitignored). Commit only *derived facts* and testcases.
 - If you see `Connection refused`, increase `--delay` (Dolphin needs time to open the GDB stub).
+- For pointer arguments (stack buffers), dump relative to entry registers:
+  - `--dump status:@r3:0x30` dumps 0x30 bytes at the address in `r3` *at function entry*.
+  - Supported forms: `@r3`, `@r3+0x20`, `@r1-0x10`.
 
 ### Host MEM1 dumping (for RVZ comparisons)
 

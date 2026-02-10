@@ -51,6 +51,11 @@ Rules:
   - `tests/sdk/pad/pad_reset`
   - `tests/sdk/pad/pad_recalibrate`
   Evidence: `tests/sdk/pad/*/expected/*padreadvsync_001.bin` and matching `actual/*`.
+- Retail MP4 RVZ input-harvest for `PADRead` (entry PC `0x800C4B88`) requires dumping the pointer argument buffer (stack) via register-relative dumps:
+  - `tools/trace_pc_entry_exit.py --dump status:@r3:0x30` (dynamic addr uses entry regs).
+  - Observed idle-case invariant in retail: return `0x80000000` and `PADStatus.err` = `[0, -1, -1, -1]` (chan0 present, others absent) with all other fields zero.
+  - Replay harness: `tools/replay_trace_case_pad_read.sh <hit_dir>` compares retail `out_status.bin` against host `sdk_port` output buffer.
+  Evidence: `tests/traces/pad_read/mp4_rvz/hit_000001_pc_800C4B88_lr_8005A7F0/` and `tools/replay_trace_case_pad_read.sh`.
 - Determinism scope:
   - Primary oracle: `sdk_port` on PPC (Dolphin DOL) vs `sdk_port` on host (virtual RAM) should be bit-exact for the dumped ranges.
   - This does NOT prove retail MP4 correctness; retail correctness needs the RVZ breakpoint dump oracle.

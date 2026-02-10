@@ -92,9 +92,13 @@ def dump_range(gdb: DolphinGDB, addr: int, size: int, out_path: Path, chunk: int
     os.replace(tmp, out_path)
 
 
-def parse_dump_spec(s: str) -> tuple[str, int, int]:
+def parse_dump_spec(s: str) -> tuple[str, str, int]:
     """
-    Parse --dump name:addr:size (addr/size accept 0x...).
+    Parse --dump name:addr:size.
+
+    addr supports:
+    - absolute address: 0x80300000
+    - register-relative: @r3, @r3+0x20, @r1-0x10
     """
     parts = s.split(":")
     if len(parts) != 3:
@@ -102,11 +106,56 @@ def parse_dump_spec(s: str) -> tuple[str, int, int]:
     name, addr_s, size_s = parts
     if not name or any(c not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_" for c in name):
         raise argparse.ArgumentTypeError("dump name must be [A-Za-z0-9_]+")
-    addr = parse_int(addr_s)
     size = parse_int(size_s)
-    if addr < 0 or size <= 0:
-        raise argparse.ArgumentTypeError("dump addr must be >=0 and size must be >0")
-    return name, addr, size
+    if size <= 0:
+        raise argparse.ArgumentTypeError("dump size must be >0")
+    # addr is validated when resolved (supports @reg expressions).
+    return name, addr_s, size
+
+
+def resolve_dump_addr(expr: str, regs_entry: dict[str, int]) -> int | None:
+    """
+    Resolve dump addr expression using entry registers.
+    This lets us dump e.g. @r3 (pointer argument) deterministically even if the
+    function is called with stack buffers.
+    """
+    s = expr.strip()
+    if not s:
+        return None
+    if not s.startswith("@"):
+        try:
+            v = parse_int(s)
+            return v if v >= 0 else None
+        except Exception:
+            return None
+
+    # @r3, @r3+0x20, @r1-0x10
+    s = s[1:]
+    op = "+"
+    base = s
+    off_s = "0"
+    if "+" in s:
+        base, off_s = s.split("+", 1)
+        op = "+"
+    elif "-" in s:
+        base, off_s = s.split("-", 1)
+        op = "-"
+    base = base.strip().lower()
+    off_s = off_s.strip()
+    if not base:
+        return None
+    if base not in regs_entry:
+        return None
+    try:
+        off = parse_int(off_s)
+    except Exception:
+        return None
+    v = regs_entry[base]
+    if op == "+":
+        addr = (v + off) & 0xFFFFFFFF
+    else:
+        addr = (v - off) & 0xFFFFFFFF
+    return addr
 
 
 def main() -> None:
@@ -157,10 +206,10 @@ def main() -> None:
         raise SystemExit(1)
 
     entry_pc = int(args.entry_pc)
-    dumps: list[tuple[str, int, int]] = list(args.dump)
+    dumps: list[tuple[str, str, int]] = list(args.dump)
     if not dumps:
         # Backwards-compatible default: dump sdk_state only.
-        dumps = [("sdk_state", int(args.sdk_state_addr), int(args.sdk_state_size))]
+        dumps = [("sdk_state", f"0x{int(args.sdk_state_addr):X}", int(args.sdk_state_size))]
 
     # We'll use real breakpoints (Z0/Z1). If that fails, the right fallback is
     # ram_dump.py's PC polling mode, but for trace harvesting we require real BPs.
@@ -201,10 +250,14 @@ def main() -> None:
             xer = gdb_read_reg_u32(gdb, REG_XER)
             r1 = gdb_read_reg_u32(gdb, REG_R1)
             args_in: dict[str, str] = {}
+            regs_entry: dict[str, int] = {}
             for regno in range(REG_ARG_FIRST, REG_ARG_LAST + 1):
                 v = gdb_read_reg_u32(gdb, regno)
                 if v is not None:
                     args_in[f"r{regno}"] = f"0x{v:08X}"
+                    regs_entry[f"r{regno}"] = v
+            if r1 is not None:
+                regs_entry["r1"] = r1
 
             if lr is None:
                 gdb.cont()
@@ -219,12 +272,19 @@ def main() -> None:
 
             in_bins: dict[str, Path] = {}
             out_bins: dict[str, Path] = {}
-            for name, addr, size in dumps:
+            resolved_dumps: list[tuple[str, int, int]] = []
+            for name, addr_expr, size in dumps:
+                addr = resolve_dump_addr(addr_expr, regs_entry)
+                if addr is None:
+                    raise RuntimeError(
+                        f"failed to resolve dump addr '{addr_expr}' (have regs: {sorted(regs_entry.keys())})"
+                    )
                 in_p = case_dir / f"in_{name}.bin"
                 out_p = case_dir / f"out_{name}.bin"
                 dump_range(gdb, addr, size, in_p, args.chunk)
                 in_bins[name] = in_p
                 out_bins[name] = out_p
+                resolved_dumps.append((name, addr, size))
             write_json(
                 in_regs,
                 {
@@ -278,7 +338,7 @@ def main() -> None:
                 continue
 
             # Capture output snapshot at return site.
-            for name, addr, size in dumps:
+            for name, addr, size in resolved_dumps:
                 dump_range(gdb, addr, size, out_bins[name], args.chunk)
             msr2 = gdb_read_reg_u32(gdb, REG_MSR)
             cr2 = gdb_read_reg_u32(gdb, REG_CR)

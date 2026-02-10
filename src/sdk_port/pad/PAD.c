@@ -49,6 +49,7 @@ typedef struct PADStatus {
 
 enum {
     PAD_ERR_NONE = 0,
+    PAD_ERR_NO_CONTROLLER = -1,
     PAD_ERR_NOT_READY = -2,
 };
 
@@ -98,7 +99,9 @@ static BOOL PADResetInternal(u32 mask) { gc_pad_reset_mask = mask; return TRUE; 
 // for the specific observable state each game callsite relies on.
 
 u32 PADRead(PADStatus *status) {
-    // Deterministic stub: no controllers. MP4's init path does not require real input.
+    // Deterministic stub for MP4 init:
+    // Retail trace shows chan0 present+idle (err=0) and chans 1..3 absent (err=-1),
+    // and return value PAD_CHAN0_BIT (0x80000000).
     if (status) {
         for (int i = 0; i < 4; i++) {
             status[i].button = 0;
@@ -110,12 +113,12 @@ u32 PADRead(PADStatus *status) {
             status[i].triggerR = 0;
             status[i].analogA = 0;
             status[i].analogB = 0;
-            status[i].err = (s8)PAD_ERR_NOT_READY;
+            status[i].err = (s8)((i == 0) ? PAD_ERR_NONE : PAD_ERR_NO_CONTROLLER);
         }
     }
     gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_READ_CALLS,
                              gc_sdk_state_load_u32_or(GC_SDK_OFF_PAD_READ_CALLS, 0) + 1u);
-    return 0;
+    return PAD_CHAN0_BIT;
 }
 
 void PADClamp(PADStatus *status) {
