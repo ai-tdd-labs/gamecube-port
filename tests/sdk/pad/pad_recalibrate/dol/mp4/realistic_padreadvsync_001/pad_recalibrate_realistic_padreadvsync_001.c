@@ -5,7 +5,7 @@
 
 #include "src/sdk_port/pad/PAD.c"
 
-static inline void store_u32be(volatile uint8_t *p, uint32_t v) {
+static inline void store_u32be_ptr(volatile uint8_t *p, uint32_t v) {
   p[0] = (uint8_t)(v >> 24);
   p[1] = (uint8_t)(v >> 16);
   p[2] = (uint8_t)(v >> 8);
@@ -21,12 +21,14 @@ int main(void) {
 
   uint32_t calls = gc_sdk_state_load_u32be(GC_SDK_OFF_PAD_RECALIBRATE_CALLS);
   uint32_t got_mask = gc_sdk_state_load_u32be(GC_SDK_OFF_PAD_RECALIBRATE_MASK);
+  uint32_t bits = gc_sdk_state_load_u32be(GC_SDK_OFF_PAD_RECALIBRATE_BITS);
 
   volatile uint8_t *out = (volatile uint8_t *)0x80300000u;
-  store_u32be(out + 0x00, 0xDEADBEEFu);
-  store_u32be(out + 0x04, ok);
-  store_u32be(out + 0x08, calls);
-  store_u32be(out + 0x0C, got_mask);
+  store_u32be_ptr(out + 0x00, 0xDEADBEEFu);
+  store_u32be_ptr(out + 0x04, ok);
+  store_u32be_ptr(out + 0x08, calls);
+  store_u32be_ptr(out + 0x0C, got_mask);
+  store_u32be_ptr(out + 0x10, bits);
 
   while (1) {
     __asm__ volatile("nop");
