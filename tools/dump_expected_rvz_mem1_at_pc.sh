@@ -4,7 +4,7 @@ set -euo pipefail
 # Dump MEM1 (24 MiB @ 0x80000000) from a real MP4 RVZ/ISO at a PC checkpoint.
 #
 # Usage:
-#   tools/dump_expected_rvz_mem1_at_pc.sh <rvz_or_iso> <pc_addr_hex> <out_bin> [timeout_seconds]
+#   tools/dump_expected_rvz_mem1_at_pc.sh <rvz_or_iso> <pc_addr_hex> <out_bin> [timeout_seconds] [hit_count]
 #
 # Notes:
 # - Prefer a real breakpoint (Z0/Z1). If the stub doesn't support it, fall back to --pc-breakpoint polling.
@@ -14,6 +14,7 @@ EXEC_PATH=${1:?rvz_or_iso required}
 PC_ADDR=${2:?pc_addr_hex required}
 OUT_BIN=${3:?out_bin required}
 TIMEOUT=${4:-30}
+HIT_COUNT=${5:-1}
 
 ADDR=0x80000000
 SIZE=0x01800000
@@ -40,6 +41,7 @@ PYTHONUNBUFFERED=1 python3 -u tools/ram_dump.py \
   --exec "$EXEC_PATH" \
   --breakpoint "$PC_ADDR" \
   --bp-timeout "$TIMEOUT" \
+  --bp-hit-count "$HIT_COUNT" \
   --addr "$ADDR" \
   --size "$SIZE" \
   --out "$OUT_BIN" \
@@ -57,6 +59,7 @@ PYTHONUNBUFFERED=1 python3 -u tools/ram_dump.py \
   --exec "$EXEC_PATH" \
   --pc-breakpoint "$PC_ADDR" \
   --pc-timeout "$TIMEOUT" \
+  --pc-hit-count "$HIT_COUNT" \
   --addr "$ADDR" \
   --size "$SIZE" \
   --out "$OUT_BIN" \

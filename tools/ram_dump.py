@@ -485,12 +485,16 @@ Examples:
                         help='Optional software breakpoint address (e.g. 0x800057C0). If set, continue until hit, then dump.')
     parser.add_argument('--bp-timeout', type=float, default=15.0,
                         help='Seconds to wait for breakpoint hit (default: 15).')
+    parser.add_argument('--bp-hit-count', type=int, default=1,
+                        help='Number of breakpoint hits to wait for before dumping (default: 1).')
     parser.add_argument('--pc-breakpoint', type=parse_int, default=None,
                         help='Optional PC/NIP checkpoint address. If set, poll-run/halts until PC==addr, then dump (works even when Z0/Z1 are unsupported).')
     parser.add_argument('--pc-timeout', type=float, default=15.0,
                         help='Seconds to wait for PC checkpoint (default: 15).')
     parser.add_argument('--pc-step', type=float, default=0.02,
                         help='Seconds to run between halt polls while waiting for --pc-breakpoint (default: 0.02).')
+    parser.add_argument('--pc-hit-count', type=int, default=1,
+                        help='Number of times to observe PC==addr before dumping (default: 1). Useful to stop on the Nth frame without real breakpoints.')
 
     # Some DOLs (especially smoke chains) do heavy work (e.g. clearing MEM1) and then
     # write a deterministic "ready marker" to RAM. Dumping before that marker is set
@@ -594,39 +598,59 @@ Examples:
             if not gdb.set_sw_breakpoint(bp):
                 print("Failed to set breakpoint (stub may not support Z0).")
                 sys.exit(3)
-            print(f"Continuing until breakpoint (timeout {args.bp_timeout}s) ...")
+            want_hits = max(1, int(args.bp_hit_count))
+            print(f"Continuing until breakpoint (hits {want_hits}, timeout {args.bp_timeout}s) ...")
             gdb.cont()
-            stop = gdb.wait_stop(timeout=args.bp_timeout)
+            stop = None
+            hits = 0
+            end = time.time() + args.bp_timeout
+            while time.time() < end:
+                stop = gdb.wait_stop(timeout=min(1.0, max(0.05, end - time.time())))
+                if stop is None:
+                    continue
+                hits += 1
+                if hits >= want_hits:
+                    break
+                # Continue to count more hits.
+                gdb.cont()
+
             # Ensure we're halted/stable for the dump.
             gdb.halt()
             # Best-effort cleanup.
             gdb.clear_sw_breakpoint(bp)
-            if stop is None:
-                print("Breakpoint not hit before timeout.")
+            if stop is None or hits < want_hits:
+                print(f"Breakpoint not hit {want_hits}x before timeout (hits={hits}).")
                 sys.exit(4)
-            print(f"Stopped: {stop.decode(errors='replace')}")
+            print(f"Stopped (hit {hits}/{want_hits}): {stop.decode(errors='replace')}")
 
         elif args.pc_breakpoint is not None:
             target = args.pc_breakpoint
-            print(f"Polling until PC==0x{target:08X} (timeout {args.pc_timeout}s, step {args.pc_step}s) ...")
+            want_hits = max(1, int(args.pc_hit_count))
+            print(
+                f"Polling until PC==0x{target:08X} (hits {want_hits}, timeout {args.pc_timeout}s, step {args.pc_step}s) ..."
+            )
             end = time.time() + args.pc_timeout
             last_pc = None
-            hit = False
+            hits = 0
+            was_at = False
             while time.time() < end:
                 stop = gdb.run_and_halt(duration=args.pc_step)
                 pc = parse_stop_pc(stop)
                 if pc is not None:
                     last_pc = pc
-                    if pc == target:
-                        hit = True
+                    at = (pc == target)
+                    if at and not was_at:
+                        hits += 1
+                    was_at = at
+                    if at and hits >= want_hits:
                         break
-            if not hit:
+            if hits < want_hits:
                 if last_pc is None:
                     print("PC checkpoint not hit (no PC decoded from stop packets).")
                 else:
-                    print(f"PC checkpoint not hit. Last observed PC=0x{last_pc:08X}")
+                    print(f"PC checkpoint not hit {want_hits}x. Last observed PC=0x{last_pc:08X} hits={hits}")
                 sys.exit(4)
-            print("PC checkpoint hit; dumping.")
+            print(f"PC checkpoint hit (hits={hits}); dumping.")
 
         elif args.run > 0:
             # In debugger mode Dolphin can start paused; explicitly continue.

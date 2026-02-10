@@ -108,19 +108,19 @@ int DVDOpen(const char *path, DVDFileInfo *file) {
     // Deterministic test backend: use path->entrynum mapping when present.
     s32 entry = DVDConvertPathToEntrynum((char *)path);
 
-    gc_dvd_open_calls = gc_sdk_state_load_u32_or(0x350, gc_dvd_open_calls) + 1u;
-    gc_sdk_state_store_u32be(0x350, gc_dvd_open_calls);
+    gc_dvd_open_calls = gc_sdk_state_load_u32_or(GC_SDK_OFF_DVD_OPEN_CALLS, gc_dvd_open_calls) + 1u;
+    gc_sdk_state_store_u32be(GC_SDK_OFF_DVD_OPEN_CALLS, gc_dvd_open_calls);
     return DVDFastOpen(entry, file);
 }
 
 int DVDRead(DVDFileInfo *file, void *addr, int len, int offset) {
     if (!file || !addr) return -1;
-    gc_dvd_read_calls = gc_sdk_state_load_u32_or(0x354, gc_dvd_read_calls) + 1u;
-    gc_sdk_state_store_u32be(0x354, gc_dvd_read_calls);
+    gc_dvd_read_calls = gc_sdk_state_load_u32_or(GC_SDK_OFF_DVD_READ_CALLS, gc_dvd_read_calls) + 1u;
+    gc_sdk_state_store_u32be(GC_SDK_OFF_DVD_READ_CALLS, gc_dvd_read_calls);
     gc_dvd_last_read_len = (u32)len;
     gc_dvd_last_read_off = (u32)offset;
-    gc_sdk_state_store_u32be(0x358, gc_dvd_last_read_len);
-    gc_sdk_state_store_u32be(0x35C, gc_dvd_last_read_off);
+    gc_sdk_state_store_u32be(GC_SDK_OFF_DVD_LAST_READ_LEN, gc_dvd_last_read_len);
+    gc_sdk_state_store_u32be(GC_SDK_OFF_DVD_LAST_READ_OFF, gc_dvd_last_read_off);
 
     // Synchronous read is implemented on top of our test file table.
     s32 entry = file->entrynum;
@@ -166,8 +166,8 @@ s32 DVDReadAsyncPrio(DVDFileInfo *file, void *addr, s32 len, s32 offset, DVDCall
 
 int DVDClose(DVDFileInfo *file) {
     (void)file;
-    gc_dvd_close_calls = gc_sdk_state_load_u32_or(0x360, gc_dvd_close_calls) + 1u;
-    gc_sdk_state_store_u32be(0x360, gc_dvd_close_calls);
+    gc_dvd_close_calls = gc_sdk_state_load_u32_or(GC_SDK_OFF_DVD_CLOSE_CALLS, gc_dvd_close_calls) + 1u;
+    gc_sdk_state_store_u32be(GC_SDK_OFF_DVD_CLOSE_CALLS, gc_dvd_close_calls);
     return 1;
 }
 

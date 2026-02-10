@@ -173,6 +173,12 @@ Smoke DOL build rule:
 On this machine, Dolphin's GDB stub **does** accept `Z0/Z1` packets (GDB remote breakpoints),
 so `tools/ram_dump.py --breakpoint <addr>` is the preferred way to reach an exact checkpoint.
 
+If you need "stop on the Nth frame" behavior (example: the same function is called every frame),
+use hit-counts:
+
+- `--bp-hit-count N` with `--breakpoint`
+- `--pc-hit-count N` with `--pc-breakpoint`
+
 If you cannot rely on breakpoints for a particular run (e.g. address not hit / timing issues), use **PC/NIP polling**:
 
 - Run for a small step, halt, read stop packet, decode PC (reg `0x40`), repeat until PC==target.
@@ -197,7 +203,7 @@ Instead, dump a few RVZ memory windows at a stable PC checkpoint and compare *de
 to what `sdk_port` reports.
 
 Tool:
-- `tools/dump_expected_rvz_probe_at_pc.sh <rvz> <pc_hex> <out_dir> [timeout]`
+- `tools/dump_expected_rvz_probe_at_pc.sh <rvz> <pc_hex> <out_dir> [timeout] [hit_count]`
 - `tools/dump_actual_host_probe_at_scenario.sh <scenario_c> <out_dir>`
 
 Important:

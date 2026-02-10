@@ -8,7 +8,7 @@ set -euo pipefail
 # - Probe a few stable SDK globals from symbols.txt.
 #
 # Usage:
-#   tools/dump_expected_rvz_probe_at_pc.sh <rvz_or_iso> <pc_addr_hex> <out_dir> [timeout_seconds]
+#   tools/dump_expected_rvz_probe_at_pc.sh <rvz_or_iso> <pc_addr_hex> <out_dir> [timeout_seconds] [hit_count]
 #
 # Output:
 # - Writes one .bin per region under out_dir/
@@ -18,6 +18,7 @@ EXEC_PATH=${1:?rvz_or_iso required}
 PC_ADDR=${2:?pc_addr_hex required}
 OUT_DIR=${3:?out_dir required}
 TIMEOUT=${4:-30}
+HIT_COUNT=${5:-1}
 DELAY=${DOLPHIN_START_DELAY:-2}
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -83,6 +84,7 @@ for i in "${!NAMES[@]}"; do
       --exec "$EXEC_PATH" \
       --breakpoint "$PC_ADDR" \
       --bp-timeout "$TIMEOUT" \
+      --bp-hit-count "$HIT_COUNT" \
       --addr "$addr" \
       --size "$size" \
       --out "$out_bin" \
@@ -100,6 +102,7 @@ for i in "${!NAMES[@]}"; do
         --exec "$EXEC_PATH" \
         --pc-breakpoint "$PC_ADDR" \
         --pc-timeout "$TIMEOUT" \
+        --pc-hit-count "$HIT_COUNT" \
         --addr "$addr" \
         --size "$size" \
         --out "$out_bin" \

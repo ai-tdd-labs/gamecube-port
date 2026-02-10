@@ -17,6 +17,11 @@ Rules:
 - Previous "Z0/Z1 not supported" conclusion was a bug in our client: it ignored the `OK` reply because it starts with `O`.
   Evidence: `tools/ram_dump.py` fix after commit `c19d1f5`.
 - Real MP4 RVZ breakpoint test (USA): breakpoint at `OSDisableInterrupts` address `0x800B723C` hits and stops (`T0540:800b723c;...`).
+- RVZ checkpoints can be captured on the Nth call without instrumenting the game by using hit-counts:
+  - `tools/ram_dump.py --breakpoint <pc> --bp-hit-count N` (preferred)
+  - fallback `--pc-breakpoint <pc> --pc-hit-count N`
+  Evidence: `tools/dump_expected_rvz_probe_at_pc.sh ... 0x800CF628 ... 60 2` stops at the 2nd `GXLoadTexMtxImm` call and dumps under `tests/oracles/mp4_rvz/probes/gxloadtexmtximm_pc_800CF628_hit2_v1/`.
+  Sanity (semantic compare): `python3 tools/helpers/compare_rvz_host_probe_values.py ... --ignore __PADSpec` vs host scenario `tests/workload/mp4/mp4_mainloop_two_iter_tick_001_scenario.c` dumped under `tests/oracles/mp4_rvz/probes/host_gxloadtexmtximm_mp4_mainloop_two_iter_tick_001_v1/`.
 - MP4 post-`HuPadInit` init continues with `HuPerfInit` (perf.c). New SDK calls covered with deterministic PPC-vs-host tests:
   - `OSInitStopwatch` (from decomp `src/dolphin/os/OSStopwatch.c`: sets name/total/hits/min/max only; does not touch running/last).
   - `GXSetDrawSyncCallback` / `GXSetDrawSync` (from decomp `src/dolphin/gx/GXMisc.c`).
@@ -48,6 +53,18 @@ Rules:
   Interpretation: PPC exception vector `0x00000900` (decrementer/interrupt path) firing before handlers are installed.
   Mitigation in smoke DOLs: use `gc_safepoint()` (disable MSR[EE] + push DEC far future) very early and during loops.
   Evidence: `tests/sdk/smoke/mp4_pad_init_chain_001/dol/mp4/mp4_pad_init_chain_001/mp4_pad_init_chain_001.c`
+
+### MP4 checkpoint smoke chain: mp4_hudata_read_chain_001
+- Purpose: validate combined/deterministic behavior of the dvd read subset used by MP4 HuData* helpers (DVDFastOpen -> OSRoundUp32B -> (intended) DCInvalidateRange -> DVDReadAsync -> status -> DVDClose -> OSRoundDown32B).
+  Evidence: `docs/sdk/mp4/MP4_chain_all.csv` rows under `HuDvdDataReadWait` + `HuDataReadNumHeapShortForce`.
+- Oracle: run the same sdk_port chain on PPC (DOL in Dolphin) and on host (virtual RAM), then compare deterministic dump windows:
+  - `0x80300000..` marker/snapshot
+  - `0x817FE000..0x81800000` sdk_state page
+  Evidence: `tests/sdk/smoke/mp4_hudata_read_chain_001/README.md`; `tools/diff_bins_smoke.sh`.
+- Status: PASS (bit-exact for the included dump ranges).
+  Evidence: `tools/diff_bins_smoke.sh tests/sdk/smoke/mp4_hudata_read_chain_001/expected/mp4_hudata_read_chain_001_mem1.bin tests/sdk/smoke/mp4_hudata_read_chain_001/actual/mp4_hudata_read_chain_001_mem1.bin`.
+- Note: this smoke chain does not call the real `DCInvalidateRange` symbol on PPC because libogc defines it and linking a replacement causes multiple-definition errors. We instead record the intended invalidate parameters into the snapshot window so PPC-vs-host dumps can remain comparable.
+  Evidence: `tests/sdk/smoke/mp4_hudata_read_chain_001/dol/mp4/mp4_hudata_read_chain_001/mp4_hudata_read_chain_001.c` (`gc_cache_record_invalidate`).
 
 ### MP4 host workload: GWInit reachability
 - Workload scenario runs MP4 init chain up to `GWInit()` on host:
@@ -473,6 +490,15 @@ Rules:
     Evidence: `tests/sdk/dvd/dvd_read_async/expected/dvd_read_async_mp4_hu_data_dvd_dir_direct_read_001.bin` and `tests/sdk/dvd/dvd_read_async/actual/dvd_read_async_mp4_hu_data_dvd_dir_direct_read_001.bin`
   - `dvd_read_async_mp4_hu_dvd_data_read_wait_cb_001`: `DVDReadAsync(&fi, dest, 0x20, 0x00, cb)` calls the callback (cb_called=1) and copies bytes.
     Evidence: `tests/sdk/dvd/dvd_read_async/expected/dvd_read_async_mp4_hu_dvd_data_read_wait_cb_001.bin` and `tests/sdk/dvd/dvd_read_async/actual/dvd_read_async_mp4_hu_dvd_data_read_wait_cb_001.bin`
+
+### HuDataReadNumHeapShortForce (MP4 HuDataDVDdirDirect* path)
+
+- Callsite (MP4): `HuDataReadNumHeapShortForce(data_id, num, heap)` opens the directory file via `DVDFastOpen(DataDirStat[dir].file_id, &fileInfo)`,
+  reads a small header with `DVDReadAsync` + `DVDGetCommandBlockStatus` polling, then reads the selected data chunk similarly and closes via `DVDClose(&fileInfo)`.
+  It also aligns offsets/lengths using `OSRoundUp32B` and `OSRoundDown32B`.
+  Evidence: `decomp_mario_party_4/src/game/data.c` (`HuDataDVDdirDirectOpen`, `HuDataDVDdirDirectRead`, `HuDataReadNumHeapShortForce`)
+- Chain tracker update: appended these SDK calls as separate rows in `docs/sdk/mp4/MP4_chain_all.csv` so we can gate future work on evidence-based suites.
+  Evidence: `docs/sdk/mp4/MP4_chain_all.csv` sections `HuDataReadNumHeapShortForce` and `HuDvdDataReadWait`.
 
 ### DCInvalidateRange (MP4 HuDvdDataReadWait path)
 
