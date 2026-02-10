@@ -324,7 +324,7 @@ if [[ "${GC_SCENARIO_COMPARE:-0}" == "1" ]]; then
   fi
 
   actual_path="$(cd "$scenario_dir" && python3 -c 'import os,sys; print(os.path.abspath(sys.argv[1]))' "$out_rel")"
-  expected_path="$(python3 -c 'import os,sys; p=sys.argv[1]; print(p.replace(\"/actual/\",\"/expected/\"))' "$actual_path")"
+  expected_path="$(python3 -c 'import sys; p=sys.argv[1]; print(p.replace("/actual/","/expected/"))' "$actual_path")"
 
   if [[ ! -f "$actual_path" ]]; then
     echo "fatal: scenario did not produce actual output: $actual_path" >&2
