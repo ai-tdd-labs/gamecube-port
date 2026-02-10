@@ -15,6 +15,8 @@ void gc_mem_set(uint32_t base, uint32_t size, uint8_t *host_ptr);
 void OSInit(void);
 void *OSGetArenaLo(void);
 void *OSGetArenaHi(void);
+void OSSetArenaLo(void *addr);
+void OSSetArenaHi(void *addr);
 uint32_t OSGetProgressiveMode(void);
 void *OSAlloc(uint32_t size);
 void OSInitFastCast(void);
@@ -139,6 +141,15 @@ int main(void) {
   // First 20 MP4 HuSysInit SDK calls (from docs/sdk/mp4/MP4_chain_all.csv).
   OSInit();
   gc_safepoint();
+
+  // Smoke harness control: pin arena bounds to deterministic values so the
+  // PPC-vs-host comparison does not depend on Dolphin loader layout.
+  //
+  // Keep ArenaLo above this DOL's .bss end (see build/*.elf.map).
+  OSSetArenaLo((void *)0x80026000u);
+  OSSetArenaHi((void *)0x81700000u);
+  gc_safepoint();
+
   DVDInit();
   gc_safepoint();
   VIInit();

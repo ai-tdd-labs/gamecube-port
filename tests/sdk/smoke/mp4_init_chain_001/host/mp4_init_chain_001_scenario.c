@@ -21,6 +21,8 @@ enum { SNAPSHOT_ADDR = 0x80300100u };
 void OSInit(void);
 void *OSGetArenaLo(void);
 void *OSGetArenaHi(void);
+void OSSetArenaLo(void *addr);
+void OSSetArenaHi(void *addr);
 uint32_t OSGetProgressiveMode(void);
 void* OSAlloc(uint32_t size);
 void OSInitFastCast(void);
@@ -80,6 +82,12 @@ static void init_dummy_rmode(void) {
 
 static void run_chain(void) {
   OSInit();
+
+  // Keep host-vs-PPC comparisons deterministic: pin arena bounds to the same
+  // values used by the PPC DOL harness.
+  OSSetArenaLo((void *)0x80026000u);
+  OSSetArenaHi((void *)0x81700000u);
+
   DVDInit();
   VIInit();
   PADInit();

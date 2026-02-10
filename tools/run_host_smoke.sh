@@ -38,6 +38,7 @@ cc -O2 -g \
   "$repo_root/src/sdk_port/os/OSError.c" \
   "$repo_root/src/sdk_port/os/OSSystem.c" \
   "$repo_root/src/sdk_port/os/OSRtc.c" \
+  "$repo_root/src/sdk_port/os/OSStopwatch.c" \
   "$repo_root/src/sdk_port/si/SI.c" \
   "$repo_root/src/sdk_port/vi/VI.c" \
   "$repo_root/src/sdk_port/pad/PAD.c" \

@@ -818,3 +818,10 @@ Notes:
   - Cause: host workloads write harness markers (e.g. "MP4P" + 0xDEADBEEF) at `0x80300000`, while the retail RVZ run does not.
 - Conclusion: a raw MEM1-vs-MEM1 binary diff between RVZ and host is not an oracle yet.
   - Use RVZ dumps as *evidence* (runtime snapshots) and compare only well-defined regions that have matching semantics in both worlds (to be defined).
+
+## 2026-02-10: Smoke chain PASS (mp4_perf_chain_001)
+- Goal: Exercise MP4 perf primitives (OSStopwatch + GX draw sync) and prove PPC-vs-host determinism for a small MEM1 window.
+- Result: PASS (bit-exact for smoke compare window).
+  Evidence (expected): `tests/sdk/smoke/mp4_perf_chain_001/expected/mp4_perf_chain_001_mem1.bin`
+  Evidence (actual): `tests/sdk/smoke/mp4_perf_chain_001/actual/mp4_perf_chain_001_mem1.bin`
+  Evidence (diff): `tools/diff_bins_smoke.sh <expected> <actual>` (includes marker/snapshot + `sdk_state` page)

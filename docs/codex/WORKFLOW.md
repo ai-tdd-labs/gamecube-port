@@ -144,6 +144,26 @@ Practical Dolphin note (MMU):
   rerun the dump with `tools/ram_dump.py --enable-mmu` (passes `-C Core.MMU=True`).
   If you're launching Dolphin manually in the GUI, enable it via: `Config -> Advanced -> Enable MMU`.
 
+## 1-Button Loop (Automation)
+
+Goal: reduce human steps so we can scale to dozens/hundreds of SDK functions without losing rigor.
+
+Definition: a "1-button loop" is **one command** that:
+
+1) builds the test artifact (DOL and/or host executable)
+2) runs Dolphin and dumps `expected/*.bin`
+3) runs the host scenario and dumps `actual/*.bin`
+4) diffs and reports PASS/FAIL (first mismatch offset)
+5) optionally appends facts/evidence links to `docs/codex/NOTES.md`
+6) optionally commits (when a task is complete)
+
+Examples in this repo:
+- Per-function suites: `tools/run_tests.sh expected ...` + `tools/run_host_scenario.sh ...` + `tools/diff_bins.sh ...`
+- Smoke suites: `tools/dump_expected_mem1.sh` + `tools/run_host_smoke.sh` + `tools/diff_bins_smoke.sh`
+
+Rule: if you find yourself repeating a manual sequence more than 2-3 times, add a wrapper script in `tools/`
+so the loop becomes a single command.
+
 Smoke DOL build rule:
 - Do not `#include` multiple `src/sdk_port/*/*.c` files into a *single* DOL translation unit. Some modules define overlapping enums/macros (example: `VI_NTSC` in `VI.c` vs `SI.c`).
 - Instead, add `oracle_*.c` files next to the smoke DOL and include exactly one module per file (see `tests/sdk/smoke/mp4_init_chain_001/dol/mp4/mp4_init_chain_001/oracle_*.c`).
