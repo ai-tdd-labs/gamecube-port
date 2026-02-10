@@ -890,6 +890,16 @@ Notes:
     - `GC_SDK_OFF_PAD_RECALIBRATE_BITS`
     - `GC_SDK_OFF_PAD_RESET_CB_PTR`
 
+## 2026-02-10: Retail RVZ trace replay (MP4 PADInit)
+
+### PADInit
+- Retail entry PC: `0x800C4978` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Trace dir (local-only, gitignored): `tests/traces/pad_init/mp4_rvz_v1/` (2 unique cases)
+- Replay harness (committed):
+  - Scenario: `tests/sdk/pad/pad_init/host/pad_init_rvz_trace_replay_001_scenario.c`
+  - Replay: `tools/replay_trace_case_pad_init.sh <trace_case_dir>`
+- Result: replay PASS for both captured cases (bit-exact vs retail `out_sdk_state.bin` + return value).
+
 ## 2026-02-10: Retail RVZ trace replay (MP4 SITransfer)
 
 ### SITransfer
