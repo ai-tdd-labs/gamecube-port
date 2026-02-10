@@ -51,6 +51,18 @@ Tip (per-game only):
 7) Notes
 - Write confirmed behaviors to docs/codex/NOTES.md (facts only, with evidence).
 
+## Property-Based Testing (Optional)
+
+Snapshot tests (DOL expected vs host actual, and retail RVZ trace replays) are the primary oracle.
+
+Property-based tests are a secondary safety net for functions with clear invariants and large input
+spaces (alignment helpers, clamp helpers).
+
+Reference: `docs/codex/PROPERTY_BASED_TESTING.md`
+
+Run:
+- `tools/run_pbt.sh` (optional args: iterations, seed)
+
 ## Test Locations
 
 - New tests go under tests/sdk/<subsystem>/<function>/
