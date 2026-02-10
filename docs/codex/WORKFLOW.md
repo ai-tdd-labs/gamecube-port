@@ -174,6 +174,7 @@ Implementation in this repo:
   - Applies the patch, runs commands that must FAIL, then always reverts the patch.
   - During the mutation run it sets `GC_ALLOW_DIRTY=1` so replay scripts can run while
     the patch is applied.
+  - Uses a global lock (`tools/.locks/gc-trace-replay.lock`) to prevent parallel replay/mutation runs.
 
 Example:
 ```bash

@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+source "$(cd "$(dirname "$0")/.." && pwd)/tools/helpers/lock.sh"
+acquire_lock "gc-trace-replay" 600
+trap release_lock EXIT
+
 # Safety: refuse to run if the worktree is dirty.
 # Mutation checks intentionally dirty the worktree; allow bypass when GC_ALLOW_DIRTY=1.
 if [[ "${GC_ALLOW_DIRTY:-0}" != "1" ]] && ( ! git diff --quiet || ! git diff --cached --quiet ); then

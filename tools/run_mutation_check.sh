@@ -25,6 +25,9 @@ shift
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$repo_root"
 
+source "$repo_root/tools/helpers/lock.sh"
+acquire_lock "gc-trace-replay" 600
+
 if [[ ! -f "$patch_file" ]]; then
   echo "fatal: patch not found: $patch_file" >&2
   exit 2
@@ -48,6 +51,7 @@ fi
 cleanup() {
   # Best-effort revert; don't fail cleanup.
   git apply -R "$patch_file" >/dev/null 2>&1 || true
+  release_lock
 }
 trap cleanup EXIT
 
