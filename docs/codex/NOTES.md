@@ -900,6 +900,20 @@ Notes:
   - Replay: `tools/replay_trace_case_pad_init.sh <trace_case_dir>`
 - Result: replay PASS for both captured cases (bit-exact vs retail `out_sdk_state.bin` + return value).
 
+## 2026-02-10: Retail RVZ trace replay (MP4 PADSetSpec)
+
+### PADSetSpec
+- Retail entry PC: `0x800C4FD8` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Trace dir (local-only, gitignored): `tests/traces/pad_set_spec/mp4_rvz_v3/` (1 unique case)
+- Replay harness (committed):
+  - Scenario: `tests/sdk/pad/pad_set_spec/host/pad_set_spec_rvz_trace_replay_001_scenario.c`
+  - Replay: `tools/replay_trace_case_pad_set_spec.sh <trace_case_dir>`
+- Confirmed retail side effects (from trace dumps + decomp `external/mp4-decomp/src/dolphin/pad/Pad.c`):
+  - `__PADSpec` @ `0x801D450C` is cleared to 0.
+  - `Spec` @ `0x801D3924` is set to the input `spec`.
+  - `MakeStatus` @ `0x801D3928` points to `SPEC2_MakeStatus` (`0x800C5320`) for `PAD_SPEC_5` (MP4 boot case).
+- Result: replay PASS for the captured case (bit-exact vs retail global dumps).
+
 ## 2026-02-10: Retail RVZ trace replay (MP4 SITransfer)
 
 ### SITransfer
