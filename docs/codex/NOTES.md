@@ -19,6 +19,9 @@ Rules:
 - Trace harvesting (entry/exit snapshots) is possible without game instrumentation:
   break at entry PC, read LR, break at LR, dump small RAM windows, dedupe by input hash.
   Evidence: `tools/trace_pc_entry_exit.py` (uses `Z0/Z1` breakpoints + LR return breakpoint).
+- OSDisableInterrupts retail note: the real SDK implementation is MSR-based (register side effects),
+  so for RVZ traces we primarily consume **MSR/return-value invariants**, not raw RAM diffs at `0x817FE000`.
+  Evidence: `tools/replay_trace_case_os_disable_interrupts.sh` derives expected return from MSR[EE].
 - Real MP4 RVZ breakpoint test (USA): breakpoint at `OSDisableInterrupts` address `0x800B723C` hits and stops (`T0540:800b723c;...`).
 - RVZ checkpoints can be captured on the Nth call without instrumenting the game by using hit-counts:
   - `tools/ram_dump.py --breakpoint <pc> --bp-hit-count N` (preferred)
