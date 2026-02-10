@@ -928,6 +928,21 @@ Notes:
 - Result: replay PASS for all 10 unique cases (bit-exact).
 
 
+## 2026-02-10: Retail RVZ trace replay (MP4 VISetPostRetraceCallback)
+
+### VISetPostRetraceCallback
+- Retail entry PC: `0x800C0DD8` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Retail global: `PostCB` @ `0x801D443C` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Trace dir (local-only, gitignored): `tests/traces/vi_set_post_retrace_callback/mp4_rvz_v2/` (1 unique case)
+- Replay harness (committed):
+  - Scenario: `tests/sdk/vi/vi_set_post_retrace_callback/host/vi_set_post_retrace_callback_rvz_trace_replay_001_scenario.c`
+  - Replay: `tools/replay_trace_case_vi_set_post_retrace_callback.sh <trace_case_dir>`
+  - 1-button: `tools/harvest_and_replay_vi_set_post_retrace_callback.sh`
+- Observed MP4 boot case: old callback `0x00000000`, new callback `0x80005CB4` (PadReadVSync).
+- Result: replay PASS for the captured case (bit-exact).
+
+
+
 ## 2026-02-10: Retail RVZ trace replay (MP4 SITransfer)
 
 ### SITransfer
