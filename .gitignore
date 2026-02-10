@@ -14,6 +14,9 @@ docs/*
 !docs/codex/
 !docs/codex/**
 
+# Generated reports (derived artifacts; do not commit).
+docs/codex/mutations/
+
 # Optional vendored game workloads (local convenience only)
 src/game_workload/*/vendor/
 
