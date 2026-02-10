@@ -37,6 +37,14 @@ if ! git diff --quiet || ! git diff --cached --quiet; then
   exit 2
 fi
 
+# Safety: refuse to run if the patch is already applied.
+# If the reverse patch applies cleanly, it means the patch is currently active.
+if git apply --reverse --check "$patch_file" >/dev/null 2>&1; then
+  echo "fatal: mutation patch already applied: $patch_file" >&2
+  echo "hint: run 'git apply -R $patch_file' to revert it, or reset your worktree" >&2
+  exit 2
+fi
+
 cleanup() {
   # Best-effort revert; don't fail cleanup.
   git apply -R "$patch_file" >/dev/null 2>&1 || true

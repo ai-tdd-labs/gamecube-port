@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Safety: refuse to run if the worktree is dirty.
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  echo "fatal: git worktree has uncommitted changes; commit/stash first" >&2
+  git status --porcelain=v1 >&2 || true
+  exit 2
+fi
+
+
 # Replay one retail RVZ PADControlMotor trace case against sdk_port.
 #
 # Usage:
