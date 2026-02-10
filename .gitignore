@@ -105,3 +105,6 @@ tests/workload/mp4/tests/
 
 # Large local-only RVZ oracle dumps (MEM1 snapshots). Keep hashes in docs instead.
 /tests/oracles/**
+
+# Trace harvesting outputs (breakpoint-driven snapshot collection).
+/tests/traces/**

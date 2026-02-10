@@ -16,6 +16,9 @@ Rules:
   Evidence: `tools/ram_dump.py --breakpoint 0x800057c0` hit and returned stop `T0540:800057c0;...` during real MP4 RVZ run.
 - Previous "Z0/Z1 not supported" conclusion was a bug in our client: it ignored the `OK` reply because it starts with `O`.
   Evidence: `tools/ram_dump.py` fix after commit `c19d1f5`.
+- Trace harvesting (entry/exit snapshots) is possible without game instrumentation:
+  break at entry PC, read LR, break at LR, dump small RAM windows, dedupe by input hash.
+  Evidence: `tools/trace_pc_entry_exit.py` (uses `Z0/Z1` breakpoints + LR return breakpoint).
 - Real MP4 RVZ breakpoint test (USA): breakpoint at `OSDisableInterrupts` address `0x800B723C` hits and stops (`T0540:800b723c;...`).
 - RVZ checkpoints can be captured on the Nth call without instrumenting the game by using hit-counts:
   - `tools/ram_dump.py --breakpoint <pc> --bp-hit-count N` (preferred)

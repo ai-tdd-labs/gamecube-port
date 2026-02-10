@@ -184,6 +184,32 @@ If you cannot rely on breakpoints for a particular run (e.g. address not hit / t
 - Run for a small step, halt, read stop packet, decode PC (reg `0x40`), repeat until PC==target.
 - Then dump RAM.
 
+### Trace harvesting (function entry/exit snapshots)
+
+Sometimes you want more than a single checkpoint dump: you want *many* real-game call instances
+for one target function, with input/output snapshots, without modifying the game.
+
+Use `tools/trace_pc_entry_exit.py` to:
+1) run a retail RVZ/ISO in Dolphin headless
+2) break at a function's entry PC
+3) read LR and set a temporary breakpoint at the return address
+4) dump a small RAM window at entry and exit (default: `sdk_state`)
+5) dedupe by input snapshot hash and write an index (`trace.jsonl`)
+
+Example (MP4 retail, OSDisableInterrupts):
+```
+python3 tools/trace_pc_entry_exit.py \
+  --rvz <MP4_RVZ_PATH> \
+  --entry-pc 0x800B723C \
+  --enable-mmu \
+  --max-unique 25 \
+  --out-dir tests/traces/os_disable_interrupts/mp4_rvz
+```
+
+Notes:
+- Output under `tests/traces/**` is local-only (gitignored). Commit only *derived facts* and testcases.
+- If you see `Connection refused`, increase `--delay` (Dolphin needs time to open the GDB stub).
+
 ### Host MEM1 dumping (for RVZ comparisons)
 
 For comparing a host workload scenario against an RVZ MEM1 oracle, dump host MEM1 from the
