@@ -904,3 +904,38 @@ Notes:
   - When an immediate transfer succeeds, `Packet[chan]` and `Alarm[chan]` remain unchanged.
   - When an immediate transfer fails, it queues `Packet[chan]` fields and sets `packet->fire = XferTime[chan] + delay`.
   - When `now < fire`, it also arms `Alarm[chan]` (handler pointer + fire time).
+
+## 2026-02-10: MP4 decomp scan: unique Nintendo SDK functions used by MP4 (game sources)
+
+Goal: estimate how much of the Nintendo SDK surface MP4 needs by scanning the MP4 decomp *game* sources
+for SDK API usage, excluding SDK sources themselves.
+
+Method (reproducible):
+1) Build a set of SDK API names from the MP4 decomp Dolphin headers:
+   - Source: `/Users/chrislamark/projects/recomp/gamecube_static_recomp/decomp_mario_party_4/include/dolphin/**/*.h`
+   - Extract prototypes matching SDK prefixes:
+     `OS,GX,VI,PAD,DVD,SI,EXI,AI,AX,AR,ARQ,CARD,MTX,PS,DB,DSP,THP,DEMO`
+2) Scan MP4 decomp `src/**/*.c` excluding `src/dolphin/**` for callsites to names in that API set.
+
+Result (current snapshot):
+- SDK API names extracted from headers: 694
+- Unique SDK functions referenced by MP4 game sources (excluding `src/dolphin`): 273
+- Per-subsystem unique usage (from the scan):
+  - GX: 121
+  - OS: 48
+  - PS: 28
+  - CARD: 17
+  - VI: 12
+  - DVD: 10
+  - AR: 10
+  - AI: 8
+  - PAD: 7
+  - THP: 6
+  - ARQ: 2
+  - DEMO: 2
+  - DB: 1
+  - SI: 1
+
+Notes:
+- This is distinct from `docs/sdk/mp4/MP4_sdk_calls_inventory.csv` which inventories SDK-like callsites
+  in `src/game_workload/mp4/vendor/src/game/*.c` only.

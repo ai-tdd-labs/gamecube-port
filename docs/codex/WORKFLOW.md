@@ -340,3 +340,15 @@ python3 tools/ram_dump.py \
   --addr 0x80000000 --size 0x01800000 --chunk 0x1000 \
   --out /tmp/game_checkpoint_mem1.bin
 ```
+
+## MP4 SDK surface estimation (decomp scan)
+
+Purpose: track "how many unique Nintendo SDK functions does MP4 use?" from the decomp.
+
+Method:
+1) Extract SDK API names from MP4 decomp Dolphin headers (`include/dolphin/**/*.h`) by parsing C prototypes
+   for known SDK prefixes (OS/GX/VI/PAD/DVD/SI/EXI/AI/AX/AR/ARQ/CARD/MTX/PS/DB/DSP/THP/DEMO).
+2) Scan MP4 decomp `src/**/*.c` excluding `src/dolphin/**` for callsites to those API names.
+3) Record the resulting unique count + subsystem breakdown in `docs/codex/NOTES.md`.
+
+We treat this as an evolving measurement: as the scanned MP4 source set grows, the numbers may change.
