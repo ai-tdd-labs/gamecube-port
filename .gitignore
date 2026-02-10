@@ -108,3 +108,6 @@ tests/workload/mp4/tests/
 
 # Trace harvesting outputs (breakpoint-driven snapshot collection).
 /tests/traces/**
+
+# Repo-local convenience symlinks (never publish)
+/local/
