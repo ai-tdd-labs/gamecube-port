@@ -86,6 +86,8 @@ tests/workload/mp4/tests/
 # Large binary dumps (generated)
 /tests/sdk/smoke/**/expected/*.bin
 /tests/sdk/smoke/**/actual/*.bin
+/tests/sdk/**/expected/*.bin
+/tests/sdk/**/actual/*.bin
 /tests/expected/*.bin
 /tests/actual/*.bin
 
