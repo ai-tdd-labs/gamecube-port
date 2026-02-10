@@ -1,12 +1,16 @@
 diff --git a/src/sdk_port/pad/PAD.c b/src/sdk_port/pad/PAD.c
 --- a/src/sdk_port/pad/PAD.c
 +++ b/src/sdk_port/pad/PAD.c
-@@ -85,7 +85,7 @@
- // stable "kind" token for deterministic dumps) and store Spec.
+@@
  void PADSetSpec(u32 spec) {
--    u32 kind = GC_PAD_MAKE_STATUS_SPEC2;
-+    u32 kind = GC_PAD_MAKE_STATUS_SPEC0; // MUTANT: wrong default kind
+     u32 kind = GC_PAD_MAKE_STATUS_SPEC2;
      u32 make_status_pc = PAD_SPEC2_MAKE_STATUS_PC;
      switch (spec) {
-         case 0: /* PAD_SPEC_0 */
-             kind = GC_PAD_MAKE_STATUS_SPEC0;
+@@
+         default: /* PAD_SPEC_2..5 */
+-            kind = GC_PAD_MAKE_STATUS_SPEC2;
+-            make_status_pc = PAD_SPEC2_MAKE_STATUS_PC;
++            kind = GC_PAD_MAKE_STATUS_SPEC0; // MUTANT: wrong default mapping for spec>=2
++            make_status_pc = PAD_SPEC0_MAKE_STATUS_PC;
+             break;
+     }
