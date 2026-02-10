@@ -1,0 +1,13 @@
+diff --git a/src/sdk_port/pad/PAD.c b/src/sdk_port/pad/PAD.c
+index 3a6bb3e..b55d2ac 100644
+--- a/src/sdk_port/pad/PAD.c
++++ b/src/sdk_port/pad/PAD.c
+@@ -174,5 +174,6 @@
+ void PADControlMotor(s32 chan, u32 command) {
+     if (chan < 0 || chan >= 4) return;
+-    gc_pad_motor_cmd[chan] = command;
+-    gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_MOTOR_CMD_BASE + (uint32_t)chan * 4u, command);
++    // MUTANT: zero the command (simulates a bug where rumble never turns on/off correctly).
++    gc_pad_motor_cmd[chan] = 0;
++    gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_MOTOR_CMD_BASE + (uint32_t)chan * 4u, 0);
+ }
