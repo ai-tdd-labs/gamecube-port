@@ -54,7 +54,7 @@ cleanup() {
   git apply -R "$patch_file" >/dev/null 2>&1 || true
   release_lock
 }
-trap cleanup EXIT
+trap cleanup EXIT INT TERM HUP
 
 # Apply mutant patch.
 git apply "$patch_file"
@@ -72,12 +72,18 @@ run_cmd_expect_fail() {
   set +e
   # Replay scripts normally refuse to run on a dirty worktree. During mutation
   # checks we intentionally dirty the tree (apply a patch), so allow a bypass.
-  GC_ALLOW_DIRTY=1 "${c[@]}"
+  # Scenario-based tests also need an oracle (expected vs actual) to kill mutants.
+  GC_ALLOW_DIRTY=1 GC_SCENARIO_COMPARE=1 "${c[@]}"
   rc=$?
   set -e
   if [[ $rc -eq 0 ]]; then
     echo "fatal: mutation survived (command exited 0): ${c[*]}" >&2
     exit 1
+  fi
+  if [[ $rc -eq 2 ]]; then
+    echo "fatal: mutation check infra error (exit 2): ${c[*]}" >&2
+    echo "hint: exit 2 usually means missing fixtures/usage error, not a killed mutant." >&2
+    exit 2
   fi
   echo "[mut] ok (failed as expected): rc=$rc" >&2
   cmd=()

@@ -295,4 +295,50 @@ fi
     env "${run_env[@]+${run_env[@]}}" "$exe"
   fi)
 
+# Optional oracle compare step (used by mutation tests).
+# Many host scenarios only *produce* actual/ output. For mutation testing we need
+# a predicate that fails when output changes. We derive the output/expected paths
+# from the scenario source.
+if [[ "${GC_SCENARIO_COMPARE:-0}" == "1" ]]; then
+  # Extract the literal string returned by gc_scenario_out_path().
+  out_rel="$(sed -n 's/.*gc_scenario_out_path[[:space:]]*(.*)[[:space:]]*{[[:space:]]*return[[:space:]]*\"\\([^\"]*\\)\".*/\\1/p' "$SCENARIO_SRC" | head -n 1 || true)"
+  if [[ -z "${out_rel:-}" ]]; then
+    echo "fatal: could not infer gc_scenario_out_path() from: $SCENARIO_SRC" >&2
+    exit 2
+  fi
+
+  actual_path="$(cd "$scenario_dir" && python3 -c 'import os,sys; print(os.path.abspath(sys.argv[1]))' "$out_rel")"
+  expected_path="$(python3 -c 'import os,sys; p=sys.argv[1]; print(p.replace(\"/actual/\",\"/expected/\"))' "$actual_path")"
+
+  if [[ ! -f "$actual_path" ]]; then
+    echo "fatal: scenario did not produce actual output: $actual_path" >&2
+    exit 2
+  fi
+
+  if [[ ! -f "$expected_path" ]]; then
+    # Expected fixtures are often derived artifacts and may live in the main repo
+    # checkout rather than this worktree.
+    if [[ -n "${GC_MAIN_REPO_ROOT:-}" ]]; then
+      rel="${expected_path#"$repo_root"/}"
+      alt="$GC_MAIN_REPO_ROOT/$rel"
+      if [[ -f "$alt" ]]; then
+        expected_path="$alt"
+      fi
+    fi
+  fi
+  if [[ ! -f "$expected_path" ]]; then
+    echo "fatal: expected fixture missing: $expected_path" >&2
+    echo "hint: generate expected bins first (Dolphin), then rerun mutation checks." >&2
+    echo "hint: or set GC_MAIN_REPO_ROOT to a checkout that has expected/ fixtures." >&2
+    exit 2
+  fi
+
+  echo "[host-compare] $expected_path vs $actual_path" >&2
+  if [[ -x "$repo_root/tools/diff_bins.sh" ]]; then
+    "$repo_root/tools/diff_bins.sh" "$expected_path" "$actual_path"
+  else
+    cmp -s "$expected_path" "$actual_path" || exit 1
+  fi
+fi
+
 rm -f "$exe" >/dev/null 2>&1 || true
