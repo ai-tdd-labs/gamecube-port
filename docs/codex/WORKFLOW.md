@@ -234,6 +234,22 @@ GC_HOST_MAIN_DUMP_ADDR=0x80300000 GC_HOST_MAIN_DUMP_SIZE=0x1F0 \
   tools/run_host_scenario.sh tests/sdk/si/si_transfer/host/si_transfer_rvz_trace_replay_001_scenario.c
 ```
 
+### Mutation checks (test strength)
+
+Goal: prove tests actually catch bugs (not just that they pass when code is correct).
+
+We do this by introducing a temporary, known-bad change (a "mutant") and verifying
+that normal replay/unit tests FAIL under that mutant.
+
+Run:
+```bash
+tools/mutations/si_transfer_fire_plus1.sh tests/traces/si_transfer/mp4_rvz_v4/<hit_dir>
+```
+
+Rules:
+- mutation checks require a clean git worktree (the script refuses to run otherwise)
+- the script auto-reverts the mutant via `trap` even if the test command crashes
+
 Notes:
 - Output under `tests/traces/**` is local-only (gitignored). Commit only *derived facts* and testcases.
 - If you see `Connection refused`, increase `--delay` (Dolphin needs time to open the GDB stub).

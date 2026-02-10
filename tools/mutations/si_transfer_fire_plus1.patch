@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/si/SI.c b/src/sdk_port/si/SI.c
+--- a/src/sdk_port/si/SI.c
++++ b/src/sdk_port/si/SI.c
+@@ -169,7 +169,7 @@ BOOL SITransfer(s32 chan, void *output, u32 outputBytes, void *input, u32 inputBy
+     u64 fire = now;
+     if (delay != 0) {
+         u64 xfer = load_u64be(SI_XFER_TIME_BASE + (uint32_t)chan * 8u);
+-        fire = xfer + delay;
++        fire = xfer + delay + 1; // MUTANT: should be caught by replay tests
+     }
+ 
+     // If we are at/after fire time, retail attempts an immediate hardware
