@@ -26,7 +26,7 @@ Rules:
   - `OSInitStopwatch` (from decomp `src/dolphin/os/OSStopwatch.c`: sets name/total/hits/min/max only; does not touch running/last).
   - `GXSetDrawSyncCallback` / `GXSetDrawSync` (from decomp `src/dolphin/gx/GXMisc.c`).
   - Suites: `tests/sdk/os/os_init_stopwatch`, `tests/sdk/gx/gx_set_draw_sync_callback`, `tests/sdk/gx/gx_set_draw_sync`.
-  Evidence: `/tmp/mp4_rvz_osdisable_bp_0x80300000.bin` produced by `tools/ram_dump.py --breakpoint 0x800B723C` on `/Users/chrislamark/projects/recomp/gamecube_static_recomp/game_files/Mario Party 4 (USA).rvz`
+  Evidence: `<TMP>/mp4_rvz_osdisable_bp_0x80300000.bin` produced by `tools/ram_dump.py --breakpoint 0x800B723C` on `<MP4_RVZ_PATH>`
 - MP4 RVZ breakpoint attempt at SDK `GXCopyTex` (`GXCopyTex = 0x800CBA0C`) did not hit within 60 seconds of boot (headless run).
   Evidence: `tools/dump_expected_rvz_mem1_at_pc.sh` output "Breakpoint not hit before timeout."
 - Real MP4 RVZ probe checkpoints (small window dumps, not full MEM1):
@@ -93,7 +93,7 @@ Rules:
   - `src/game_workload/mp4/vendor/src/game/printfunc.c`
   - `src/game_workload/mp4/vendor/src/game/wipe.c`
   - `src/game_workload/mp4/vendor/src/game/objmain.c`
-  Evidence: file copies from `/Users/chrislamark/projects/recomp/gamecube_static_recomp/decomp_mario_party_4/src/game/`.
+  Evidence: file copies from `<DECOMP_MP4_ROOT>/src/game/`.
 - These files are NOT compiled by the host workload runner yet (workloads still compile only `init.c`, `pad.c`, `process.c` + slices).
   Evidence: `tools/run_host_scenario.sh` workload `extra_srcs` list.
 
@@ -134,7 +134,7 @@ Rules:
 
 ### RVZ probe (GWInit checkpoint) for SDK globals
 - Probe tool: `tools/dump_expected_rvz_probe_at_pc.sh`.
-- RVZ: `/Users/chrislamark/projects/recomp/gamecube_static_recomp/game_files/Mario Party 4 (USA).rvz` at PC `0x800308B8` (`GWInit`).
+- RVZ: `<MP4_RVZ_PATH>` at PC `0x800308B8` (`GWInit`).
 - Output dir: `tests/oracles/mp4_rvz/probes/gwinit_pc_800308B8/` (see `manifest.sha256`):
   - `os_heap_arena_window.bin` (`0x801D38A0` size `0x80`) sha256 `a51024657eb2224f6c342f65797e7fd8535493bf7e9e49aa676dba306c51ba0d`
   - `os_arena_hi_window.bin` (`0x801D42E0` size `0x40`) sha256 `91947db67dece35f297f38d994fa8b1770567aa6b89c7a5a7f94923cc421f8d2`
@@ -170,7 +170,7 @@ Rules:
 
 ### RVZ probes (post-GWInit init steps) + matching host checkpoints
 - Purpose: confirm the same *semantic* invariants hold deeper into MP4 init without doing raw RVZ-vs-host full-MEM1 diffs.
-- RVZ image: `/Users/chrislamark/projects/recomp/gamecube_static_recomp/game_files/Mario Party 4 (USA).rvz`
+- RVZ image: `<MP4_RVZ_PATH>`
 - Tool: `tools/dump_expected_rvz_probe_at_pc.sh`
 - Checkpoints (PC -> function -> RVZ dir -> host checkpoint scenario):
   - `0x8000D348` -> `HuSprInit` entry -> `tests/oracles/mp4_rvz/probes/husprinit_pc_8000D348/` -> host uses `tests/workload/mp4/mp4_gwinit_001_scenario.c` (state right before `HuSprInit`).
@@ -550,10 +550,10 @@ Rules:
 ## GXLoadTexObj (MP4 wipe)
 
 Evidence:
-- MP4 callsite: `/Users/chrislamark/projects/gamecube/decomp_mario_party_4/src/game/wipe.c` (`WipeFrameStill`)
+- MP4 callsite: `<DECOMP_MP4_ROOT>/src/game/wipe.c` (`WipeFrameStill`)
 - SDK reference:
-  - `/Users/chrislamark/projects/gamecube/decomp_mario_party_4/src/dolphin/gx/GXTexture.c` (`GXLoadTexObjPreLoaded` ID injection + 6 BP writes)
-  - `/Users/chrislamark/projects/gamecube/decomp_mario_party_4/src/dolphin/gx/GXInit.c` (`__GXDefaultTexRegionCallback` round-robin + `GXInitTexCacheRegion` init pattern)
+  - `<DECOMP_MP4_ROOT>/src/dolphin/gx/GXTexture.c` (`GXLoadTexObjPreLoaded` ID injection + 6 BP writes)
+  - `<DECOMP_MP4_ROOT>/src/dolphin/gx/GXInit.c` (`__GXDefaultTexRegionCallback` round-robin + `GXInitTexCacheRegion` init pattern)
 
 Test:
 - expected (PPC/Dolphin): `tests/sdk/gx/gx_load_tex_obj/expected/gx_load_tex_obj_mp4_wipe_texmap0_001.bin`
@@ -565,7 +565,7 @@ Facts (confirmed by bit-exact expected vs actual):
 
 ## RVZ oracle: MEM1 dump at GXInit (MP4 USA)
 
-- RVZ: `/Users/chrislamark/projects/recomp/gamecube_static_recomp/game_files/Mario Party 4 (USA).rvz`
+- RVZ: `<MP4_RVZ_PATH>`
 - PC checkpoint: `GXInit` entry @ `0x800C7E7C` (from `decomp_mario_party_4/config/GMPE01_00/symbols.txt`)
 - Dump: `tests/oracles/mp4_rvz/mem1_at_pc_800C7E7C_gxinit.bin` (MEM1 0x80000000 size 0x01800000)
 - SHA256: `1de788bdfe8d7ab0643af186d8000c606263e667e81a5e5fa16d50aea58bfffa`
@@ -814,7 +814,7 @@ Notes:
   - `tests/sdk/gx/gx_load_tex_mtx_imm/actual/gx_load_tex_mtx_imm_mp4_hsfdraw_3x4_001.bin`
 
 ## 2026-02-09: MP4 RVZ MEM1 oracle dump at GXLoadTexMtxImm
-- RVZ specimen: `/Users/chrislamark/projects/recomp/gamecube_static_recomp/game_files/Mario Party 4 (USA).rvz`
+- RVZ specimen: `<MP4_RVZ_PATH>`
 - Checkpoint PC: `0x800CF628` (GXLoadTexMtxImm) from `output_mp4/ppc_func_mapping.cpp`.
 - Produced via: `tools/dump_expected_rvz_mem1_at_pc.sh <rvz> 0x800CF628 <out>`
 - Output (local-only, gitignored): `tests/oracles/rvz/mp4_mem1_at_gx_load_tex_mtx_imm_0x800CF628.bin`

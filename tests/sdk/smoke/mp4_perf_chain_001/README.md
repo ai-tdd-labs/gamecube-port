@@ -20,7 +20,7 @@ Dump range:
 ## Run
 
 ```bash
-cd /Users/chrislamark/projects/gamecube
+cd <REPO_ROOT>
 
 # expected (Dolphin)
 tools/dump_expected_mem1.sh \

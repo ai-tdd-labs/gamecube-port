@@ -3,7 +3,7 @@
 MP4 callsite (wipe):
 
 - `GXInitTexObj(&tex, wipe->copy_data, wipe->w, wipe->h, GX_TF_RGB565, GX_CLAMP, GX_CLAMP, GX_FALSE)`
-  Evidence: `/Users/chrislamark/projects/gamecube/decomp_mario_party_4/src/game/wipe.c`
+  Evidence: `<DECOMP_MP4_ROOT>/src/game/wipe.c`
 
 SDK reference behavior:
 
@@ -12,9 +12,8 @@ SDK reference behavior:
   - `image0` (width-1, height-1, format low nibble)
   - `image3` (image base = image_ptr >> 5)
   - `fmt`, `loadFmt`, `loadCnt`, `flags`
-  Evidence: `/Users/chrislamark/projects/gamecube/decomp_mario_party_4/src/dolphin/gx/GXTexture.c`
+  Evidence: `<DECOMP_MP4_ROOT>/src/dolphin/gx/GXTexture.c`
 
 Oracle:
 - expected: PPC DOL built from the reference behavior (run in Dolphin)
-- actual: host build using `/Users/chrislamark/projects/gamecube/src/sdk_port/gx/GX.c`
-
+- actual: host build using `<REPO_ROOT>/src/sdk_port/gx/GX.c`

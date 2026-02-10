@@ -7,12 +7,12 @@
 
 # Archive area (not part of canonical layout)
 docs/_legacy/
+docs/_archive/
 
-# Decomp/source drops (likely proprietary)
-decomp_*
-decomp_*/
-**/decomp_*
-**/decomp_*/
+# Publishable repo: only keep docs/codex tracked.
+docs/*
+!docs/codex/
+!docs/codex/**
 
 # Optional vendored game workloads (local convenience only)
 src/game_workload/*/vendor/
