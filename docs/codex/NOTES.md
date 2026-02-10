@@ -942,6 +942,33 @@ Notes:
 - Result: replay PASS for the captured case (bit-exact).
 
 
+## 2026-02-10: Retail RVZ trace replay (MP4 SISetSamplingRate)
+
+### SISetSamplingRate
+- Retail entry PC: `0x800DA3C8` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Trace dir (local-only, gitignored): `tests/traces/si_set_sampling_rate/mp4_rvz_si_ctrl/` (10 unique cases)
+- Replay harness (committed):
+  - Scenario: `tests/sdk/si/si_set_sampling_rate/host/si_set_sampling_rate_rvz_trace_replay_001_scenario.c`
+  - Replay: `tools/replay_trace_case_si_set_sampling_rate.sh <trace_case_dir>`
+  - 1-button: `tools/harvest_and_replay_si_set_sampling_rate.sh` (replay-only; uses existing trace corpus)
+- Result: replay PASS for all 10 unique cases (bit-exact).
+
+
+## 2026-02-10: Retail RVZ trace replay (MP4 PADControlMotor)
+
+### PADControlMotor
+- Retail entry PC: `0x800C4F34` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Trace dir (local-only, gitignored): `tests/traces/pad_control_motor/mp4_rvz_v1/` (2 unique cases)
+- Replay harness (committed):
+  - Scenario: `tests/sdk/pad/pad_control_motor/host/pad_control_motor_rvz_trace_replay_001_scenario.c`
+  - Replay: `tools/replay_trace_case_pad_control_motor.sh <trace_case_dir>`
+  - 1-button: `tools/harvest_and_replay_pad_control_motor.sh`
+- Observed cases: chan=0 cmd=2
+- Result: replay PASS for both captured cases (bit-exact).
+
+
+
+
 
 ## 2026-02-10: Retail RVZ trace replay (MP4 SITransfer)
 
