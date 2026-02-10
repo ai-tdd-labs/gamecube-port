@@ -4,6 +4,7 @@
 .trash/
 .claude/
 .codex/
+.worktrees/
 
 # Archive area (not part of canonical layout)
 docs/_legacy/
@@ -111,3 +112,6 @@ tests/workload/mp4/tests/
 
 # Repo-local convenience symlinks (never publish)
 /local/
+
+# Local mutation tooling lives on a separate branch/worktree; keep stray files out of main.
+tools/run_mutation_report.sh
