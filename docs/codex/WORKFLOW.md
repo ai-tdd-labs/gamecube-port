@@ -219,6 +219,21 @@ tools/replay_trace_case_pad_clamp.sh tests/traces/pad_clamp/mp4_rvz/<hit_dir>
 tools/replay_trace_case_pad_reset.sh tests/traces/pad_reset/mp4_rvz_v2/<hit_dir>
 ```
 
+### Host runner dump override (for trace replays)
+
+By default the host runner dumps `0x80300000..0x80300040` to the scenario's `actual/*.bin`.
+Some trace replays need a bigger output blob (e.g. multiple memory windows).
+
+Use these environment variables to override the **main** dump window:
+- `GC_HOST_MAIN_DUMP_ADDR` (default `0x80300000`)
+- `GC_HOST_MAIN_DUMP_SIZE` (default `0x40`)
+
+Example (SITransfer replay uses a `0x1F0`-byte output layout):
+```bash
+GC_HOST_MAIN_DUMP_ADDR=0x80300000 GC_HOST_MAIN_DUMP_SIZE=0x1F0 \
+  tools/run_host_scenario.sh tests/sdk/si/si_transfer/host/si_transfer_rvz_trace_replay_001_scenario.c
+```
+
 Notes:
 - Output under `tests/traces/**` is local-only (gitignored). Commit only *derived facts* and testcases.
 - If you see `Connection refused`, increase `--delay` (Dolphin needs time to open the GDB stub).

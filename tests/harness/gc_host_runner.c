@@ -59,8 +59,26 @@ int main(int argc, char **argv) {
     gc_scenario_run(&ram);
 
     // Default dump region matches the Dolphin dumps in tools/run_tests.sh.
-    const uint32_t dump_addr = 0x80300000u;
-    const size_t dump_size = 0x40;
+    // Some trace-replay scenarios need larger output blobs; allow overriding
+    // the main dump window without changing code.
+    //
+    // Environment variables:
+    // - GC_HOST_MAIN_DUMP_ADDR: hex/dec address (default 0x80300000)
+    // - GC_HOST_MAIN_DUMP_SIZE: hex/dec size (default 0x40)
+    uint32_t dump_addr = 0x80300000u;
+    size_t dump_size = 0x40;
+    const char *env_main_addr = getenv("GC_HOST_MAIN_DUMP_ADDR");
+    const char *env_main_size = getenv("GC_HOST_MAIN_DUMP_SIZE");
+    if (env_main_addr && *env_main_addr) {
+        char *endp = 0;
+        dump_addr = (uint32_t)strtoul(env_main_addr, &endp, 0);
+        if (!endp || *endp != 0) die("invalid GC_HOST_MAIN_DUMP_ADDR");
+    }
+    if (env_main_size && *env_main_size) {
+        char *endp = 0;
+        dump_size = (size_t)strtoull(env_main_size, &endp, 0);
+        if (!endp || *endp != 0 || dump_size == 0) die("invalid GC_HOST_MAIN_DUMP_SIZE");
+    }
 
     const char *out_path = gc_scenario_out_path();
     if (!out_path) die("gc_scenario_out_path returned NULL");

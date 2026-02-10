@@ -889,3 +889,18 @@ Notes:
     - `GC_SDK_OFF_PAD_RESETTING_CHAN`
     - `GC_SDK_OFF_PAD_RECALIBRATE_BITS`
     - `GC_SDK_OFF_PAD_RESET_CB_PTR`
+
+## 2026-02-10: Retail RVZ trace replay (MP4 SITransfer)
+
+### SITransfer
+- Retail entry PC: `0x800D9CC4` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Trace dir (local-only, gitignored): `tests/traces/si_transfer/mp4_rvz_v4/` (20 unique cases)
+- Replay harness (committed):
+  - Scenario: `tests/sdk/si/si_transfer/host/si_transfer_rvz_trace_replay_001_scenario.c`
+  - Replay: `tools/replay_trace_case_si_transfer.sh <trace_case_dir>`
+- Result: replay PASS for all 20 unique cases (bit-exact).
+- Confirmed behaviors (as observed in traces + decomp `external/mp4-decomp/src/dolphin/si/SIBios.c`):
+  - `SITransfer()` returns `TRUE` in all observed MP4 init cases.
+  - When an immediate transfer succeeds, `Packet[chan]` and `Alarm[chan]` remain unchanged.
+  - When an immediate transfer fails, it queues `Packet[chan]` fields and sets `packet->fire = XferTime[chan] + delay`.
+  - When `now < fire`, it also arms `Alarm[chan]` (handler pointer + fire time).
