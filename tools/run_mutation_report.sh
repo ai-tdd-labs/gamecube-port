@@ -125,7 +125,7 @@ pick_suite_arg() {
         pad_set_spec) required=(in_regs.json) ;;
         si_get_response) required=(in_regs.json) ;;
         si_set_sampling_rate) required=(in_regs.json out_si_ctrl.bin) ;;
-        si_transfer) required=(in_regs.json) ;;
+        si_transfer) required=(in_regs.json in_si_core.bin) ;;
         vi_set_post_retrace_callback) required=(in_regs.json) ;;
       esac
 
