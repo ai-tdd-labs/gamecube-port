@@ -77,6 +77,99 @@ static inline void store_u32be(uint32_t addr, uint32_t v) {
 // which is 12 bytes on GC (3x 32-bit fields).
 enum { HEAPDESC_SIZE = 12, ALIGNMENT = 32 };
 
+// ── DL helpers for emulated memory ──
+//
+// Cell layout in emulated RAM (16 bytes):
+//   +0x00: prev  (u32 GC pointer)
+//   +0x04: next  (u32 GC pointer)
+//   +0x08: size  (u32)
+//   +0x0C: hd    (u32 GC pointer to HeapDesc; 0 for free cells)
+//
+// These are non-static so property tests can call them directly for
+// leaf-level DL testing.
+
+// DLAddFront: prepend cell to list, return new head.
+uint32_t port_DLAddFront(uint32_t list, uint32_t cell) {
+    store_u32be(cell + 4, list); // cell->next = list
+    store_u32be(cell + 0, 0);   // cell->prev = NULL
+    if (list != 0) {
+        store_u32be(list + 0, cell); // list->prev = cell
+    }
+    return cell;
+}
+
+// DLLookup: search for cell in list, return cell if found, 0 otherwise.
+uint32_t port_DLLookup(uint32_t list, uint32_t cell) {
+    for (; list != 0; list = load_u32be(list + 4)) {
+        if (list == cell) {
+            return list;
+        }
+    }
+    return 0;
+}
+
+// DLExtract: remove cell from doubly-linked list, return new head.
+uint32_t port_DLExtract(uint32_t list, uint32_t cell) {
+    uint32_t cell_next = load_u32be(cell + 4);
+    uint32_t cell_prev = load_u32be(cell + 0);
+
+    if (cell_next != 0) {
+        store_u32be(cell_next + 0, cell_prev); // next->prev = cell->prev
+    }
+    if (cell_prev == 0) {
+        return cell_next; // removing head
+    }
+    store_u32be(cell_prev + 4, cell_next); // prev->next = cell->next
+    return list;
+}
+
+// DLInsert: insert cell into address-sorted free list with coalescing.
+uint32_t port_DLInsert(uint32_t list, uint32_t cell) {
+    uint32_t prev = 0;
+    uint32_t next = list;
+
+    while (next != 0) {
+        if (cell <= next) break;
+        prev = next;
+        next = load_u32be(next + 4); // next->next
+    }
+
+    store_u32be(cell + 4, next); // cell->next = next
+    store_u32be(cell + 0, prev); // cell->prev = prev
+
+    if (next != 0) {
+        store_u32be(next + 0, cell); // next->prev = cell
+        // Coalesce with next?
+        uint32_t cell_size = load_u32be(cell + 8);
+        if (cell + cell_size == next) {
+            uint32_t next_size = load_u32be(next + 8);
+            store_u32be(cell + 8, cell_size + next_size); // cell->size += next->size
+            next = load_u32be(next + 4); // next = next->next
+            store_u32be(cell + 4, next);  // cell->next = next
+            if (next != 0) {
+                store_u32be(next + 0, cell); // next->prev = cell
+            }
+        }
+    }
+
+    if (prev != 0) {
+        store_u32be(prev + 4, cell); // prev->next = cell
+        // Coalesce prev with cell?
+        uint32_t prev_size = load_u32be(prev + 8);
+        if (prev + prev_size == cell) {
+            uint32_t cell_size = load_u32be(cell + 8);
+            store_u32be(prev + 8, prev_size + cell_size); // prev->size += cell->size
+            next = load_u32be(cell + 4);
+            store_u32be(prev + 4, next); // prev->next = cell->next
+            if (next != 0) {
+                store_u32be(next + 0, prev); // next->prev = prev
+            }
+        }
+        return list;
+    }
+    return cell;
+}
+
 void *OSInitAlloc(void *arenaStart, void *arenaEnd, int maxHeaps) {
     const uint32_t arena_lo = (uint32_t)(uintptr_t)arenaStart;
     const uint32_t arena_hi = (uint32_t)(uintptr_t)arenaEnd;
@@ -221,15 +314,11 @@ void *OSAllocFromHeap(int heap, uint32_t size) {
         }
     }
 
-    // Add allocated cell to front of allocated list.
+    // Add allocated cell to front of allocated list (via DLAddFront).
     uint32_t alloc_head = load_u32be(hd + 8);
-    store_u32be(cell + 4, alloc_head); // next
-    store_u32be(cell + 0, 0);          // prev
+    alloc_head = port_DLAddFront(alloc_head, cell);
     store_u32be(cell + 12, hd);        // cell->hd = &HeapArray[heap] (emulated address)
-    if (alloc_head != 0) {
-        store_u32be(alloc_head + 0, cell);
-    }
-    store_u32be(hd + 8, cell);
+    store_u32be(hd + 8, alloc_head);
 
     return (void *)(uintptr_t)(cell + 0x20u);
 }
@@ -239,6 +328,131 @@ void *OSAlloc(uint32_t size) {
     // current heap.
     int curr = (int)state_load_i32(GC_SDK_OFF_OS_CURR_HEAP, __OSCurrHeap);
     return OSAllocFromHeap(curr, size);
+}
+
+void OSFreeToHeap(int heap, void *ptr) {
+    if (!ptr) return;
+
+    const uint32_t heap_array = state_load_u32(GC_SDK_OFF_OSALLOC_HEAP_ARRAY, __gc_osalloc_heap_array);
+    const int32_t num_heaps = state_load_i32(GC_SDK_OFF_OSALLOC_NUM_HEAPS, __gc_osalloc_num_heaps);
+    if (heap_array == 0 || heap < 0 || heap >= num_heaps) return;
+
+    const uint32_t hd = heap_array + (uint32_t)heap * (uint32_t)HEAPDESC_SIZE;
+    if (load_i32be(hd + 0) < 0) return;
+
+    uint32_t gc_ptr = (uint32_t)(uintptr_t)ptr;
+    uint32_t cell = gc_ptr - 0x20u;
+
+    // Remove from allocated list.
+    uint32_t alloc_head = load_u32be(hd + 8);
+    uint32_t new_alloc = port_DLExtract(alloc_head, cell);
+    store_u32be(hd + 8, new_alloc);
+
+    // Clear hd pointer (mark as free).
+    store_u32be(cell + 12, 0);
+
+    // Insert into free list (address-sorted, with coalescing).
+    uint32_t free_head = load_u32be(hd + 4);
+    uint32_t new_free = port_DLInsert(free_head, cell);
+    store_u32be(hd + 4, new_free);
+}
+
+void OSDestroyHeap(int heap) {
+    const uint32_t heap_array = state_load_u32(GC_SDK_OFF_OSALLOC_HEAP_ARRAY, __gc_osalloc_heap_array);
+    const int32_t num_heaps = state_load_i32(GC_SDK_OFF_OSALLOC_NUM_HEAPS, __gc_osalloc_num_heaps);
+    if (heap_array == 0 || heap < 0 || heap >= num_heaps) return;
+
+    const uint32_t hd = heap_array + (uint32_t)heap * (uint32_t)HEAPDESC_SIZE;
+    store_u32be(hd + 0, 0xFFFFFFFFu); // hd->size = -1
+}
+
+void OSAddToHeap(int heap, void *start, void *end) {
+    const uint32_t heap_array = state_load_u32(GC_SDK_OFF_OSALLOC_HEAP_ARRAY, __gc_osalloc_heap_array);
+    const int32_t num_heaps = state_load_i32(GC_SDK_OFF_OSALLOC_NUM_HEAPS, __gc_osalloc_num_heaps);
+    if (heap_array == 0 || heap < 0 || heap >= num_heaps) return;
+
+    const uint32_t hd = heap_array + (uint32_t)heap * (uint32_t)HEAPDESC_SIZE;
+    if (load_i32be(hd + 0) < 0) return;
+
+    uint32_t s = (uint32_t)(uintptr_t)start;
+    uint32_t e = (uint32_t)(uintptr_t)end;
+
+    s = round_up(s, ALIGNMENT);
+    e = round_down(e, ALIGNMENT);
+
+    uint32_t cell_size = e - s;
+    // cell = start; cell->size = end - start
+    store_u32be(s + 8, cell_size);
+    store_u32be(s + 12, 0); // hd=0 (free cell)
+
+    // hd->size += cell->size
+    int32_t hd_size = load_i32be(hd + 0);
+    store_u32be(hd + 0, (uint32_t)(hd_size + (int32_t)cell_size));
+
+    // hd->free = DLInsert(hd->free, cell)
+    uint32_t free_head = load_u32be(hd + 4);
+    uint32_t new_free = port_DLInsert(free_head, s);
+    store_u32be(hd + 4, new_free);
+}
+
+void OSFree(void *ptr) {
+    int curr = (int)state_load_i32(GC_SDK_OFF_OS_CURR_HEAP, __OSCurrHeap);
+    OSFreeToHeap(curr, ptr);
+}
+
+long OSCheckHeap(int heap) {
+    const uint32_t heap_array = state_load_u32(GC_SDK_OFF_OSALLOC_HEAP_ARRAY, __gc_osalloc_heap_array);
+    const int32_t num_heaps = state_load_i32(GC_SDK_OFF_OSALLOC_NUM_HEAPS, __gc_osalloc_num_heaps);
+    const uint32_t arena_start = state_load_u32(GC_SDK_OFF_OSALLOC_ARENA_START, __gc_osalloc_arena_start);
+    const uint32_t arena_end = state_load_u32(GC_SDK_OFF_OSALLOC_ARENA_END, __gc_osalloc_arena_end);
+
+    if (heap_array == 0) return -1;
+    if (heap < 0 || heap >= num_heaps) return -1;
+
+    const uint32_t hd = heap_array + (uint32_t)heap * (uint32_t)HEAPDESC_SIZE;
+    int32_t hd_size = load_i32be(hd + 0);
+    if (hd_size < 0) return -1;
+
+    long total = 0;
+    long free_bytes = 0;
+
+    // Walk allocated list.
+    uint32_t alloc_head = load_u32be(hd + 8);
+    if (alloc_head != 0 && load_u32be(alloc_head + 0) != 0) return -1; // head->prev must be NULL
+
+    for (uint32_t cell = alloc_head; cell != 0; cell = load_u32be(cell + 4)) {
+        if (cell < arena_start || cell >= arena_end) return -1;
+        if ((cell & (ALIGNMENT - 1)) != 0) return -1;
+        uint32_t cell_next = load_u32be(cell + 4);
+        if (cell_next != 0 && load_u32be(cell_next + 0) != cell) return -1;
+        int32_t cell_size = load_i32be(cell + 8);
+        if (cell_size < 0x40) return -1;
+        if ((cell_size & (ALIGNMENT - 1)) != 0) return -1;
+        total += cell_size;
+        if (total <= 0 || total > hd_size) return -1;
+    }
+
+    // Walk free list.
+    uint32_t free_head = load_u32be(hd + 4);
+    if (free_head != 0 && load_u32be(free_head + 0) != 0) return -1; // head->prev must be NULL
+
+    for (uint32_t cell = free_head; cell != 0; cell = load_u32be(cell + 4)) {
+        if (cell < arena_start || cell >= arena_end) return -1;
+        if ((cell & (ALIGNMENT - 1)) != 0) return -1;
+        uint32_t cell_next = load_u32be(cell + 4);
+        if (cell_next != 0 && load_u32be(cell_next + 0) != cell) return -1;
+        int32_t cell_size = load_i32be(cell + 8);
+        if (cell_size < 0x40) return -1;
+        if ((cell_size & (ALIGNMENT - 1)) != 0) return -1;
+        if (cell_next != 0 && cell + (uint32_t)cell_size >= cell_next) return -1;
+        total += cell_size;
+        free_bytes += cell_size;
+        free_bytes -= 0x20; // HEADERSIZE
+        if (total <= 0 || total > hd_size) return -1;
+    }
+
+    if (total != hd_size) return -1;
+    return free_bytes;
 }
 
 // Minimal extras used by some init paths and debug helpers.
