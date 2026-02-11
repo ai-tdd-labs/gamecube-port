@@ -37,6 +37,11 @@
 #define ORACLE_MAX_WAIT_QUEUES  16
 #define ORACLE_MAX_MUTEXES      16
 #define ORACLE_MAX_CONDS         8
+#define ORACLE_MAX_MSGQUEUES     8
+#define ORACLE_MAX_MSGS_PER_Q   16
+
+#define ORACLE_OS_MESSAGE_NOBLOCK 0
+#define ORACLE_OS_MESSAGE_BLOCK   1
 
 /* ── Forward declarations ── */
 typedef struct oracle_OSThread oracle_OSThread;
@@ -46,6 +51,7 @@ typedef struct oracle_OSMutex oracle_OSMutex;
 typedef struct oracle_OSMutexQueue oracle_OSMutexQueue;
 typedef struct oracle_OSMutexLink oracle_OSMutexLink;
 typedef struct oracle_OSCond oracle_OSCond;
+typedef struct oracle_OSMessageQueue oracle_OSMessageQueue;
 
 /* ── Thread queue / link ── */
 struct oracle_OSThreadQueue {
@@ -83,6 +89,17 @@ struct oracle_OSCond {
     oracle_OSThreadQueue queue;
 };
 
+/* ── OSMessageQueue ── */
+struct oracle_OSMessageQueue {
+    int id;
+    oracle_OSThreadQueue queueSend;     /* threads blocked on full queue */
+    oracle_OSThreadQueue queueReceive;  /* threads blocked on empty queue */
+    uint32_t msgArray[ORACLE_MAX_MSGS_PER_Q]; /* circular buffer of messages */
+    int32_t  msgCount;                  /* capacity */
+    int32_t  firstIndex;               /* index of first message */
+    int32_t  usedCount;                /* number of messages in queue */
+};
+
 /* ── OSThread ── */
 struct oracle_OSThread {
     int      id;          /* index in pool, for identification */
@@ -112,6 +129,7 @@ static oracle_OSThreadQueue oracle_ActiveThreadQueue;
 static oracle_OSThreadQueue oracle_WaitQueues[ORACLE_MAX_WAIT_QUEUES];
 static oracle_OSMutex       oracle_MutexPool[ORACLE_MAX_MUTEXES];
 static oracle_OSCond        oracle_CondPool[ORACLE_MAX_CONDS];
+static oracle_OSMessageQueue oracle_MsgQPool[ORACLE_MAX_MSGQUEUES];
 
 /* ════════════════════════════════════════════════════════════════════
  * Thread queue macros (OSThread.c:24-83, exact logic)
@@ -489,6 +507,7 @@ static void oracle_OSThreadInit(void)
     memset(oracle_ThreadUsed, 0, sizeof(oracle_ThreadUsed));
     memset(oracle_MutexPool, 0, sizeof(oracle_MutexPool));
     memset(oracle_CondPool, 0, sizeof(oracle_CondPool));
+    memset(oracle_MsgQPool, 0, sizeof(oracle_MsgQPool));
 
     for (prio = 0; prio < ORACLE_MAX_THREADS; prio++) {
         oracle_ThreadPool[prio].id = prio;
@@ -831,4 +850,92 @@ static void oracle_ProcessPendingLocks(void)
         /* Retry the lock — same logic as OSLockMutex */
         oracle_OSLockMutex(m);
     }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+ *  OSMessage API functions (OSMessage.c)
+ *
+ *  Same blocking-loop adaptation as OSMutex: non-blocking only in the
+ *  random test mix.  Blocking paths (OS_MESSAGE_BLOCK) can be tested
+ *  in controlled sequences where the test driver ensures the operation
+ *  can complete.
+ * ════════════════════════════════════════════════════════════════════ */
+
+/* ── OSInitMessageQueue (OSMessage.c:3-11) ── */
+static void oracle_OSInitMessageQueue(oracle_OSMessageQueue *mq, int32_t msgCount)
+{
+    oracle_OSInitThreadQueue(&mq->queueSend);
+    oracle_OSInitThreadQueue(&mq->queueReceive);
+    memset(mq->msgArray, 0, sizeof(mq->msgArray));
+    mq->msgCount = msgCount;
+    mq->firstIndex = 0;
+    mq->usedCount = 0;
+}
+
+/* ── OSSendMessage (OSMessage.c:12-37, non-blocking path) ──
+ *
+ * For NOBLOCK: returns 1 if sent, 0 if queue full.
+ * For BLOCK: if full, sleeps on queueSend and returns 0.
+ *   The test driver calls ProcessPendingSends() to complete.
+ * ── */
+static int oracle_OSSendMessage(oracle_OSMessageQueue *mq, uint32_t msg, int32_t flags)
+{
+    if (mq->msgCount <= mq->usedCount) {
+        if (!(flags & ORACLE_OS_MESSAGE_BLOCK)) {
+            return 0; /* FALSE: queue full, non-blocking */
+        }
+        /* BLOCK: sleep on queueSend */
+        oracle_OSSleepThread(&mq->queueSend);
+        return 0; /* Deferred — ProcessPendingSends will complete */
+    }
+
+    {
+        int32_t lastIndex = (mq->firstIndex + mq->usedCount) % mq->msgCount;
+        mq->msgArray[lastIndex] = msg;
+        mq->usedCount++;
+    }
+
+    oracle_OSWakeupThread(&mq->queueReceive);
+    return 1; /* TRUE: sent */
+}
+
+/* ── OSReceiveMessage (OSMessage.c:39-65, non-blocking path) ── */
+static int oracle_OSReceiveMessage(oracle_OSMessageQueue *mq, uint32_t *msg, int32_t flags)
+{
+    if (mq->usedCount == 0) {
+        if (!(flags & ORACLE_OS_MESSAGE_BLOCK)) {
+            return 0; /* FALSE: queue empty, non-blocking */
+        }
+        /* BLOCK: sleep on queueReceive */
+        oracle_OSSleepThread(&mq->queueReceive);
+        return 0; /* Deferred */
+    }
+
+    if (msg != NULL) {
+        *msg = mq->msgArray[mq->firstIndex];
+    }
+    mq->firstIndex = (mq->firstIndex + 1) % mq->msgCount;
+    mq->usedCount--;
+
+    oracle_OSWakeupThread(&mq->queueSend);
+    return 1; /* TRUE: received */
+}
+
+/* ── OSJamMessage (OSMessage.c:67-91, non-blocking path) ── */
+static int oracle_OSJamMessage(oracle_OSMessageQueue *mq, uint32_t msg, int32_t flags)
+{
+    if (mq->msgCount <= mq->usedCount) {
+        if (!(flags & ORACLE_OS_MESSAGE_BLOCK)) {
+            return 0; /* FALSE: queue full, non-blocking */
+        }
+        oracle_OSSleepThread(&mq->queueSend);
+        return 0; /* Deferred */
+    }
+
+    mq->firstIndex = (mq->firstIndex + mq->msgCount - 1) % mq->msgCount;
+    mq->msgArray[mq->firstIndex] = msg;
+    mq->usedCount++;
+
+    oracle_OSWakeupThread(&mq->queueReceive);
+    return 1; /* TRUE: jammed */
 }

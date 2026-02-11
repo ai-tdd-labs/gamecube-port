@@ -806,6 +806,118 @@ int port_OSJoinThread(port_OSThreadState *st, uint32_t thread_addr, uint32_t *va
     return 0;
 }
 
+/* ════════════════════════════════════════════════════════════════════
+ *  Message Queue API functions (OSMessage.c)
+ * ════════════════════════════════════════════════════════════════════ */
+
+/* ── MessageQueue field access ── */
+
+static inline uint32_t mq_get32(uint32_t mq, int off) { return load_u32be(mq + (uint32_t)off); }
+static inline void     mq_set32(uint32_t mq, int off, uint32_t v) { store_u32be(mq + (uint32_t)off, v); }
+static inline int32_t  mq_gets32(uint32_t mq, int off) { return (int32_t)load_u32be(mq + (uint32_t)off); }
+static inline void     mq_sets32(uint32_t mq, int off, int32_t v) { store_u32be(mq + (uint32_t)off, (uint32_t)v); }
+
+/* ── OSInitMessageQueue ── */
+void port_OSInitMessageQueue(port_OSThreadState *st, uint32_t mq_addr, int32_t msgCount)
+{
+    int i;
+    (void)st;
+    /* Init queueSend */
+    q_init(mq_addr + PORT_MSGQ_SEND_HEAD);
+    /* Init queueReceive */
+    q_init(mq_addr + PORT_MSGQ_RECV_HEAD);
+    mq_sets32(mq_addr, PORT_MSGQ_COUNT, msgCount);
+    mq_sets32(mq_addr, PORT_MSGQ_FIRST, 0);
+    mq_sets32(mq_addr, PORT_MSGQ_USED, 0);
+    /* Clear message slots */
+    for (i = 0; i < PORT_MAX_MSGS_PER_Q; i++) {
+        mq_set32(mq_addr, PORT_MSGQ_MSGS + i * 4, 0);
+    }
+}
+
+/* ── OSSendMessage (FIFO) ── */
+int port_OSSendMessage(port_OSThreadState *st, uint32_t mq_addr,
+                       uint32_t msg, int32_t flags)
+{
+    int32_t msgCount = mq_gets32(mq_addr, PORT_MSGQ_COUNT);
+    int32_t usedCount = mq_gets32(mq_addr, PORT_MSGQ_USED);
+
+    if (msgCount <= usedCount) {
+        if (!(flags & 1)) { /* OS_MESSAGE_NOBLOCK */
+            return 0;
+        }
+        /* BLOCK: sleep on queueSend */
+        port_OSSleepThread(st, mq_addr + PORT_MSGQ_SEND_HEAD);
+        return 0; /* Deferred */
+    }
+
+    {
+        int32_t firstIndex = mq_gets32(mq_addr, PORT_MSGQ_FIRST);
+        int32_t lastIndex = (firstIndex + usedCount) % msgCount;
+        mq_set32(mq_addr, PORT_MSGQ_MSGS + lastIndex * 4, msg);
+        mq_sets32(mq_addr, PORT_MSGQ_USED, usedCount + 1);
+    }
+
+    port_OSWakeupThread(st, mq_addr + PORT_MSGQ_RECV_HEAD);
+    return 1;
+}
+
+/* ── OSReceiveMessage ── */
+int port_OSReceiveMessage(port_OSThreadState *st, uint32_t mq_addr,
+                          uint32_t *msg, int32_t flags)
+{
+    int32_t usedCount = mq_gets32(mq_addr, PORT_MSGQ_USED);
+
+    if (usedCount == 0) {
+        if (!(flags & 1)) { /* OS_MESSAGE_NOBLOCK */
+            return 0;
+        }
+        /* BLOCK: sleep on queueReceive */
+        port_OSSleepThread(st, mq_addr + PORT_MSGQ_RECV_HEAD);
+        return 0; /* Deferred */
+    }
+
+    {
+        int32_t firstIndex = mq_gets32(mq_addr, PORT_MSGQ_FIRST);
+        int32_t msgCount = mq_gets32(mq_addr, PORT_MSGQ_COUNT);
+        if (msg != NULL) {
+            *msg = mq_get32(mq_addr, PORT_MSGQ_MSGS + firstIndex * 4);
+        }
+        mq_sets32(mq_addr, PORT_MSGQ_FIRST, (firstIndex + 1) % msgCount);
+        mq_sets32(mq_addr, PORT_MSGQ_USED, usedCount - 1);
+    }
+
+    port_OSWakeupThread(st, mq_addr + PORT_MSGQ_SEND_HEAD);
+    return 1;
+}
+
+/* ── OSJamMessage (LIFO) ── */
+int port_OSJamMessage(port_OSThreadState *st, uint32_t mq_addr,
+                      uint32_t msg, int32_t flags)
+{
+    int32_t msgCount = mq_gets32(mq_addr, PORT_MSGQ_COUNT);
+    int32_t usedCount = mq_gets32(mq_addr, PORT_MSGQ_USED);
+
+    if (msgCount <= usedCount) {
+        if (!(flags & 1)) {
+            return 0;
+        }
+        port_OSSleepThread(st, mq_addr + PORT_MSGQ_SEND_HEAD);
+        return 0;
+    }
+
+    {
+        int32_t firstIndex = mq_gets32(mq_addr, PORT_MSGQ_FIRST);
+        firstIndex = (firstIndex + msgCount - 1) % msgCount;
+        mq_set32(mq_addr, PORT_MSGQ_MSGS + firstIndex * 4, msg);
+        mq_sets32(mq_addr, PORT_MSGQ_FIRST, firstIndex);
+        mq_sets32(mq_addr, PORT_MSGQ_USED, usedCount + 1);
+    }
+
+    port_OSWakeupThread(st, mq_addr + PORT_MSGQ_RECV_HEAD);
+    return 1;
+}
+
 /* ── ProcessPendingLocks ── */
 void port_ProcessPendingLocks(port_OSThreadState *st)
 {

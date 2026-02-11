@@ -11,7 +11,8 @@ Subsystems in this program:
 - `ARQ`
 - `CARD-FAT`
 - `MTX`
-- `OSThread+Mutex`
+- `OSThread+Mutex+Message`
+- `OSStopwatch`
 
 ## Definition of Done (DoD) per subsystem
 
@@ -71,7 +72,8 @@ For each subsystem, keep these artifacts up to date:
 | ARQ | in progress | in progress | in progress | in progress | in progress | pending | not done |
 | CARD-FAT | in progress | in progress | in progress | in progress | in progress | pending | not done |
 | MTX | in progress | in progress | in progress | in progress | in progress | pending | not done |
-| OSThread+Mutex | done | done | done | done | pending | pending | not done |
+| OSThread+Mutex+Msg | done | done | done | done | pending | pending | not done |
+| OSStopwatch | done | done | done | done | pending | pending | not done |
 
 ## Execution order (global)
 

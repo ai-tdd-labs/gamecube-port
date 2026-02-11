@@ -60,11 +60,30 @@
 #define PORT_COND_QUEUE_TAIL     4    /* u32 */
 #define PORT_COND_SIZE           8
 
+/* ── MessageQueue struct in gc_mem ──
+ *
+ * Layout matches decomp OSMessageQueue:
+ *   queueSend (8), queueReceive (8), msgArray offset (4),
+ *   msgCount (4), firstIndex (4), usedCount (4)
+ * Followed by inline msg storage: MAX_MSGS_PER_Q * 4 bytes
+ */
+#define PORT_MSGQ_SEND_HEAD      0    /* u32: head of queueSend */
+#define PORT_MSGQ_SEND_TAIL      4    /* u32: tail of queueSend */
+#define PORT_MSGQ_RECV_HEAD      8    /* u32: head of queueReceive */
+#define PORT_MSGQ_RECV_TAIL     12    /* u32: tail of queueReceive */
+#define PORT_MSGQ_COUNT         16    /* s32: capacity (msgCount) */
+#define PORT_MSGQ_FIRST         20    /* s32: firstIndex */
+#define PORT_MSGQ_USED          24    /* s32: usedCount */
+#define PORT_MSGQ_MSGS          28    /* u32[]: inline message storage */
+#define PORT_MAX_MSGS_PER_Q     16
+#define PORT_MSGQ_SIZE          (28 + PORT_MAX_MSGS_PER_Q * 4)  /* = 92 bytes */
+
 /* ── Max counts ── */
 #define PORT_MAX_THREADS      32
 #define PORT_MAX_WAIT_QUEUES  16
 #define PORT_MAX_MUTEXES      16
 #define PORT_MAX_CONDS         8
+#define PORT_MAX_MSGQUEUES     8
 
 /* ── Memory layout in gc_mem ──
  *
@@ -74,7 +93,8 @@
  * BASE + 2312:                              WaitQueue[MAX]    = 16 * 8 = 128
  * BASE + 2440:                              Mutex[MAX]        = 16 * 24 = 384
  * BASE + 2824:                              Cond[MAX]         = 8 * 8 = 64
- * Total: 2888 bytes
+ * BASE + 2888:                              MsgQ[MAX]         = 8 * 92 = 736
+ * Total: 3624 bytes
  */
 #define PORT_RUNQUEUE_OFFSET    0
 #define PORT_ACTIVEQ_OFFSET     (PORT_RUNQUEUE_OFFSET + 32 * PORT_QUEUE_SIZE)
@@ -82,7 +102,8 @@
 #define PORT_WAITQ_OFFSET       (PORT_THREADS_OFFSET + PORT_MAX_THREADS * PORT_THREAD_SIZE)
 #define PORT_MUTEXQ_OFFSET      (PORT_WAITQ_OFFSET + PORT_MAX_WAIT_QUEUES * PORT_QUEUE_SIZE)
 #define PORT_CONDQ_OFFSET       (PORT_MUTEXQ_OFFSET + PORT_MAX_MUTEXES * PORT_MUTEX_SIZE)
-#define PORT_TOTAL_SIZE         (PORT_CONDQ_OFFSET + PORT_MAX_CONDS * PORT_COND_SIZE)
+#define PORT_MSGQ_OFFSET        (PORT_CONDQ_OFFSET + PORT_MAX_CONDS * PORT_COND_SIZE)
+#define PORT_TOTAL_SIZE         (PORT_MSGQ_OFFSET + PORT_MAX_MSGQUEUES * PORT_MSGQ_SIZE)
 
 /* ── Port state (host-side) ── */
 typedef struct {
@@ -107,6 +128,8 @@ typedef struct {
     ((st)->gc_base + PORT_MUTEXQ_OFFSET + (uint32_t)(idx) * PORT_MUTEX_SIZE)
 #define PORT_COND_ADDR(st, idx) \
     ((st)->gc_base + PORT_CONDQ_OFFSET + (uint32_t)(idx) * PORT_COND_SIZE)
+#define PORT_MSGQ_ADDR(st, idx) \
+    ((st)->gc_base + PORT_MSGQ_OFFSET + (uint32_t)(idx) * PORT_MSGQ_SIZE)
 
 /* ── Thread scheduler API ── */
 void port_OSThreadInit(port_OSThreadState *st, uint32_t gc_base);
@@ -131,3 +154,9 @@ void port_OSInitCond(port_OSThreadState *st, uint32_t cond_addr);
 void port_OSSignalCond(port_OSThreadState *st, uint32_t cond_addr);
 int  port_OSJoinThread(port_OSThreadState *st, uint32_t thread_addr, uint32_t *val);
 void port_ProcessPendingLocks(port_OSThreadState *st);
+
+/* ── Message Queue API ── */
+void port_OSInitMessageQueue(port_OSThreadState *st, uint32_t mq_addr, int32_t msgCount);
+int  port_OSSendMessage(port_OSThreadState *st, uint32_t mq_addr, uint32_t msg, int32_t flags);
+int  port_OSReceiveMessage(port_OSThreadState *st, uint32_t mq_addr, uint32_t *msg, int32_t flags);
+int  port_OSJamMessage(port_OSThreadState *st, uint32_t mq_addr, uint32_t msg, int32_t flags);

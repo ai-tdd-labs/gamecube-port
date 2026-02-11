@@ -637,6 +637,49 @@ static void oracle_C_QUATMtx(oracle_Quaternion *r, const oracle_Mtx m)
     }
 }
 
+/* --- C_QUATMultiply (decomp PS asm only, trivial C implementation) --- */
+static void oracle_C_QUATMultiply(const oracle_Quaternion *a, const oracle_Quaternion *b,
+                                  oracle_Quaternion *ab)
+{
+    oracle_Quaternion tmp;
+    tmp.x = a->w*b->x + a->x*b->w + a->y*b->z - a->z*b->y;
+    tmp.y = a->w*b->y - a->x*b->z + a->y*b->w + a->z*b->x;
+    tmp.z = a->w*b->z + a->x*b->y - a->y*b->x + a->z*b->w;
+    tmp.w = a->w*b->w - a->x*b->x - a->y*b->y - a->z*b->z;
+    *ab = tmp;
+}
+
+/* --- C_QUATNormalize (decomp PS asm only, trivial C implementation) --- */
+static void oracle_C_QUATNormalize(const oracle_Quaternion *src, oracle_Quaternion *unit)
+{
+    oracle_f32 dot = src->x*src->x + src->y*src->y + src->z*src->z + src->w*src->w;
+    if (dot < 0.00001f) {
+        unit->x = unit->y = unit->z = unit->w = 0.0f;
+        return;
+    }
+    oracle_f32 inv = 1.0f / sqrtf(dot);
+    unit->x = src->x * inv;
+    unit->y = src->y * inv;
+    unit->z = src->z * inv;
+    unit->w = src->w * inv;
+}
+
+/* --- C_QUATInverse (decomp PS asm only, trivial C implementation) --- */
+static void oracle_C_QUATInverse(const oracle_Quaternion *src, oracle_Quaternion *inv)
+{
+    oracle_f32 dot = src->x*src->x + src->y*src->y + src->z*src->z + src->w*src->w;
+    oracle_f32 invDot;
+    if (dot <= 0.0f) {
+        invDot = 1.0f;
+    } else {
+        invDot = 1.0f / dot;
+    }
+    inv->x = -src->x * invDot;
+    inv->y = -src->y * invDot;
+    inv->z = -src->z * invDot;
+    inv->w =  src->w * invDot;
+}
+
 static void oracle_C_QUATSlerp(const oracle_Quaternion *p, const oracle_Quaternion *q,
                                oracle_Quaternion *r, oracle_f32 t)
 {
