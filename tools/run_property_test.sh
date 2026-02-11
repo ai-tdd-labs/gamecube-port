@@ -22,6 +22,24 @@ mkdir -p "$build_dir"
 
 exe="$build_dir/osalloc_property_test"
 
+# Probe whether this toolchain can actually build 32-bit (-m32) binaries.
+# On modern macOS (especially Apple Silicon), 32-bit targets are generally unsupported.
+supports_m32() {
+  local tmp_dir tmp_c tmp_out
+  tmp_dir="$(mktemp -d 2>/dev/null || mktemp -d -t gc-m32-probe)"
+  tmp_c="$tmp_dir/probe.c"
+  tmp_out="$tmp_dir/probe"
+  cat >"$tmp_c" <<'EOF'
+int main(void) { return 0; }
+EOF
+  if "$CC" -m32 "$tmp_c" -o "$tmp_out" >/dev/null 2>&1; then
+    rm -rf "$tmp_dir"
+    return 0
+  fi
+  rm -rf "$tmp_dir"
+  return 1
+}
+
 # Debug mode: set GC_HOST_DEBUG=1 for -O0 -g.
 opt_flags=(-O2 -g0)
 if [[ "${GC_HOST_DEBUG:-0}" == "1" ]]; then
