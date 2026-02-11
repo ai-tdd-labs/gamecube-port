@@ -1473,3 +1473,18 @@ Notes:
   - `bash tools/run_dvdqueue_property_test.sh --num-runs=5 --seed=0xC0DEC0DE --op=L0`
   - `bash tools/run_gxproject_property_test.sh --num-runs=5 --seed=0xC0DEC0DE --op=L5`
   - `bash tools/run_thpaudio_property_test.sh --num-runs=5 --seed=0xC0DEC0DE --op=L4`
+## 2026-02-11: Branch consolidation into codex/integration-all
+
+- Merged latest remote work from:
+  - `origin/codex/macos-codex53-pbt-audit`
+  - `origin/pbt/remaining-sdk-coverage`
+- Resolved add/add conflicts for new PBT suite files by keeping integration-all copies with OSAlloc-style `--op` targeting.
+- Verified no remote branch remains ahead of `codex/integration-all` after consolidation (`ahead_of_integration_all` list empty).
+- Post-merge validation (PASS):
+  - `tools/run_dvdqueue_property_test.sh --num-runs=20 --seed=0xC0DEC0DE --op=L4`
+  - `tools/run_gxtexture_property_test.sh --num-runs=20 --seed=0xC0DEC0DE --op=L4`
+  - `tools/run_osalarm_property_test.sh --num-runs=20 --seed=0xC0DEC0DE --op=L4`
+  - `tools/run_gxproject_property_test.sh --num-runs=10 --seed=0xC0DEC0DE --op=L5`
+  - `tools/run_gxz16_property_test.sh --num-runs=10 --seed=0xC0DEC0DE --op=L5`
+  - `tools/run_gxyscale_property_test.sh --num-runs=10 --seed=0xC0DEC0DE --op=L5`
+  - `tools/run_thpaudio_property_test.sh --num-runs=10 --seed=0xC0DEC0DE --op=L4`
