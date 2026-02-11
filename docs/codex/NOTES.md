@@ -1337,3 +1337,18 @@ Notes:
   - new one-button script: `tools/harvest_and_replay_os_unlink_movie.sh`
 - Practical conclusion:
   - We now have deterministic input automation wiring; remaining blocker is a valid MP4 `.dtm` that reaches overlay unload.
+## 2026-02-11: Validation run of merged Claude PBT suites on `main`
+
+- Full gate run passed on this machine:
+  - `tools/run_pbt_chain_gate.sh`
+  - Included mutation checks and all expected FAIL-under-mutation outcomes for MTX, DVD fast-open, ARQ callback, CARD alloc/free invariants.
+- Explicit reruns (host) passed:
+  - `bash tools/run_property_test.sh --num-runs=200 --seed=0xC0DEC0DE -v` (OSAlloc)
+  - `bash tools/run_mtx_property_test.sh --num-runs=200 --seed=0xC0DEC0DE -v` (MTX)
+  - `bash tools/run_osthread_property_test.sh --num-runs=200 --seed=0xC0DEC0DE -v` (OSThread/Mutex/Message)
+  - `bash tools/run_stopwatch_property_test.sh --num-runs=200 --seed=0xC0DEC0DE -v` (OSStopwatch)
+  - `bash tools/run_property_dvdfs.sh --num-runs=200 --seed=0xC0DEC0DE -v` (DVDFS)
+  - `bash tools/run_arq_property_test.sh --num-runs=200 --seed=0xC0DEC0DE` (ARQ)
+  - `bash tools/run_card_fat_property_test.sh --num-runs=200 --seed=0xC0DEC0DE` (CARD FAT)
+- Practical note from verification:
+  - ARQ/CARD property binaries report `Seeds: 1` when a fixed `--seed` is supplied (deterministic single-seed mode), while gate-mode without fixed seed iterates multiple seeds.
