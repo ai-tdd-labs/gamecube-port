@@ -22,7 +22,7 @@ big-endian to a host-side C implementation with `gc_mem` big-endian emulation.
 | **Decomp functions available** | ~854 |
 | **Port functions implemented** | ~296 |
 | **Overall completion** | ~35% |
-| **PBT suites passing** | 9 (OSAlloc, MTX+Quat, ARQ, CARD-FAT, DVDFS, OSThread+Mutex+Message, OSStopwatch) |
+| **PBT suites passing** | 13 (OSAlloc, MTX+Quat, ARQ, CARD-FAT, DVDFS, OSThread+Mutex+Msg, OSStopwatch, OSTime, PADClamp, dvdqueue, OSAlarm, GXTexture) |
 
 ### Per-Module Breakdown
 
@@ -30,8 +30,8 @@ big-endian to a host-side C implementation with `gc_mem` big-endian emulation.
 |--------|--------|--------|---|------------|-------|
 | **OSAlloc** | 12 | 16+ | ~100% | 2000/2000 PASS | Extra DL helpers; `-m32` struct match |
 | **OSArena** | 6 | 6 | 100% | — | Fully complete |
-| **OSThread** | 17 | 19 | ~100% | 518k/518k PASS | Scheduler + mutex + priority inheritance + JoinThread + Message |
-| **OSMutex** | 11 | 7 | ~64% | (covered by OSThread L4-L6) | Init/Lock/Unlock/TryLock/InitCond/SignalCond; WaitCond/CheckDeadLock not yet |
+| **OSThread** | 17 | 19 | ~100% | 726k/726k PASS | Scheduler + mutex + priority inheritance + JoinThread + Message + WaitCond + invariants |
+| **OSMutex** | 11 | 11 | 100% | (covered by OSThread L4-L6, L10-L11) | Full: Lock/Unlock/TryLock/WaitCond/SignalCond/CheckDeadLock/CheckMutex |
 | **OSMessage** | 4 | 4 | 100% | (covered by OSThread L7-L9) | Init/Send/Receive/Jam; circular buffer FIFO+LIFO |
 | **OSStopwatch** | 6 | 6 | 100% | 622k/622k PASS | All 6 functions ported + PBT |
 | **OSCache** | 23 | 3 | 13% | — | Minimal (DCInvalidateRange etc.) |
@@ -42,13 +42,13 @@ big-endian to a host-side C implementation with `gc_mem` big-endian emulation.
 | **OSContext** | 13 | 0 | 0% | — | Not needed for port (no real PPC context) |
 | **OSMemory** | 7 | 0 | 0% | — | |
 | **OSLink** | 9 | 0 | 0% | — | |
-| **OSAlarm** | 5 | 0 | 0% | — | |
+| **OSAlarm** | 5 | 5 | 100% | 531k/531k PASS | Sorted DL insert/cancel/fire + periodic re-insert |
 | **MTX** | 76 | 46 | 61% | PASS | mtx(23), vec(12), quat(8), mtx44(3) |
 | **GX** | 261 | 123 | 47% | Integration | Largest module; smoke-test coverage |
 | **VI** | 19 | 15 | 79% | — | |
 | **SI** | 23 | 13 | 57% | — | |
-| **PAD** | 15 | 9 | 60% | — | |
-| **DVD** | 66 | 20 | 30% | Built | DVDFS property tests passing |
+| **PAD** | 15 | 9 | 60% | PADClamp 1.6M PASS | ClampStick/ClampTrigger/PADClamp |
+| **DVD** | 66 | 20 | 30% | Built | DVDFS + dvdqueue PBT passing |
 | **AR/ARQ** | 26 | 5 | 19% | Built | ARQ property tests passing |
 | **CARD** | 69 | 4 | 6% | Built | CARD-FAT property tests passing |
 | **EXI** | 23 | 0 | 0% | — | Not started |
@@ -59,11 +59,11 @@ big-endian to a host-side C implementation with `gc_mem` big-endian emulation.
 
 ### Completion Tiers
 
-1. **Complete (90%+):** OSAlloc, OSArena, OSThread+Mutex, OSMessage, OSStopwatch
+1. **Complete (90%+):** OSAlloc, OSArena, OSThread+Mutex, OSMessage, OSStopwatch, OSAlarm
 2. **Well underway (50-80%):** MTX+Quat, VI, SI, PAD
 3. **Partial (20-50%):** GX, DVD, OSInterrupt, OSError
 4. **Minimal (<20%):** CARD, AR/ARQ, OSCache, OSRtc, OS core
-5. **Not started (0%):** EXI, DSP, AI, PPCArch, DB, OSContext, OSMemory, OSLink, OSAlarm
+5. **Not started (0%):** EXI, DSP, AI, PPCArch, DB, OSContext, OSMemory, OSLink
 
 ---
 
@@ -75,9 +75,14 @@ compared against the `sdk_port` implementation using `gc_mem` big-endian emulati
 | Suite | Location | Build Script | Seeds | Checks | Status |
 |-------|----------|-------------|-------|--------|--------|
 | **OSAlloc** | `tests/sdk/os/os_alloc/property/` | `tools/run_property_test.sh` | 2000 | ~60k | PASS |
-| **OSThread+Mutex+Message** | `tests/sdk/os/osthread/property/` | `tools/run_osthread_property_test.sh` | 2000 | ~518k | PASS |
+| **OSThread+Mutex+Msg** | `tests/sdk/os/osthread/property/` | `tools/run_osthread_property_test.sh` | 2000 | ~726k | PASS |
 | **MTX+Quat** | `tests/sdk/mtx/property/` | `tools/run_mtx_property_test.sh` | 2000 | 100k | PASS |
 | **OSStopwatch** | `tests/sdk/os/stopwatch/property/` | `tools/run_stopwatch_property_test.sh` | 2000 | ~622k | PASS |
+| **OSTime** | `tests/sdk/os/ostime/property/` | `tools/run_ostime_property_test.sh` | 2000 | ~506k | PASS |
+| **PADClamp** | `tests/sdk/pad/property/` | `tools/run_padclamp_property_test.sh` | 2000 | ~1.6M | PASS |
+| **dvdqueue** | `tests/sdk/dvd/property/` | `tools/run_dvdqueue_property_test.sh` | 2000 | ~300k | PASS |
+| **OSAlarm** | `tests/sdk/os/osalarm/property/` | `tools/run_osalarm_property_test.sh` | 2000 | ~531k | PASS |
+| **GXTexture** | `tests/sdk/gx/property/` | `tools/run_gxtexture_property_test.sh` | 2000 | ~1.3M | PASS |
 | **ARQ** | `tests/sdk/ar/property/` | `tools/run_arq_property_test.sh` | — | — | PASS |
 | **CARD-FAT** | `tests/sdk/card/property/` | `tools/run_card_fat_property_test.sh` | — | — | PASS |
 | **DVDFS** | `tests/sdk/dvd/dvdfs/property/` | `tools/run_dvdfs_property_test.sh` | — | — | PASS |
@@ -96,6 +101,8 @@ compared against the `sdk_port` implementation using `gc_mem` big-endian emulati
 | L7 | Message basic | Non-blocking Send/Receive across multiple queues |
 | L8 | Message jam | LIFO Jam + FIFO Send wraparound on small queues |
 | L9 | Message + threads | Message ops with thread switching, yield, resume |
+| L10 | WaitCond/SignalCond | Release mutex → sleep on cond → re-lock with saved count |
+| L11 | Mutex invariants | CheckMutex, CheckDeadLock, CheckMutexes after every random op |
 
 ### Additional PBT Suites (core)
 
@@ -140,7 +147,7 @@ compared against the `sdk_port` implementation using `gc_mem` big-endian emulati
 
 ### To reach MP4 boot
 
-1. **OS module gaps:** OSContext (stubbed), OSMemory, OSLink, OSAlarm
+1. **OS module gaps:** OSContext (stubbed), OSMemory, OSLink
 2. **EXI:** Required for memory card and serial I/O — 23 functions, not started
 3. **DSP:** Audio subsystem — 19 functions, not started
 4. **AI:** Audio interface — 27 functions, not started
@@ -153,29 +160,40 @@ compared against the `sdk_port` implementation using `gc_mem` big-endian emulati
 1. **OSMessage** (4 functions) — DONE, integrated into OSThread suite as L7-L9
 2. **Quaternion math** (3 new functions) — DONE, integrated into MTX suite
 3. **OSStopwatch** (6 functions) — DONE, standalone PBT suite
+4. **OSCond + invariant checkers** — DONE, integrated into OSThread suite as L10-L11
+5. **OSTicksToCalendarTime** — DONE, standalone PBT suite (506k checks)
+6. **PADClamp** (3 functions) — DONE, standalone PBT suite (1.6M checks)
+7. **dvdqueue** (6 functions) — DONE, standalone PBT suite (300k checks)
+8. **OSAlarm** (5 functions) — DONE, standalone PBT suite (531k checks)
+9. **GXTexture** (GXGetTexBufferSize + GetImageTileCount) — DONE, standalone PBT suite (1.3M checks)
 
-### Remaining PBT Candidates
+### Evaluated and Skipped (not suitable for PBT)
 
-#### Tier 1 — High value, low risk
-- **OSCond (WaitCond/SignalCond)** — pure synchronization logic, builds on existing Thread/Mutex infra; add as L10/L11 in OSThread suite
-- **OSMutex invariant checkers** (`__OSCheckMutex`, `__OSCheckDeadLock`, `__OSCheckMutexes`) — use as property assertions in existing L3-L9 tests
+| Module | Reason |
+|--------|--------|
+| **OSFont** | ROM-dependent lookup tables + LZ77 decoder needs crafted input |
+| **OSArena** | Trivial bump allocator (4 getters/setters + 2 aligned allocs) |
+| **OSReset** | OSRegisterResetFunction is same sorted DL list pattern as OSAlarm |
+| **CARDCheck** | __CARDCheckSum is 4-line u16 sum loop; __CARDCompareFileName is bounded strcmp |
+| **GXLight** | Math depends on PPC `__frsqrte` intrinsic and `cosf()` |
+| **psmtx.c / mtxvec.c** | PPC paired-single assembly (no C decomp available) |
+| **OSMemory** | Hardware register config, BAT/MMU assembly |
+| **OSLink** | ELF relocation, cache ops |
+| **OSContext** | PPC register save/restore (not needed for port) |
+| **AR** (not ARQ) | DMA hardware, bus probing |
+| **OSSync** | 1 function, pure hardware exception vector install |
+| **VI/SI/EXI/DSP/AI** | Hardware interface modules, need extensive mock layer |
 
-#### Tier 2 — Small but pure logic
-- **OSTicksToCalendarTime** — pure date/time math (leap years, month boundaries, roundtrip); single function
+### Remaining PBT Candidates (new, from full decomp scan)
 
-#### Not suitable for PBT
-All remaining subsystems are hardware-dependent and not suitable for oracle-vs-port PBT:
-
-- **OSAlarm** — PowerPC decrementer, exception handlers, interrupt-driven timer queue
-- **OSFont** — ROM reads, VI registers, font texture decoding
-- **OSReset/OSResetSW** — PI register writes, cache flushes, reset button GPIO
-- **psmtx.c / mtxvec.c** — PPC paired-single assembly (no C decomp available)
-- **OSMemory** — hardware register config, BAT/MMU assembly
-- **OSLink** — ELF relocation, cache ops
-- **OSContext** — PPC register save/restore (not needed for port)
-- **AR** (not ARQ) — DMA hardware, bus probing
-- **OSSync** — 1 function, pure hardware exception vector install
-- **VI/SI/PAD** — hardware interface modules, would need extensive mock layer
+| Candidate | Source | Type | Suitability | Notes |
+|-----------|--------|------|-------------|-------|
+| **GXProject** | GXTransform.c:7-35 | Pure math | **Strong** | 3D projection: modelview transform -> perspective/ortho -> viewport map. No globals, no hardware, no side effects. |
+| **THPAudioDecode** | THPAudio.c:3-146 | Signal processing | **Moderate** | ADPCM decoder: predictor coefficients, scale, saturation, nibble extraction. Need to define THPAudioRecordHeader + generate random encoded frames. |
+| **GXSetFog (core math)** | GXPixel.c:7-56 | Float encoding | **Moderate** | Mantissa normalization loop (B_mant/B_expn), A/B/C computation from 4 floats. Extract math from register packing. |
+| **__GXCalculateVLim** | GXAttr.c:123-171 | Lookup table | **Moderate** | Vertex limit from VCD register fields. Pure given (vcdLo, vcdHi, vatA) as inputs. Needs GET_REG_FIELD macro. |
+| **GXInitFogAdjTable** | GXPixel.c:108-138 | Math + sqrtf | **Weak** | 10-entry table from width + projection matrix. Straightforward sqrtf loop. |
+| **GXSetIndTexMtx** | GXBump.c:42-100 | Fixed-point encode | **Weak** | Simple `(int)(1024*val) & 0x7FF` for 6 values + scale_exp split. Too simple for PBT. |
 
 ### PBT coverage expansion (ongoing)
 
