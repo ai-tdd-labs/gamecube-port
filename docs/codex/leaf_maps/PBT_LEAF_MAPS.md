@@ -46,6 +46,64 @@ This file maps leaves to levels for currently active suites.
 - `L3` leaf/API: chdir path handling
 - `L4` leaf/API: illegal 8.3 path rejection parity
 
+## dvdqueue property
+- `L0` push/pop parity
+- `L1` dequeue parity
+- `L2` membership parity (`IsBlockInWaitingQueue`)
+- `L3` queue ordering properties (priority + FIFO within priority)
+- `L4` randomized integration mix
+
+## GXTexture property
+- `L0` oracle/port parity for `GXGetTexBufferSize`
+- `L1` non-mipmap tile math consistency
+- `L2` mipmap monotonicity
+- `L3` RGBA8 double-tile-size behavior
+- `L4` `GetImageTileCount` parity + cross-check
+
+## OSAlarm property
+- `L0` insert parity + sorted order
+- `L1` cancel parity + cancel idempotence
+- `L2` fire-head parity
+- `L3` periodic alarm reinsertion behavior
+- `L4` randomized integration mix
+
+## PADClamp property
+- `L0` ClampStick parity
+- `L1` ClampTrigger parity
+- `L2` ClampStick properties (idempotence/bounds/symmetry/dead zone)
+- `L3` full `PADClamp` parity
+
+## GXProject property
+- `L0` projection parity (oracle vs port)
+- `L1` identity modelview mapping
+- `L2` orthographic linearity
+- `L3` perspective depth behavior
+- `L4` viewport center mapping
+- `L5` randomized integration mix
+
+## GXCompressZ16 / GXDecompressZ16 property
+- `L0` compress/decompress parity
+- `L1` linear round-trip invariant
+- `L2` idempotence invariant
+- `L3` bit-range invariants
+- `L4` exhaustive linear-space check
+- `L5` randomized integration mix
+
+## GXGetYScaleFactor property
+- `L0` `__GXGetNumXfbLines` parity
+- `L1` `GXGetYScaleFactor` parity
+- `L2` result-correctness invariant
+- `L3` boundedness invariant
+- `L4` identity-scale invariant
+- `L5` randomized integration mix
+
+## THPAudioDecode property
+- `L0` mono/interleaved parity
+- `L1` stereo/separate parity
+- `L2` mono channels-equal invariant
+- `L3` saturation/range invariant
+- `L4` randomized integration mix
+
 ## Core strict PBT suites
 - `tests/pbt/os/os_round_32b`: strict leaves (`OSRoundUp32B`, `OSRoundDown32B`)
 - `tests/pbt/mtx/mtx_core_pbt.c`: strict leaves (`C_MTXIdentity`, `C_MTXOrtho`)

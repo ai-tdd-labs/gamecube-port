@@ -42,6 +42,7 @@ static float rand_float(float lo, float hi) {
 static uint64_t g_total_checks;
 static uint64_t g_total_pass;
 static int       g_verbose;
+static const char *g_opt_op;
 
 #define CHECK(cond, ...) do { \
     g_total_checks++; \
@@ -446,12 +447,24 @@ static int test_L5_random_integration(void) {
 
 static int run_seed(uint32_t seed) {
     g_rng = seed;
-    if (!test_L0_parity()) return 0;
-    if (!test_L1_identity_modelview()) return 0;
-    if (!test_L2_ortho_linearity()) return 0;
-    if (!test_L3_perspective_depth()) return 0;
-    if (!test_L4_viewport_center()) return 0;
-    if (!test_L5_random_integration()) return 0;
+    if (!g_opt_op || strstr("L0", g_opt_op) || strstr("PARITY", g_opt_op)) {
+        if (!test_L0_parity()) return 0;
+    }
+    if (!g_opt_op || strstr("L1", g_opt_op) || strstr("IDENTITY", g_opt_op)) {
+        if (!test_L1_identity_modelview()) return 0;
+    }
+    if (!g_opt_op || strstr("L2", g_opt_op) || strstr("ORTHO", g_opt_op)) {
+        if (!test_L2_ortho_linearity()) return 0;
+    }
+    if (!g_opt_op || strstr("L3", g_opt_op) || strstr("DEPTH", g_opt_op) || strstr("PERSPECTIVE", g_opt_op)) {
+        if (!test_L3_perspective_depth()) return 0;
+    }
+    if (!g_opt_op || strstr("L4", g_opt_op) || strstr("CENTER", g_opt_op) || strstr("VIEWPORT", g_opt_op)) {
+        if (!test_L4_viewport_center()) return 0;
+    }
+    if (!g_opt_op || strstr("L5", g_opt_op) || strstr("FULL", g_opt_op) || strstr("MIX", g_opt_op) || strstr("RANDOM", g_opt_op)) {
+        if (!test_L5_random_integration()) return 0;
+    }
     return 1;
 }
 
@@ -469,8 +482,16 @@ int main(int argc, char **argv) {
             start_seed = (uint32_t)strtoul(argv[i] + 7, NULL, 0);
         else if (strncmp(argv[i], "--num-runs=", 11) == 0)
             num_runs = atoi(argv[i] + 11);
+        else if (strncmp(argv[i], "--op=", 5) == 0)
+            g_opt_op = argv[i] + 5;
         else if (strcmp(argv[i], "-v") == 0)
             g_verbose = 1;
+        else {
+            fprintf(stderr,
+                    "Usage: gxproject_property_test [--seed=N] [--num-runs=N] "
+                    "[--op=L0|L1|L2|L3|L4|L5|PARITY|IDENTITY|ORTHO|DEPTH|CENTER|FULL|MIX] [-v]\n");
+            return 2;
+        }
     }
 
     printf("\n=== GXProject Property Test ===\n");

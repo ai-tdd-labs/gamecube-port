@@ -1443,3 +1443,24 @@ Notes:
   - `bash tools/run_gxtexture_property_test.sh --seed=0xC0DEC0DE --op=L4 -v`
   - `bash tools/run_osalarm_property_test.sh --seed=0xC0DEC0DE --op=L0 -v`
   - `bash tools/run_osalarm_property_test.sh --seed=0xC0DEC0DE --op=L4 -v`
+## 2026-02-11: OSAlloc-style `--op` targeting added for latest 4 suites
+
+- Upgraded these suites to OSAlloc-style focused level execution:
+  - `tests/sdk/gx/property/gxproject_property_test.c`
+  - `tests/sdk/gx/property/gxz16_property_test.c`
+  - `tests/sdk/gx/property/gxyscale_property_test.c`
+  - `tests/sdk/thp/property/thpaudio_property_test.c`
+- Added `--op=` parsing + per-level gating in `run_seed`:
+  - GXProject: `L0..L5` + `PARITY|IDENTITY|ORTHO|DEPTH|CENTER|FULL|MIX`
+  - GXZ16: `L0..L5` + `PARITY|ROUNDTRIP|IDEMPOTENCE|RANGE|EXHAUSTIVE|FULL|MIX`
+  - GXYScale: `L0..L5` + `NUMXFB|YSCALE|RESULT|BOUNDED|IDENTITY|FULL|MIX`
+  - THPAudio: `L0..L4` + `MONO|STEREO|CHANNEL|SATURATION|FULL|MIX`
+- Validation (PASS):
+  - `bash tools/run_gxproject_property_test.sh --seed=0xC0DEC0DE --op=L0 -v`
+  - `bash tools/run_gxproject_property_test.sh --seed=0xC0DEC0DE --op=L5 -v`
+  - `bash tools/run_gxz16_property_test.sh --seed=0xC0DEC0DE --op=L1 -v`
+  - `bash tools/run_gxz16_property_test.sh --seed=0xC0DEC0DE --op=L5 -v`
+  - `bash tools/run_gxyscale_property_test.sh --seed=0xC0DEC0DE --op=L2 -v`
+  - `bash tools/run_gxyscale_property_test.sh --seed=0xC0DEC0DE --op=L5 -v`
+  - `bash tools/run_thpaudio_property_test.sh --seed=0xC0DEC0DE --op=L0 -v`
+  - `bash tools/run_thpaudio_property_test.sh --seed=0xC0DEC0DE --op=L4 -v`

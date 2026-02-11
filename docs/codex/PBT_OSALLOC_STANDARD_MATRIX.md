@@ -34,6 +34,10 @@ This matrix enforces one uniform standard across active suites:
 | GXTexture property | yes | yes | partial | yes | mutation | Added `--op` targeting (L0-L4 + aliases). |
 | OSAlarm property | yes | yes | partial | yes | mutation | Added `--op` targeting (L0-L4 + aliases). |
 | PADClamp property | yes | yes | partial | yes | mutation | Already had L0-L3 + `--op` targeting. |
+| GXProject property | yes | yes | partial | yes | mutation | Added `--op` targeting (L0-L5 + aliases). |
+| GXCompressZ16 property | yes | yes | partial | yes | mutation | Added `--op` targeting (L0-L5 + aliases). |
+| GXGetYScaleFactor property | yes | yes | partial | yes | mutation | Added `--op` targeting (L0-L5 + aliases). |
+| THPAudioDecode property | yes | yes | partial | yes | mutation | Added `--op` targeting (L0-L4 + aliases). |
 | MTX core PBT | leaf/core | n/a | yes | yes | mutation | Focused strict leaf suite. |
 | DVD core PBT | leaf/core | n/a | yes | yes | mutation | Focused strict semantic suite. |
 | OS round PBT | leaf/core | n/a | yes | yes | mutation | Strict dualcheck leafs. |
