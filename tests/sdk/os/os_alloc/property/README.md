@@ -46,6 +46,62 @@ tools/run_property_test.sh --seed=0xDEADBEEF --steps=500 -v
 GC_HOST_DEBUG=1 tools/run_property_test.sh --seed=42
 ```
 
+## Available `--op` values
+
+| Op | Level | Description |
+|----|-------|-------------|
+| `DLAddFront` | 0 | Prepend to linked list |
+| `DLExtract` | 0 | Remove from linked list |
+| `DLInsert` | 0 | Sorted insert with coalescing |
+| `DLLookup` | 0 | Search linked list |
+| `OSAllocFromHeap` | 1 | Heap allocation |
+| `OSFreeToHeap` | 1 | Heap deallocation |
+| `OSCheckHeap` | 1 | Heap integrity check |
+| `OSDestroyHeap` | 1 | Heap destruction |
+| `OSAddToHeap` | 1 | Add memory to existing heap |
+| `full` | 2 | Random mix of all operations (default) |
+
+## Coverage
+
+### Proven correct (oracle == port)
+
+All core allocator functions are property-tested and produce identical
+results between oracle and port across 2000+ random seeds:
+
+| Function | Tested via |
+|----------|-----------|
+| `DLAddFront` | L0 leaf test + used internally by L1/L2 |
+| `DLExtract` | L0 leaf test + used internally by L1/L2 |
+| `DLInsert` | L0 leaf test (incl. coalescing) + used internally by L1/L2 |
+| `DLLookup` | L0 leaf test |
+| `OSInitAlloc` | L1 setup for every API test + L2 |
+| `OSCreateHeap` | L1 setup for every API test + L2 |
+| `OSAllocFromHeap` | L1 focused + L2 full integration |
+| `OSFreeToHeap` | L1 focused + L2 full integration |
+| `OSCheckHeap` | L1 focused + verified after every op in all levels |
+| `OSSetCurrentHeap` | L1 setup (used in every test) |
+| `OSDestroyHeap` | L1 focused |
+| `OSAddToHeap` | L1 focused |
+
+### Not yet tested
+
+| Function | Reason |
+|----------|--------|
+| `OSAllocFixed` | Complex (multi-heap range splitting), separate porting traject |
+| `OSReferentSize` | In oracle but no port-side test yet (needs `cell->hd` validation) |
+| `OSVisitAllocated` | In oracle but no port-side test yet (iterator, low priority) |
+| `DLOverlap` | In oracle, only used by `OSAllocFixed` |
+| `DLSize` | In oracle, only used by `OSDumpHeap` (debug) |
+
+### What the tests prove
+
+For every seeded run, the test verifies:
+- **Pointer offsets** — allocations return the same offset from heap base
+- **Success/failure** — alloc returns non-NULL in oracle iff port does too
+- **Heap integrity** — `OSCheckHeap` returns the same free-byte count
+- **Linked list structure** — DL leaf tests compare full list walk (offset + size per node)
+- **Coalescing** — `DLInsert` tests adjacent cells that must merge
+
 ## Files
 
 | File | Purpose |
