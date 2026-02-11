@@ -95,9 +95,12 @@ For each subsystem, keep these artifacts up to date:
 
 ## Execution order (global)
 
-1. Complete matrix tasks.
-2. Implement/expand leaf-level ops.
-3. Add oracle linkage.
-4. Enforce mutation gate.
+1. ~~Complete matrix tasks.~~ DONE — all 16 subsystems have matrix + leaf + stateful + oracle.
+2. ~~Implement/expand leaf-level ops.~~ DONE — all decomp pure-computation functions covered.
+3. ~~Add oracle linkage.~~ DONE — all 17 suites use deterministic oracle pattern.
+4. Enforce mutation gate. ← **NEXT**
 5. Wire one-button global gate.
 6. Update notes and close issue.
+
+**Note:** All decomp source files have been exhaustively scanned (2026-02-11).
+No further PBT candidates exist — remaining decomp functions are all hardware-coupled.
