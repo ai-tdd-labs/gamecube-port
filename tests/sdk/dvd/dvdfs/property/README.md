@@ -19,6 +19,13 @@ tools/run_property_dvdfs.sh --num-runs=2000 --steps=200 -v
 
 # reproduce
 tools/run_property_dvdfs.sh --seed=0xDEADBEEF --steps=500 -v
+
+# Focused level/operation runs (OSAlloc-style targeting)
+tools/run_property_dvdfs.sh --op=L0 --seed=0xDEADBEEF -v          # canonical sweep
+tools/run_property_dvdfs.sh --op=L1 --seed=0xDEADBEEF --steps=300 # path->entry
+tools/run_property_dvdfs.sh --op=L2 --seed=0xDEADBEEF --steps=300 # entry->path
+tools/run_property_dvdfs.sh --op=L3 --seed=0xDEADBEEF --steps=300 # chdir
+tools/run_property_dvdfs.sh --op=L4 --seed=0xDEADBEEF --steps=300 # illegal 8.3
 ```
 
 ## What it tests

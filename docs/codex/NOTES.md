@@ -1385,3 +1385,18 @@ Notes:
   - `docs/codex/TASKS.md` now states this script still needs to be created.
 - Verification run (all PASS, 20 deterministic seeds):
   - OSAlloc, MTX, OSThread, OSTime, OSStopwatch, DVDFS, ARQ, CARD-FAT property/parity runners.
+## 2026-02-11: OSAlloc-style PBT standardization sweep (step-up)
+
+- Added standard matrix and checklist baseline:
+  - `docs/codex/PBT_OSALLOC_STANDARD_MATRIX.md`
+- Added cross-suite leaf-to-level mapping:
+  - `docs/codex/leaf_maps/PBT_LEAF_MAPS.md`
+- Added focused level targeting where missing:
+  - `tests/sdk/os/stopwatch/property/stopwatch_property_test.c` now supports `--op=L0|L1|RANDOM|MULTI`
+  - `tests/sdk/dvd/dvdfs/property/dvdfs_property_test.c` now supports `--op=L0|L1|L2|L3|L4|MIX`
+- Updated DVDFS property README with per-level run commands:
+  - `tests/sdk/dvd/dvdfs/property/README.md`
+- Validation:
+  - `./tools/run_stopwatch_property_test.sh --seed=0xC0DEC0DE --op=L0 -v` PASS
+  - `./tools/run_stopwatch_property_test.sh --seed=0xC0DEC0DE --op=L1 -v` PASS
+  - `./tools/run_property_dvdfs.sh --seed=0xC0DEC0DE --op=L0..L4 -v` PASS

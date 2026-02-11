@@ -330,9 +330,14 @@ static int build_canonical_path(FSTEntryHost *fst, char *str, u32 entry, char *o
 
 static void usage(const char *argv0) {
     fprintf(stderr,
-        "usage: %s [--seed=N] [--num-runs=N] [--steps=N] [-v]\n"
+        "usage: %s [--seed=N] [--num-runs=N] [--steps=N] [--op=L0|L1|L2|L3|L4|MIX] [-v]\n"
         "default: --num-runs=200 --steps=200\n",
         argv0);
+}
+
+static int op_enabled(const char *opt_op, const char *name, const char *alias) {
+    if (!opt_op) return 1;
+    return strstr(name, opt_op) != NULL || (alias && strstr(alias, opt_op) != NULL);
 }
 
 int main(int argc, char **argv) {
@@ -340,6 +345,7 @@ int main(int argc, char **argv) {
     int num_runs = 200;
     int steps = 200;
     int verbose = 0;
+    const char *opt_op = NULL;
 
     for (int i = 1; i < argc; i++) {
         if (strncmp(argv[i], "--seed=", 7) == 0) {
@@ -348,6 +354,8 @@ int main(int argc, char **argv) {
             num_runs = (int)strtol(argv[i] + 11, NULL, 0);
         } else if (strncmp(argv[i], "--steps=", 8) == 0) {
             steps = (int)strtol(argv[i] + 8, NULL, 0);
+        } else if (strncmp(argv[i], "--op=", 5) == 0) {
+            opt_op = argv[i] + 5;
         } else if (strcmp(argv[i], "-v") == 0) {
             verbose = 1;
         } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
@@ -374,43 +382,53 @@ int main(int argc, char **argv) {
         __DVDFSInit();
         (void)DVDChangeDir("/");
 
-        /* Sanity: both should resolve canonical paths for every entry. */
-        for (u32 e = 0; e < fb.n_entries; e++) {
-            char path[512];
-            if (build_canonical_path(fb.fst, fb.str, e, path, sizeof(path)) != 0) continue;
+        /* L0: canonical sweep (entry <-> path invariants). */
+        if (op_enabled(opt_op, "L0", "CANON")) {
+            for (u32 e = 0; e < fb.n_entries; e++) {
+                char path[512];
+                if (build_canonical_path(fb.fst, fb.str, e, path, sizeof(path)) != 0) continue;
 
-            s32 oe = dvdfs_oracle_path_to_entry(path);
-            s32 pe = DVDConvertPathToEntrynum(path);
-            if (oe != pe || oe != (s32)e) {
-                fail_case(s, run, (int)e, "canon_path_to_entry", path);
-                fprintf(stderr, "  entry=%u oracle=%d port=%d path='%s'\n", e, oe, pe, path);
-                return 1;
-            }
-
-            if (entryIsDir_h(fb.fst, e)) {
-                char o_out[512], p_out[512];
-                BOOL ok1 = dvdfs_oracle_entry_to_path((s32)e, o_out, sizeof(o_out));
-                BOOL ok2 = (BOOL)DVDChangeDir(path);
-                if (ok1 != ok2) {
-                    fail_case(s, run, (int)e, "entry_to_path", "mismatch");
-                    fprintf(stderr, "  oracle='%s' chdir_ok=%d port_chdir_ok=%d\n", o_out, ok1, ok2);
+                s32 oe = dvdfs_oracle_path_to_entry(path);
+                s32 pe = DVDConvertPathToEntrynum(path);
+                if (oe != pe || oe != (s32)e) {
+                    fail_case(s, run, (int)e, "canon_path_to_entry", path);
+                    fprintf(stderr, "  entry=%u oracle=%d port=%d path='%s'\n", e, oe, pe, path);
                     return 1;
                 }
-                if (!DVDGetCurrentDir(p_out, sizeof(p_out))) {
-                    fail_case(s, run, (int)e, "entry_to_path", "DVDGetCurrentDir failed");
-                    return 1;
-                }
-                if (strcmp(o_out, p_out) != 0) {
-                    fail_case(s, run, (int)e, "entry_to_path", "path mismatch");
-                    fprintf(stderr, "  oracle='%s' port='%s'\n", o_out, p_out);
-                    return 1;
+
+                if (entryIsDir_h(fb.fst, e)) {
+                    char o_out[512], p_out[512];
+                    BOOL ok1 = dvdfs_oracle_entry_to_path((s32)e, o_out, sizeof(o_out));
+                    BOOL ok2 = (BOOL)DVDChangeDir(path);
+                    if (ok1 != ok2) {
+                        fail_case(s, run, (int)e, "entry_to_path", "mismatch");
+                        fprintf(stderr, "  oracle='%s' chdir_ok=%d port_chdir_ok=%d\n", o_out, ok1, ok2);
+                        return 1;
+                    }
+                    if (!DVDGetCurrentDir(p_out, sizeof(p_out))) {
+                        fail_case(s, run, (int)e, "entry_to_path", "DVDGetCurrentDir failed");
+                        return 1;
+                    }
+                    if (strcmp(o_out, p_out) != 0) {
+                        fail_case(s, run, (int)e, "entry_to_path", "path mismatch");
+                        fprintf(stderr, "  oracle='%s' port='%s'\n", o_out, p_out);
+                        return 1;
+                    }
                 }
             }
         }
 
         for (int step = 0; step < steps; step++) {
             uint32_t r = xorshift32(&rng);
-            int op = (int)(r % 4u);
+            int op = (int)(r % 4u); /* MIX: random among L1..L4 */
+            if (opt_op) {
+                if (strstr("L1", opt_op) || strstr("PATH", opt_op)) op = 0;
+                else if (strstr("L2", opt_op) || strstr("ENTRY", opt_op)) op = 1;
+                else if (strstr("L3", opt_op) || strstr("CHDIR", opt_op)) op = 2;
+                else if (strstr("L4", opt_op) || strstr("ILLEGAL", opt_op)) op = 3;
+                else if (strstr("MIX", opt_op)) op = (int)(r % 4u);
+                else continue; /* L0-only run */
+            }
 
             if (op == 0) {
                 /* random canonical path -> entry */

@@ -173,6 +173,7 @@ static int g_total_checks = 0;
 static int g_total_pass   = 0;
 static int g_total_fail   = 0;
 static int opt_verbose = 0;
+static const char *opt_op = NULL;
 
 /* ── State comparison ── */
 
@@ -366,13 +367,17 @@ static int run_seed(uint32_t seed)
     int fail = 0;
 
     /* L0: Random single stopwatch */
-    g_rng = seed;
-    fail += test_stopwatch_random(seed);
+    if (!opt_op || strstr("L0", opt_op) || strstr("RANDOM", opt_op) || strstr("SINGLE", opt_op)) {
+        g_rng = seed;
+        fail += test_stopwatch_random(seed);
+    }
 
     /* L1: Multiple stopwatches interleaved */
-    g_rng = seed ^ 0xABCD1234u;
-    if (g_rng == 0) g_rng = 1;
-    fail += test_stopwatch_multi(seed);
+    if (!opt_op || strstr("L1", opt_op) || strstr("MULTI", opt_op)) {
+        g_rng = seed ^ 0xABCD1234u;
+        if (g_rng == 0) g_rng = 1;
+        fail += test_stopwatch_multi(seed);
+    }
 
     return fail;
 }
@@ -387,12 +392,14 @@ static void parse_args(int argc, char **argv, int *opt_seed, int *opt_num_runs)
             *opt_seed = atoi(argv[i] + 7);
         } else if (strncmp(argv[i], "--num-runs=", 11) == 0) {
             *opt_num_runs = atoi(argv[i] + 11);
+        } else if (strncmp(argv[i], "--op=", 5) == 0) {
+            opt_op = argv[i] + 5;
         } else if (strcmp(argv[i], "-v") == 0) {
             opt_verbose = 1;
         } else {
             fprintf(stderr, "Unknown arg: %s\n", argv[i]);
             fprintf(stderr,
-                "Usage: stopwatch_property_test [--seed=N] [--num-runs=N] [-v]\n");
+                "Usage: stopwatch_property_test [--seed=N] [--num-runs=N] [--op=L0|L1|RANDOM|MULTI] [-v]\n");
             exit(1);
         }
     }
