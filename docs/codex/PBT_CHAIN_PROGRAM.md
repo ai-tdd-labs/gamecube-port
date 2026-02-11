@@ -11,8 +11,17 @@ Subsystems in this program:
 - `ARQ`
 - `CARD-FAT`
 - `MTX`
-- `OSThread+Mutex+Message`
+- `OSThread+Mutex+Msg` (incl. WaitCond, invariant checkers)
 - `OSStopwatch`
+- `OSTime` (OSTicksToCalendarTime)
+- `PADClamp` (ClampStick, ClampTrigger, PADClamp)
+- `dvdqueue` (circular DL priority queue)
+- `OSAlarm` (sorted temporal priority queue)
+- `GXTexture` (GXGetTexBufferSize, GetImageTileCount)
+- `GXProject` (3D projection math)
+- `GXCompressZ16` (Z-depth compress/decompress, 4 formats)
+- `THPAudioDecode` (ADPCM audio decoder)
+- `GXGetYScaleFactor` (Y scale convergence + __GXGetNumXfbLines)
 
 ## Definition of Done (DoD) per subsystem
 
@@ -74,12 +83,24 @@ For each subsystem, keep these artifacts up to date:
 | MTX | in progress | in progress | in progress | in progress | in progress | pending | not done |
 | OSThread+Mutex+Msg | done | done | done | done | pending | pending | not done |
 | OSStopwatch | done | done | done | done | pending | pending | not done |
+| OSTime | done | done | done | done | pending | pending | not done |
+| PADClamp | done | done | done | done | pending | pending | not done |
+| dvdqueue | done | done | done | done | pending | pending | not done |
+| OSAlarm | done | done | done | done | pending | pending | not done |
+| GXTexture | done | done | done | done | pending | pending | not done |
+| GXProject | done | done | done | done | pending | pending | not done |
+| GXCompressZ16 | done | done | done | done | pending | pending | not done |
+| THPAudioDecode | done | done | done | done | pending | pending | not done |
+| GXGetYScaleFactor | done | done | done | done | pending | pending | not done |
 
 ## Execution order (global)
 
-1. Complete matrix tasks.
-2. Implement/expand leaf-level ops.
-3. Add oracle linkage.
-4. Enforce mutation gate.
+1. ~~Complete matrix tasks.~~ DONE — all 16 subsystems have matrix + leaf + stateful + oracle.
+2. ~~Implement/expand leaf-level ops.~~ DONE — all decomp pure-computation functions covered.
+3. ~~Add oracle linkage.~~ DONE — all 17 suites use deterministic oracle pattern.
+4. Enforce mutation gate. ← **NEXT**
 5. Wire one-button global gate.
 6. Update notes and close issue.
+
+**Note:** All decomp source files have been exhaustively scanned (2026-02-11).
+No further PBT candidates exist — remaining decomp functions are all hardware-coupled.

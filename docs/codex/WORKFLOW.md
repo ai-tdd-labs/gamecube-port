@@ -63,6 +63,17 @@ Reference: `docs/codex/PROPERTY_BASED_TESTING.md`
 Run:
 - `tools/run_pbt.sh` (optional args: iterations, seed)
 
+Important terminology:
+- In this repo, many suites are **deterministic randomized parity/property harnesses**.
+- They are valid safety nets, but they are not identical to framework-grade PBT with automatic shrinking (e.g. fast-check/QuickCheck style).
+- For cross-check against retail behavior, pair PBT/parity runs with replay suites.
+
+Replay gate:
+- `tools/run_replay_gate.sh`
+
+Failure minimization helper:
+- `tools/pbt_minimize_failure.sh --cmd \"<runner>\" --seed <N> [--steps <N>]`
+
 ## Test Locations
 
 - New tests go under tests/sdk/<subsystem>/<function>/

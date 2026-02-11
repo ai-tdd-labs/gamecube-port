@@ -26,7 +26,7 @@ MP4 boot-forward chain (bd):
 
 Oracle exactness hardening (new):
 - [ ] Add tier tag to each oracle (`STRICT_DECOMP`, `DECOMP_ADAPTED`, `MODEL_OR_SYNTHETIC`) and print in test output.
-  Evidence target: `tests/sdk/*/property/*_oracle.h`, `tools/run_*property*.sh`
+  Evidence target: `tests/sdk/*/property/*_oracle.h`, property runner scripts under `tools/`
 - [ ] Build delta ledgers for current adapted oracles:
   - `ARQ`: interrupt + callback + DMA mocking deltas
   - `CARD FAT`: update-fat erase/write callback deltas
@@ -136,7 +136,7 @@ PBT matrix baseline:
     Prereq: reproducible later-game trigger path for objdll unload.
     Extra signal: `omOvlKill` (`0x8002F014`) also not hit in 180s boot-window probe.
    - [ ] Build `OSUnlink` trace replay harness and pass harvested case(s) bit-exact on host.
-     Target: `tools/replay_trace_case_os_unlink.sh`
+     Target: host replay script to be added under `tools/` (not present yet)
   - [ ] Re-run omMaster-adjacent checkpoint after both replay harnesses pass.
 
 5. DVD path expansion (MP4)
