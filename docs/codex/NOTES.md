@@ -19,6 +19,16 @@ Rules:
 - One-button dualcheck now includes MTX strict run in addition to CARD checksum strict run.
   Evidence: `tools/run_oracle_dualcheck.sh`.
 
+### PBT strict dualcheck (OS round leafs used in OSAlloc flows)
+- Added strict decomp-derived leaf oracle for:
+  - `OSRoundUp32B`
+  - `OSRoundDown32B`
+  Evidence: `tests/pbt/os/os_round_32b/os_round_32b_strict_oracle.h`.
+- OS round property test now checks sdk_port output against strict oracle output every iteration.
+  Evidence: `tests/pbt/os/os_round_32b/os_round_32b_pbt.c`.
+- One-button dualcheck now includes the strict OS round suite.
+  Evidence: `tools/run_oracle_dualcheck.sh`.
+
 ### Dolphin GDB Stub (macOS build on this machine)
 - Stop packets include PC/NIP in reg `0x40` (usable for PC-polling checkpoints).
   Evidence: `tools/ram_dump.py` `parse_stop_pc()`; observed stop example `T0540:800ba2f0;01:8019d798;` from real MP4 RVZ.

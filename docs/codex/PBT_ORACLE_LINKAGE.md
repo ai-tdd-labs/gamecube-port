@@ -4,15 +4,17 @@ This file maps each PBT subsystem to its oracle source and replay command.
 
 ## OSAlloc
 
-- Oracle type: decomp-faithful behavior + deterministic PPC/host snapshots.
-- Oracle tier: `DECOMP_ADAPTED` (branch-backed)
+- Oracle type: strict decomp leaf oracle (`OSRoundUp32B/OSRoundDown32B`) + decomp-adapted snapshots.
+- Oracle tier: `STRICT_DECOMP` + `DECOMP_ADAPTED`
 - Delta ledger: `docs/codex/oracle_deltas/osalloc_oracle_delta.md`
 - Evidence:
   - `tests/sdk/os/os_alloc/`
   - `tests/sdk/os/os_alloc_from_heap/`
   - `tests/sdk/smoke/mp4_init_chain_001/`
+  - `tests/pbt/os/os_round_32b/os_round_32b_strict_oracle.h`
 - Commands:
   - `tools/run_pbt.sh os_round_32b 20000 0xC0DEC0DE`
+  - `tools/run_oracle_dualcheck.sh 500` (includes strict os_round_32b dual-check)
   - `tools/diff_bins.sh tests/sdk/os/os_alloc/expected/os_alloc_mp4_default_fifo_001.bin tests/sdk/os/os_alloc/actual/os_alloc_mp4_default_fifo_001.bin`
 
 ## DVDFS

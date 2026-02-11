@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "os_round_32b_strict_oracle.h"
+
 // Use the sdk_port implementation directly.
 uint32_t OSRoundUp32B(uint32_t x);
 uint32_t OSRoundDown32B(uint32_t x);
@@ -31,11 +33,23 @@ int main(int argc, char **argv) {
         uint32_t x = xs32(&seed);
 
         uint32_t up = OSRoundUp32B(x);
+        uint32_t up_strict = strict_OSRoundUp32B(x);
+        if (up != up_strict) {
+            fprintf(stderr, "PBT FAIL: strict mismatch OSRoundUp32B x=0x%08X got=0x%08X strict=0x%08X\n",
+                    x, up, up_strict);
+            return 1;
+        }
         if ((up & 31u) != 0) fail_u32("OSRoundUp32B alignment", x, up);
         if (up < x) fail_u32("OSRoundUp32B monotonic", x, up);
         if (OSRoundUp32B(up) != up) fail_u32("OSRoundUp32B idempotent", x, up);
 
         uint32_t down = OSRoundDown32B(x);
+        uint32_t down_strict = strict_OSRoundDown32B(x);
+        if (down != down_strict) {
+            fprintf(stderr, "PBT FAIL: strict mismatch OSRoundDown32B x=0x%08X got=0x%08X strict=0x%08X\n",
+                    x, down, down_strict);
+            return 1;
+        }
         if ((down & 31u) != 0) fail_u32("OSRoundDown32B alignment", x, down);
         if (down > x) fail_u32("OSRoundDown32B monotonic", x, down);
         if (OSRoundDown32B(down) != down) fail_u32("OSRoundDown32B idempotent", x, down);
@@ -52,6 +66,6 @@ int main(int argc, char **argv) {
         }
     }
 
-    printf("PBT PASS: %u iterations\n", iters);
+    printf("PBT PASS: %u iterations (strict dualcheck)\n", iters);
     return 0;
 }
