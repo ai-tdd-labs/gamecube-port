@@ -1045,3 +1045,20 @@ Result (current snapshot):
 Notes:
 - This is distinct from `docs/sdk/mp4/MP4_sdk_calls_inventory.csv` which inventories SDK-like callsites
   in `src/game_workload/mp4/vendor/src/game/*.c` only.
+## 2026-02-11: PBT chain expansion (MTX + DVD core + ARQ + CARD-FAT)
+
+- Added suite selector to `tools/run_pbt.sh`: `os_round_32b`, `mtx_core`, `dvd_core`.
+- Added `tests/pbt/mtx/mtx_core_pbt.c`:
+  - validates `C_MTXIdentity` / `PSMTXIdentity` invariants
+  - validates `C_MTXOrtho` formula invariants over randomized ranges
+  - PASS at 50,000 iterations (`tools/run_pbt.sh mtx_core 50000 0xC0DEC0DE`)
+- Added `tests/pbt/dvd/dvd_core_pbt.c`:
+  - randomized checks for `DVDFastOpen`, `DVDOpen`, `DVDConvertPathToEntrynum`
+  - randomized checks for `DVDRead`, `DVDReadAsync`, `DVDReadPrio`, `DVDReadAsyncPrio`, `DVDClose`
+  - callback and command-block state checks
+  - PASS at 20,000 iterations (`tools/run_pbt.sh dvd_core 20000 0xC0DEC0DE`)
+- Imported ARQ + CARD-FAT property suites from integration branch and validated on macOS:
+  - `tools/run_arq_property_test.sh --num-runs=50 -v` PASS
+  - `tools/run_card_fat_property_test.sh --num-runs=50 -v` PASS
+- Updated chain matrix baseline with current ARQ/CARD-FAT status:
+  - `docs/sdk/PBT_CHAIN_MATRIX.md`

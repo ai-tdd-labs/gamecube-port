@@ -118,3 +118,6 @@ tests/workload/mp4/tests/
 
 # Local mutation tooling lives on a separate branch/worktree; keep stray files out of main.
 tools/run_mutation_report.sh
+
+# Local-only reference projects
+external/

@@ -1,0 +1,14 @@
+diff --git a/src/sdk_port/ar/arq.c b/src/sdk_port/ar/arq.c
+index 1c6e859..3c32867 100644
+--- a/src/sdk_port/ar/arq.c
++++ b/src/sdk_port/ar/arq.c
+@@ -82,7 +82,7 @@ void port_ARQPopTaskQueueHi(port_ARQState *st)
+             port_ARStartDMA(st, type, dest, source, length);
+         }
+ 
+-        st->hasCallbackHi = 1;
++        st->hasCallbackHi = 0;
+         st->pendingHi = req;
+         st->queueHi = req_get(req, PORT_ARQ_REQ_NEXT);
+     }
+

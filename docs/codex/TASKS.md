@@ -5,6 +5,22 @@ evidence-based. Mark items DONE with a commit hash.
 
 ## Now (priority order)
 
+PBT chain program (whole-chain quality gate):
+- [x] Define subsystem-level DoD and gating policy for OSAlloc/DVDFS/ARQ/CARD-FAT/MTX.
+  Evidence: `docs/codex/PBT_CHAIN_PROGRAM.md`
+
+PBT matrix baseline:
+- [x] Add cross-subsystem matrix baseline (OSAlloc/DVDFS/ARQ/CARD-FAT/MTX).
+  Evidence: `docs/sdk/PBT_CHAIN_MATRIX.md`
+- [x] Add MTX core PBT suite and pass 50k iterations.
+  Evidence: `tests/pbt/mtx/mtx_core_pbt.c`, `tools/run_pbt.sh mtx_core 50000 0xC0DEC0DE`
+- [x] Add DVD core PBT suite and pass 20k iterations.
+  Evidence: `tests/pbt/dvd/dvd_core_pbt.c`, `tools/run_pbt.sh dvd_core 20000 0xC0DEC0DE`
+- [x] Import ARQ and CARD-FAT property suites on this branch and validate on macOS.
+  Evidence: `tools/run_arq_property_test.sh --num-runs=50 -v`, `tools/run_card_fat_property_test.sh --num-runs=50 -v`
+- [x] Add PBT oracle linkage map and one-button chain gate script.
+  Evidence: `docs/codex/PBT_ORACLE_LINKAGE.md`, `tools/run_pbt_chain_gate.sh`
+
 0. Real-game breakpoint dump tooling (secondary oracle)
    - [x] Large MEM1 dumps work reliably with conservative chunking (`--chunk 0x1000`) and reconnect/retry logic in `tools/ram_dump.py`.
      Evidence: `tools/dump_expected_mem1.sh`, `tests/sdk/smoke/mp4_pad_init_chain_001/expected/mp4_pad_init_chain_001_mem1.bin`
