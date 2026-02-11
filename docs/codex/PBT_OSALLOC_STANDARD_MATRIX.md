@@ -30,6 +30,10 @@ This matrix enforces one uniform standard across active suites:
 | ARQ property | yes | yes | partial | yes | mutation + strict leaf | L0-L2 + strict callback leaf check. |
 | CARD FAT property | yes | yes | partial | yes | mutation + strict leaf | L0-L2 + checksum strict leaf. |
 | DVDFS property | yes | yes | partial | yes | mutation | Added `--op=L0..L4|MIX`. |
+| dvdqueue property | yes | yes | partial | yes | mutation | Added `--op` targeting (L0-L4 + aliases). |
+| GXTexture property | yes | yes | partial | yes | mutation | Added `--op` targeting (L0-L4 + aliases). |
+| OSAlarm property | yes | yes | partial | yes | mutation | Added `--op` targeting (L0-L4 + aliases). |
+| PADClamp property | yes | yes | partial | yes | mutation | Already had L0-L3 + `--op` targeting. |
 | MTX core PBT | leaf/core | n/a | yes | yes | mutation | Focused strict leaf suite. |
 | DVD core PBT | leaf/core | n/a | yes | yes | mutation | Focused strict semantic suite. |
 | OS round PBT | leaf/core | n/a | yes | yes | mutation | Strict dualcheck leafs. |

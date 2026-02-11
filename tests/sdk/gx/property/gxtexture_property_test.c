@@ -33,6 +33,7 @@ static uint32_t xorshift32(void) {
 static uint64_t g_total_checks;
 static uint64_t g_total_pass;
 static int       g_verbose;
+static const char *g_opt_op;
 
 #define CHECK(cond, ...) do { \
     g_total_checks++; \
@@ -443,11 +444,21 @@ static int run_seed(uint32_t seed) {
     g_rng = seed;
     sub = xorshift32();
 
-    if (!test_parity(sub ^ 0x7EF00001u)) return 0;
-    if (!test_non_mipmap(sub ^ 0x7EF00002u)) return 0;
-    if (!test_mipmap_monotonic(sub ^ 0x7EF00003u)) return 0;
-    if (!test_rgba8_double(sub ^ 0x7EF00004u)) return 0;
-    if (!test_tile_count(sub ^ 0x7EF00005u)) return 0;
+    if (!g_opt_op || strstr("L0", g_opt_op) || strstr("PARITY", g_opt_op)) {
+        if (!test_parity(sub ^ 0x7EF00001u)) return 0;
+    }
+    if (!g_opt_op || strstr("L1", g_opt_op) || strstr("NOMIP", g_opt_op)) {
+        if (!test_non_mipmap(sub ^ 0x7EF00002u)) return 0;
+    }
+    if (!g_opt_op || strstr("L2", g_opt_op) || strstr("MONO", g_opt_op)) {
+        if (!test_mipmap_monotonic(sub ^ 0x7EF00003u)) return 0;
+    }
+    if (!g_opt_op || strstr("L3", g_opt_op) || strstr("RGBA8", g_opt_op)) {
+        if (!test_rgba8_double(sub ^ 0x7EF00004u)) return 0;
+    }
+    if (!g_opt_op || strstr("L4", g_opt_op) || strstr("TILE", g_opt_op)) {
+        if (!test_tile_count(sub ^ 0x7EF00005u)) return 0;
+    }
 
     return 1;
 }
@@ -462,8 +473,16 @@ int main(int argc, char **argv) {
             start_seed = (uint32_t)strtoul(argv[i] + 7, NULL, 0);
         else if (strncmp(argv[i], "--num-runs=", 11) == 0)
             num_runs = atoi(argv[i] + 11);
+        else if (strncmp(argv[i], "--op=", 5) == 0)
+            g_opt_op = argv[i] + 5;
         else if (strcmp(argv[i], "-v") == 0)
             g_verbose = 1;
+        else {
+            fprintf(stderr,
+                    "Usage: gxtexture_property_test [--seed=N] [--num-runs=N] "
+                    "[--op=L0|L1|L2|L3|L4|PARITY|NOMIP|MONO|RGBA8|TILE] [-v]\n");
+            return 2;
+        }
     }
 
     printf("\n=== GXTexture Property Test ===\n");

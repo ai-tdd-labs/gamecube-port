@@ -32,6 +32,7 @@ static uint32_t xorshift32(void) {
 static uint64_t g_total_checks;
 static uint64_t g_total_pass;
 static int       g_verbose;
+static const char *g_opt_op;
 
 #define CHECK(cond, ...) do { \
     g_total_checks++; \
@@ -625,11 +626,21 @@ static int run_seed(uint32_t seed) {
     g_rng = seed;
     sub = xorshift32();
 
-    if (!test_push_pop(sub ^ 0xDEAD0001u)) return 0;
-    if (!test_dequeue(sub ^ 0xDEAD0002u)) return 0;
-    if (!test_is_in_queue(sub ^ 0xDEAD0003u)) return 0;
-    if (!test_properties(sub ^ 0xDEAD0004u)) return 0;
-    if (!test_integration(sub ^ 0xDEAD0005u)) return 0;
+    if (!g_opt_op || strstr("L0", g_opt_op) || strstr("PUSH", g_opt_op)) {
+        if (!test_push_pop(sub ^ 0xDEAD0001u)) return 0;
+    }
+    if (!g_opt_op || strstr("L1", g_opt_op) || strstr("DEQUEUE", g_opt_op)) {
+        if (!test_dequeue(sub ^ 0xDEAD0002u)) return 0;
+    }
+    if (!g_opt_op || strstr("L2", g_opt_op) || strstr("INQUEUE", g_opt_op)) {
+        if (!test_is_in_queue(sub ^ 0xDEAD0003u)) return 0;
+    }
+    if (!g_opt_op || strstr("L3", g_opt_op) || strstr("PROP", g_opt_op)) {
+        if (!test_properties(sub ^ 0xDEAD0004u)) return 0;
+    }
+    if (!g_opt_op || strstr("L4", g_opt_op) || strstr("FULL", g_opt_op) || strstr("MIX", g_opt_op)) {
+        if (!test_integration(sub ^ 0xDEAD0005u)) return 0;
+    }
 
     return 1;
 }
@@ -644,8 +655,16 @@ int main(int argc, char **argv) {
             start_seed = (uint32_t)strtoul(argv[i] + 7, NULL, 0);
         else if (strncmp(argv[i], "--num-runs=", 11) == 0)
             num_runs = atoi(argv[i] + 11);
+        else if (strncmp(argv[i], "--op=", 5) == 0)
+            g_opt_op = argv[i] + 5;
         else if (strcmp(argv[i], "-v") == 0)
             g_verbose = 1;
+        else {
+            fprintf(stderr,
+                    "Usage: dvdqueue_property_test [--seed=N] [--num-runs=N] "
+                    "[--op=L0|L1|L2|L3|L4|PUSH|DEQUEUE|INQUEUE|PROP|FULL|MIX] [-v]\n");
+            return 2;
+        }
     }
 
     printf("\n=== dvdqueue Property Test ===\n");

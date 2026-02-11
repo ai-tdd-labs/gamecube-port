@@ -1426,3 +1426,20 @@ Notes:
   - `bash tools/run_gxz16_property_test.sh --num-runs=20 --seed=0xC0DEC0DE`
   - `bash tools/run_gxyscale_property_test.sh --num-runs=20 --seed=0xC0DEC0DE`
   - `bash tools/run_thpaudio_property_test.sh --num-runs=20 --seed=0xC0DEC0DE`
+## 2026-02-11: OSAlloc-style `--op` targeting added for new 3 suites
+
+- Upgraded these suites to OSAlloc-style focused level execution:
+  - `tests/sdk/dvd/property/dvdqueue_property_test.c`
+  - `tests/sdk/gx/property/gxtexture_property_test.c`
+  - `tests/sdk/os/osalarm/property/osalarm_property_test.c`
+- Added `--op=` parsing + per-level gating in `run_seed`:
+  - dvdqueue: `L0..L4` + `PUSH|DEQUEUE|INQUEUE|PROP|FULL|MIX`
+  - gxtexture: `L0..L4` + `PARITY|NOMIP|MONO|RGBA8|TILE`
+  - osalarm: `L0..L4` + `INSERT|CANCEL|FIRE|PERIODIC|FULL|MIX`
+- Validation (PASS):
+  - `bash tools/run_dvdqueue_property_test.sh --seed=0xC0DEC0DE --op=L0 -v`
+  - `bash tools/run_dvdqueue_property_test.sh --seed=0xC0DEC0DE --op=L4 -v`
+  - `bash tools/run_gxtexture_property_test.sh --seed=0xC0DEC0DE --op=L1 -v`
+  - `bash tools/run_gxtexture_property_test.sh --seed=0xC0DEC0DE --op=L4 -v`
+  - `bash tools/run_osalarm_property_test.sh --seed=0xC0DEC0DE --op=L0 -v`
+  - `bash tools/run_osalarm_property_test.sh --seed=0xC0DEC0DE --op=L4 -v`
