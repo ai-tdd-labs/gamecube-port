@@ -11,8 +11,13 @@ Subsystems in this program:
 - `ARQ`
 - `CARD-FAT`
 - `MTX`
-- `OSThread+Mutex+Message`
+- `OSThread+Mutex+Msg` (incl. WaitCond, invariant checkers)
 - `OSStopwatch`
+- `OSTime` (OSTicksToCalendarTime)
+- `PADClamp` (ClampStick, ClampTrigger, PADClamp)
+- `dvdqueue` (circular DL priority queue)
+- `OSAlarm` (sorted temporal priority queue)
+- `GXTexture` (GXGetTexBufferSize, GetImageTileCount)
 
 ## Definition of Done (DoD) per subsystem
 
@@ -74,6 +79,11 @@ For each subsystem, keep these artifacts up to date:
 | MTX | in progress | in progress | in progress | in progress | in progress | pending | not done |
 | OSThread+Mutex+Msg | done | done | done | done | pending | pending | not done |
 | OSStopwatch | done | done | done | done | pending | pending | not done |
+| OSTime | done | done | done | done | pending | pending | not done |
+| PADClamp | done | done | done | done | pending | pending | not done |
+| dvdqueue | done | done | done | done | pending | pending | not done |
+| OSAlarm | done | done | done | done | pending | pending | not done |
+| GXTexture | done | done | done | done | pending | pending | not done |
 
 ## Execution order (global)
 
