@@ -140,7 +140,7 @@ compared against the `sdk_port` implementation using `gc_mem` big-endian emulati
 
 ### To reach MP4 boot
 
-1. **OS module gaps:** OSContext (stubbed), OSMemory, OSLink, OSAlarm, OSMessage
+1. **OS module gaps:** OSContext (stubbed), OSMemory, OSLink, OSAlarm
 2. **EXI:** Required for memory card and serial I/O — 23 functions, not started
 3. **DSP:** Audio subsystem — 19 functions, not started
 4. **AI:** Audio interface — 27 functions, not started
@@ -154,23 +154,30 @@ compared against the `sdk_port` implementation using `gc_mem` big-endian emulati
 2. **Quaternion math** (3 new functions) — DONE, integrated into MTX suite
 3. **OSStopwatch** (6 functions) — DONE, standalone PBT suite
 
-### Next PBT Candidates
+### Remaining PBT Candidates
 
-- **WaitCond/CheckDeadLock** — remaining OSMutex functions
-- **VI/SI/PAD** — hardware interface modules (need mock layer)
-- **CARD** full chain — mount/read/write/format
+#### Tier 1 — High value, low risk
+- **OSCond (WaitCond/SignalCond)** — pure synchronization logic, builds on existing Thread/Mutex infra; add as L10/L11 in OSThread suite
+- **OSMutex invariant checkers** (`__OSCheckMutex`, `__OSCheckDeadLock`, `__OSCheckMutexes`) — use as property assertions in existing L3-L9 tests
+
+#### Tier 2 — Small but pure logic
+- **OSTicksToCalendarTime** — pure date/time math (leap years, month boundaries, roundtrip); single function
+
+#### Not suitable for PBT
+All remaining subsystems are hardware-dependent and not suitable for oracle-vs-port PBT:
+
+- **OSAlarm** — PowerPC decrementer, exception handlers, interrupt-driven timer queue
+- **OSFont** — ROM reads, VI registers, font texture decoding
+- **OSReset/OSResetSW** — PI register writes, cache flushes, reset button GPIO
+- **psmtx.c / mtxvec.c** — PPC paired-single assembly (no C decomp available)
+- **OSMemory** — hardware register config, BAT/MMU assembly
+- **OSLink** — ELF relocation, cache ops
+- **OSContext** — PPC register save/restore (not needed for port)
+- **AR** (not ARQ) — DMA hardware, bus probing
+- **OSSync** — 1 function, pure hardware exception vector install
+- **VI/SI/PAD** — hardware interface modules, would need extensive mock layer
 
 ### PBT coverage expansion (ongoing)
 
-- OSThread+Mutex: WaitCond, CheckDeadLock (not yet tested)
-- Add PBT for VI, SI, PAD (currently no property tests)
 - Mutation gate enforcement for all suites
 - Retail-trace replay for hardware-sensitive behaviors
-
-### Modules NOT suitable for PBT
-
-- **OSAlarm** — exception handlers, hardware timer decrementer
-- **OSMemory** — hardware register config, BAT/MMU assembly
-- **OSLink** — ELF relocation, cache ops
-- **AR** (not ARQ) — DMA hardware, bus probing
-- **OSSync** — 1 function, pure hardware exception vector install
