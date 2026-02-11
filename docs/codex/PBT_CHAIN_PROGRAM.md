@@ -18,6 +18,10 @@ Subsystems in this program:
 - `dvdqueue` (circular DL priority queue)
 - `OSAlarm` (sorted temporal priority queue)
 - `GXTexture` (GXGetTexBufferSize, GetImageTileCount)
+- `GXProject` (3D projection math)
+- `GXCompressZ16` (Z-depth compress/decompress, 4 formats)
+- `THPAudioDecode` (ADPCM audio decoder)
+- `GXGetYScaleFactor` (Y scale convergence + __GXGetNumXfbLines)
 
 ## Definition of Done (DoD) per subsystem
 
@@ -84,6 +88,10 @@ For each subsystem, keep these artifacts up to date:
 | dvdqueue | done | done | done | done | pending | pending | not done |
 | OSAlarm | done | done | done | done | pending | pending | not done |
 | GXTexture | done | done | done | done | pending | pending | not done |
+| GXProject | done | done | done | done | pending | pending | not done |
+| GXCompressZ16 | done | done | done | done | pending | pending | not done |
+| THPAudioDecode | done | done | done | done | pending | pending | not done |
+| GXGetYScaleFactor | done | done | done | done | pending | pending | not done |
 
 ## Execution order (global)
 

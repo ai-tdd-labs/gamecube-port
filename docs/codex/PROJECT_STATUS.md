@@ -22,7 +22,7 @@ big-endian to a host-side C implementation with `gc_mem` big-endian emulation.
 | **Decomp functions available** | ~854 |
 | **Port functions implemented** | ~296 |
 | **Overall completion** | ~35% |
-| **PBT suites passing** | 13 (OSAlloc, MTX+Quat, ARQ, CARD-FAT, DVDFS, OSThread+Mutex+Msg, OSStopwatch, OSTime, PADClamp, dvdqueue, OSAlarm, GXTexture) |
+| **PBT suites passing** | 17 (OSAlloc, MTX+Quat, ARQ, CARD-FAT, DVDFS, OSThread+Mutex+Msg, OSStopwatch, OSTime, PADClamp, dvdqueue, OSAlarm, GXTexture, GXProject, GXCompressZ16, THPAudioDecode, GXGetYScaleFactor) |
 
 ### Per-Module Breakdown
 
@@ -83,6 +83,10 @@ compared against the `sdk_port` implementation using `gc_mem` big-endian emulati
 | **dvdqueue** | `tests/sdk/dvd/property/` | `tools/run_dvdqueue_property_test.sh` | 2000 | ~300k | PASS |
 | **OSAlarm** | `tests/sdk/os/osalarm/property/` | `tools/run_osalarm_property_test.sh` | 2000 | ~531k | PASS |
 | **GXTexture** | `tests/sdk/gx/property/` | `tools/run_gxtexture_property_test.sh` | 2000 | ~1.3M | PASS |
+| **GXProject** | `tests/sdk/gx/property/` | `tools/run_gxproject_property_test.sh` | 2000 | ~1.6M | PASS |
+| **GXCompressZ16** | `tests/sdk/gx/property/` | `tools/run_gxz16_property_test.sh` | 2000 | ~141M | PASS |
+| **THPAudioDecode** | `tests/sdk/thp/property/` | `tools/run_thpaudio_property_test.sh` | 2000 | ~40M | PASS |
+| **GXGetYScaleFactor** | `tests/sdk/gx/property/` | `tools/run_gxyscale_property_test.sh` | 2000 | ~4.3M | PASS |
 | **ARQ** | `tests/sdk/ar/property/` | `tools/run_arq_property_test.sh` | — | — | PASS |
 | **CARD-FAT** | `tests/sdk/card/property/` | `tools/run_card_fat_property_test.sh` | — | — | PASS |
 | **DVDFS** | `tests/sdk/dvd/dvdfs/property/` | `tools/run_property_dvdfs.sh` | — | — | PASS |
@@ -166,6 +170,10 @@ compared against the `sdk_port` implementation using `gc_mem` big-endian emulati
 7. **dvdqueue** (6 functions) — DONE, standalone PBT suite (300k checks)
 8. **OSAlarm** (5 functions) — DONE, standalone PBT suite (531k checks)
 9. **GXTexture** (GXGetTexBufferSize + GetImageTileCount) — DONE, standalone PBT suite (1.3M checks)
+10. **GXProject** (3D projection math) — DONE, standalone PBT suite (1.6M checks)
+11. **GXCompressZ16/GXDecompressZ16** (Z-depth round-trip encoding) — DONE, standalone PBT suite (141M checks)
+12. **THPAudioDecode** (ADPCM decoder) — DONE, standalone PBT suite (40M checks)
+13. **GXGetYScaleFactor** (Y scale convergence) — DONE, standalone PBT suite (4.3M checks)
 
 ### Evaluated and Skipped (not suitable for PBT)
 
@@ -183,19 +191,10 @@ compared against the `sdk_port` implementation using `gc_mem` big-endian emulati
 | **AR** (not ARQ) | DMA hardware, bus probing |
 | **OSSync** | 1 function, pure hardware exception vector install |
 | **VI/SI/EXI/DSP/AI** | Hardware interface modules, need extensive mock layer |
-
-### Remaining PBT Candidates (new, from full decomp scan)
-
-| Candidate | Source | Type | Suitability | Notes |
-|-----------|--------|------|-------------|-------|
-| **GXProject** | GXTransform.c:7-35 | Pure math | **Strong** | 3D projection: modelview transform -> perspective/ortho -> viewport map. No globals, no hardware, no side effects. |
-| **GXCompressZ16 / GXDecompressZ16** | GXMisc.c:362-485 | Bit manipulation | **Strong** | Z-depth compress/decompress with 4 formats (LINEAR/NEAR/MID/FAR). Round-trip property. Only PPC dep is `__cntlzw` (trivial: `__builtin_clz`). |
-| **THPAudioDecode** | THPAudio.c:3-146 | Signal processing | **Moderate** | ADPCM decoder: predictor coefficients, scale, saturation, nibble extraction. Need to define THPAudioRecordHeader + generate random encoded frames. |
-| **GXGetYScaleFactor** | GXFrameBuf.c:257-290 | Iterative convergence | **Moderate** | Converges on Y scale factor via two loops + `__GXGetNumXfbLines` helper. Pure integer/float math. |
-| **GXSetFog (core math)** | GXPixel.c:7-56 | Float encoding | **Moderate** | Mantissa normalization loop (B_mant/B_expn), A/B/C computation from 4 floats. Extract math from register packing. |
-| **__GXCalculateVLim** | GXAttr.c:123-171 | Lookup table | **Moderate** | Vertex limit from VCD register fields. Pure given (vcdLo, vcdHi, vatA) as inputs. Needs GET_REG_FIELD macro. |
-| **GXInitFogAdjTable** | GXPixel.c:108-138 | Math + sqrtf | **Weak** | 10-entry table from width + projection matrix. Straightforward sqrtf loop. |
-| **GXSetIndTexMtx** | GXBump.c:42-100 | Fixed-point encode | **Weak** | Simple `(int)(1024*val) & 0x7FF` for 6 values + scale_exp split. Too simple for PBT. |
+| **GXSetFog** | Mantissa normalization tightly coupled with SET_REG_FIELD hardware register packing |
+| **__GXCalculateVLim** | Simple 4-entry lookup table sum from register fields (~50 lines), too simple |
+| **GXInitFogAdjTable** | Straightforward sqrtf loop, 10 entries, not worth PBT |
+| **GXSetIndTexMtx** | Simple `(int)(1024*val) & 0x7FF` for 6 values, too simple |
 
 ### PBT coverage expansion (ongoing)
 
