@@ -1400,3 +1400,16 @@ Notes:
   - `./tools/run_stopwatch_property_test.sh --seed=0xC0DEC0DE --op=L0 -v` PASS
   - `./tools/run_stopwatch_property_test.sh --seed=0xC0DEC0DE --op=L1 -v` PASS
   - `./tools/run_property_dvdfs.sh --seed=0xC0DEC0DE --op=L0..L4 -v` PASS
+## 2026-02-11: Pulled latest Claude PBT batch into current branch
+
+- Merged remote branch `origin/pbt/remaining-sdk-coverage` into `codex/macos-codex53-pbt-audit`.
+- New suites added by that batch:
+  - `tests/sdk/dvd/property/dvdqueue_property_test.c`
+  - `tests/sdk/gx/property/gxtexture_property_test.c`
+  - `tests/sdk/os/osalarm/property/osalarm_property_test.c`
+  - `tests/sdk/pad/property/padclamp_property_test.c`
+- Validation reruns on this branch (all PASS, deterministic seed):
+  - `bash tools/run_dvdqueue_property_test.sh --num-runs=50 --seed=0xC0DEC0DE`
+  - `bash tools/run_gxtexture_property_test.sh --num-runs=50 --seed=0xC0DEC0DE`
+  - `bash tools/run_osalarm_property_test.sh --num-runs=50 --seed=0xC0DEC0DE`
+  - `bash tools/run_padclamp_property_test.sh --num-runs=50 --seed=0xC0DEC0DE`
