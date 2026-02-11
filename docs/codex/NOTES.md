@@ -9,6 +9,19 @@ Rules:
 
 ## Confirmed Behaviors
 
+### Integration sync: pbt/remaining-sdk-coverage -> codex/integration-all (2026-02-11)
+- Integrated remote commits:
+  - `d245941` ("todo: add SDK port coverage overview (69% of game-needed functions)")
+  - `169d526` ("todo: add AR module, fix ARQ coverage in SDK overview")
+  Evidence: `todo/SDK_PORT_COVERAGE.md`.
+- Replay gate robustness: optional harvest scripts that exit with code `2` are treated as skip (missing RVZ/trace corpus), not hard failure.
+  Evidence: `tools/run_replay_gate.sh`.
+- Validation after integration:
+  - `tools/run_pbt_chain_gate.sh` => PASS (including mutation checks).
+  - `tools/run_replay_gate.sh` => PASS with explicit SKIPs when assets are unavailable.
+  - `tools/run_tests.sh all tests/sdk` => PASS (`rc:0`) in integration-all worktree run log.
+  Evidence logs: `/tmp/gc-intall-pbt.log`, `/tmp/gc-intall-replay2.log`, `/tmp/gc-intall-sdk2.log`.
+
 ### Pre-main test sweep stabilization (2026-02-11)
 - `tests/sdk` full expected sweep now completes end-to-end (`tools/run_tests.sh all tests/sdk`) after resolving PAD test helper symbol collisions.
   Evidence: renamed local dump helpers in:

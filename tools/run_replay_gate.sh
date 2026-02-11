@@ -11,10 +11,14 @@ run_if_exists() {
   shift || true
   if [[ -x "$script" ]]; then
     echo "[replay-gate] $script $*"
-    if "$script" "$@"; then
+    local rc=0
+    set +e
+    "$script" "$@"
+    rc=$?
+    set -e
+    if [[ $rc -eq 0 ]]; then
       return 0
     fi
-    local rc=$?
     if [[ $rc -eq 2 ]]; then
       echo "[replay-gate] SKIP ($rc): $script (missing external asset/trace corpus)"
       return 0
