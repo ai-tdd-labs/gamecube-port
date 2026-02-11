@@ -1,0 +1,9 @@
+diff --git a/src/sdk_port/os/OSArena.c b/src/sdk_port/os/OSArena.c
+--- a/src/sdk_port/os/OSArena.c
++++ b/src/sdk_port/os/OSArena.c
+@@ -50,3 +50,4 @@
+ uint32_t OSRoundDown32B(uint32_t x) {
+-    return x & ~31u;
++    // MUTANT: use 15 instead of 31 (16-byte align instead of 32)
++    return x & ~15u;
+ }

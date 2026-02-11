@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1167,7 +1167,7 @@
+ }
+ 
+ void GXPokeDstAlpha(u8 enable, u8 alpha) {
+-    gc_gx_poke_dst_alpha_enable = (u32)enable;
++    gc_gx_poke_dst_alpha_enable = (u32)alpha; // MUTANT
+     gc_gx_poke_dst_alpha = (u32)alpha;
+ }
+ 

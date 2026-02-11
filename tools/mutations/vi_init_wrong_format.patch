@@ -1,0 +1,10 @@
+diff --git a/src/sdk_port/vi/VI.c b/src/sdk_port/vi/VI.c
+--- a/src/sdk_port/vi/VI.c
++++ b/src/sdk_port/vi/VI.c
+@@ -143,5 +143,5 @@
+
+ void VIInit(void) {
+-    s_tv_format = VI_NTSC;
++    s_tv_format = 1u; // MUTANT: init to PAL (1) instead of NTSC (0)
+     gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_TV_FORMAT, &s_tv_format, s_tv_format);
+ }

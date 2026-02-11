@@ -1,0 +1,11 @@
+diff --git a/src/sdk_port/os/OSAlloc.c b/src/sdk_port/os/OSAlloc.c
+--- a/src/sdk_port/os/OSAlloc.c
++++ b/src/sdk_port/os/OSAlloc.c
+@@ -140,5 +140,5 @@
+             store_u32be(s + 12, 0);
+
+-            // hd->free = start, hd->allocated = 0
+-            store_u32be(hd + 4, s);
++            // MUTANT: skip writing hd->free pointer (leave it as 0)
++            // store_u32be(hd + 4, s);
+             store_u32be(hd + 8, 0);

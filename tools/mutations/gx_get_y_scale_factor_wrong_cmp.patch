@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1024,7 +1024,7 @@
+     u32 iScale = ((u32)(256.0f / yScale)) & 0x1FFu;
+     u32 realHt = __GXGetNumXfbLines(efbHeight, iScale);
+ 
+-    while (realHt > xfbHeight) {
++    while (realHt < xfbHeight) { // MUTANT
+         tgtHt--;
+         yScale = (float)tgtHt / (float)efbHeight;
+         iScale = ((u32)(256.0f / yScale)) & 0x1FFu;

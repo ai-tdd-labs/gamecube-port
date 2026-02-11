@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1602,7 +1602,7 @@
+     reg = 0;
+     reg = set_field(reg, 8, 0, (u32)clear_clr.r);
+     reg = set_field(reg, 8, 8, (u32)clear_clr.a);
+-    reg = set_field(reg, 8, 24, 0x4Fu);
++    reg = set_field(reg, 8, 24, 0x50u); // MUTANT
+     gc_gx_copy_clear_reg0 = reg;
+     gx_write_ras_reg(reg);
+ 

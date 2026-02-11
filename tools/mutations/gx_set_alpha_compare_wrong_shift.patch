@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2012,7 +2012,7 @@
+     // GXTev.c: pack into a RAS reg with high byte 0xF3.
+     u32 reg = 0;
+     reg = set_field(reg, 8, 0, (u32)ref0);
+-    reg = set_field(reg, 8, 8, (u32)ref1);
++    reg = set_field(reg, 8, 0, (u32)ref1); // MUTANT
+     reg = set_field(reg, 3, 16, comp0 & 7u);
+     reg = set_field(reg, 3, 19, comp1 & 7u);
+     reg = set_field(reg, 2, 22, op & 3u);

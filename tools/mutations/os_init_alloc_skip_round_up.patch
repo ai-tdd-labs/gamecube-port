@@ -1,0 +1,11 @@
+diff --git a/src/sdk_port/os/OSAlloc.c b/src/sdk_port/os/OSAlloc.c
+--- a/src/sdk_port/os/OSAlloc.c
++++ b/src/sdk_port/os/OSAlloc.c
+@@ -103,5 +103,6 @@
+     // arenaStart becomes HeapArray + arraySize, then rounded up to 32 bytes.
+     uint32_t new_lo = arena_lo + array_size;
+-    new_lo = round_up(new_lo, ALIGNMENT);
++    // MUTANT: skip the round-up alignment
++    // new_lo = round_up(new_lo, ALIGNMENT);
+
+     // ArenaEnd is rounded down to 32 bytes.

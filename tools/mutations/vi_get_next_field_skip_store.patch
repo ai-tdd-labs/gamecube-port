@@ -1,0 +1,13 @@
+diff --git a/src/sdk_port/vi/VI.c b/src/sdk_port/vi/VI.c
+--- a/src/sdk_port/vi/VI.c
++++ b/src/sdk_port/vi/VI.c
+@@ -152,7 +152,7 @@
+ u32 VIGetNextField(void) {
+     u32 c = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_GET_NEXT_FIELD_CALLS, gc_vi_get_next_field_calls);
+     c++;
+-    gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_GET_NEXT_FIELD_CALLS, &gc_vi_get_next_field_calls, c);
+-    gc_vi_next_field = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_NEXT_FIELD, gc_vi_next_field);
++    // MUTANT: skip persisting call counter and loading next_field from state
++    gc_vi_next_field = 0;
+     return gc_vi_next_field;
+ }

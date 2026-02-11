@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/os/OSCache.c b/src/sdk_port/os/OSCache.c
+--- a/src/sdk_port/os/OSCache.c
++++ b/src/sdk_port/os/OSCache.c
+@@ -24,5 +24,6 @@
+ // Used by MP4 callsites (dvd.c, thp, gfx code). We record args for deterministic tests.
+ __attribute__((weak)) void DCInvalidateRange(void *addr, uint32_t nbytes) {
+-    gc_dc_inval_last_addr = (uint32_t)(uintptr_t)addr;
+-    gc_dc_inval_last_len = nbytes;
++    // MUTANT: swap addr and len fields
++    gc_dc_inval_last_addr = nbytes;
++    gc_dc_inval_last_len = (uint32_t)(uintptr_t)addr;
+ }

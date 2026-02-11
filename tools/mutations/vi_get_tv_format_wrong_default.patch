@@ -1,0 +1,9 @@
+diff --git a/src/sdk_port/vi/VI.c b/src/sdk_port/vi/VI.c
+--- a/src/sdk_port/vi/VI.c
++++ b/src/sdk_port/vi/VI.c
+@@ -147,4 +147,4 @@
+ u32 VIGetTvFormat(void) {
+-    s_tv_format = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_TV_FORMAT, s_tv_format);
++    s_tv_format = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_TV_FORMAT, 1u); // MUTANT: wrong fallback (PAL instead of NTSC)
+     return s_tv_format;
+ }

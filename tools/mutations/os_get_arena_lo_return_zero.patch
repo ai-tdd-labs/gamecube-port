@@ -1,0 +1,13 @@
+diff --git a/src/sdk_port/os/OSArena.c b/src/sdk_port/os/OSArena.c
+index 1234567..abcdefg 100644
+--- a/src/sdk_port/os/OSArena.c
++++ b/src/sdk_port/os/OSArena.c
+@@ -12,5 +12,6 @@
+ void *OSGetArenaLo(void) {
+     // Prefer RAM-backed state.
+     uint32_t v = gc_sdk_state_load_u32be(GC_SDK_OFF_OS_ARENA_LO);
+-    if (v != 0) return (void *)(uintptr_t)v;
++    // MUTANT: always return fallback, ignore RAM-backed state
++    if (0) return (void *)(uintptr_t)v;
+     return g_os_arena_lo_fallback;
+ }

@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -313,7 +313,7 @@
+     f32 cr;
+     GXLightObj *obj = lt_obj;
+ 
+-    if (cutoff <= 0.0f || cutoff > 90.0f) {
++    if (cutoff <= 0.0f || cutoff > 80.0f) { // MUTANT
+         spot_func = GX_SP_OFF;
+     }
+ 

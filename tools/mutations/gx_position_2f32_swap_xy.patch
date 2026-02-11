@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2322,7 +2322,7 @@
+ 
+ void GXPosition2f32(float x, float y) {
+     // Deterministic host model: keep last written values as raw f32 bits.
+-    gc_gx_pos2f32_x_bits = f32_bits(x);
++    gc_gx_pos2f32_x_bits = f32_bits(y); // MUTANT
+     gc_gx_pos2f32_y_bits = f32_bits(y);
+ }
+ 

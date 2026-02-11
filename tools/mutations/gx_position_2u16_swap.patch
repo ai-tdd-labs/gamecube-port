@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2309,7 +2309,7 @@
+ 
+ void GXPosition2u16(u16 x, u16 y) {
+     // Deterministic host model: keep last written values (zero-extended).
+-    gc_gx_pos2u16_x = (u32)x;
++    gc_gx_pos2u16_x = (u32)y; // MUTANT
+     gc_gx_pos2u16_y = (u32)y;
+ }
+ 

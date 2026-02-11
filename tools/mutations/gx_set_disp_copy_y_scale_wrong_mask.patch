@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1005,7 +1005,7 @@
+ }
+ 
+ u32 GXSetDispCopyYScale(float vscale) {
+-    u32 scale = ((u32)(256.0f / vscale)) & 0x1FFu;
++    u32 scale = ((u32)(256.0f / vscale)) & 0x1FEu; // MUTANT
+     u32 check = (scale != 0x100u);
+ 
+     // Track cpDisp bit 10 (check) so tests can observe it.

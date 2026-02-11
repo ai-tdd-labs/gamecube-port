@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2027,7 +2027,7 @@
+     const u32 subtract = (type == 3u) ? 1u : 0u;
+     const u32 logic = (type == 2u) ? 1u : 0u;
+ 
+-    gc_gx_cmode0 = set_field(gc_gx_cmode0, 1, 0, blend_enable);
++    gc_gx_cmode0 = set_field(gc_gx_cmode0, 1, 1, blend_enable); // MUTANT
+     gc_gx_cmode0 = set_field(gc_gx_cmode0, 1, 11, subtract);
+     gc_gx_cmode0 = set_field(gc_gx_cmode0, 1, 1, logic);
+     gc_gx_cmode0 = set_field(gc_gx_cmode0, 4, 12, op & 0xFu);

@@ -1,0 +1,14 @@
+diff --git a/src/sdk_port/os/OSAlloc.c b/src/sdk_port/os/OSAlloc.c
+index 1234567..abcdefg 100644
+--- a/src/sdk_port/os/OSAlloc.c
++++ b/src/sdk_port/os/OSAlloc.c
+@@ -153,7 +153,8 @@
+ int OSSetCurrentHeap(int heap) {
+     // SDK contract: set __OSCurrHeap and return previous.
+     // Asserts in the original SDK are intentionally omitted; tests drive correctness.
+-    int prev = (int)state_load_i32(GC_SDK_OFF_OS_CURR_HEAP, __OSCurrHeap);
++    // MUTANT: return 0 instead of previous heap
++    int prev = 0;
+     __OSCurrHeap = (int32_t)heap;
+     state_store_i32(GC_SDK_OFF_OS_CURR_HEAP, (int32_t)heap);
+     return prev;

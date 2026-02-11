@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2188,7 +2188,7 @@
+     } else {
+         gc_gx_vcd_lo = set_field(gc_gx_vcd_lo, 2, 11, 0);
+     }
+-    gc_gx_dirty_state |= 8u;
++    gc_gx_dirty_state |= 4u; // MUTANT
+ }
+ 
+ static inline void gc_gx_set_vat(u32 *va, u32 *vb, u32 *vc, u32 attr, u32 cnt, u32 type, u8 shft) {

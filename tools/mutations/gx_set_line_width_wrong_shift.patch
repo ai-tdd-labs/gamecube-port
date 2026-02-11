@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -816,7 +816,7 @@
+ 
+ void GXSetLineWidth(u8 width, u32 texOffsets) {
+     // GXGeometry.c: lpSize[0..7]=width, lpSize[16..18]=texOffsets; bpSentNot=0
+-    gc_gx_lp_size = set_field(gc_gx_lp_size, 8, 0, (u32)width);
++    gc_gx_lp_size = set_field(gc_gx_lp_size, 8, 8, (u32)width); // MUTANT
+     gc_gx_lp_size = set_field(gc_gx_lp_size, 3, 16, texOffsets & 0x7u);
+     gc_gx_bp_sent_not = 0;
+ }

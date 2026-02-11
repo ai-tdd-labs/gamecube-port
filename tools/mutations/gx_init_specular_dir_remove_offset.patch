@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -427,7 +427,7 @@
+ 
+     vx = -nx;
+     vy = -ny;
+-    vz = -nz + 1.0f;
++    vz = -nz; // MUTANT
+     mag = 1.0f / sqrtf((vx * vx) + (vy * vy) + (vz * vz));
+     obj->ldir[0] = vx * mag;
+     obj->ldir[1] = vy * mag;

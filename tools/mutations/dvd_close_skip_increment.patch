@@ -1,0 +1,11 @@
+diff --git a/src/sdk_port/dvd/DVD.c b/src/sdk_port/dvd/DVD.c
+--- a/src/sdk_port/dvd/DVD.c
++++ b/src/sdk_port/dvd/DVD.c
+@@ -167,6 +167,5 @@
+ int DVDClose(DVDFileInfo *file) {
+     (void)file;
+-    gc_dvd_close_calls = gc_sdk_state_load_u32_or(GC_SDK_OFF_DVD_CLOSE_CALLS, gc_dvd_close_calls) + 1u;
+-    gc_sdk_state_store_u32be(GC_SDK_OFF_DVD_CLOSE_CALLS, gc_dvd_close_calls);
++    // MUTANT: skip incrementing and persisting close call counter
+     return 1;
+ }

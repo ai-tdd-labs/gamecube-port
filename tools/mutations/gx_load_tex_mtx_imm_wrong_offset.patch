@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -724,7 +724,7 @@
+     // id: GX_TEXMTX0.., GX_PTTEXMTX0 = 64 (GXEnum.h).
+     u32 addr;
+     if (id >= 64u) {
+-        addr = (id - 64u) * 4u + 0x500u;
++        addr = (id - 64u) * 4u + 0x400u; // MUTANT
+         // SDK asserts (type == GX_MTX3x4) for post-transform matrices.
+     } else {
+         addr = id * 4u;

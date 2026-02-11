@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2102,7 +2102,7 @@
+ }
+ 
+ void GXClearMemMetric(void) {
+-    for (u32 i = 0; i < 10; i++) gc_gx_mem_metrics[i] = 0;
++    for (u32 i = 0; i < 9; i++) gc_gx_mem_metrics[i] = 0; // MUTANT
+ }
+ 
+ void GXReadMemMetric(u32 *cp_req, u32 *tc_req, u32 *cpu_rd_req, u32 *cpu_wr_req,

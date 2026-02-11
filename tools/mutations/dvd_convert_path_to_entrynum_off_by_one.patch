@@ -1,0 +1,11 @@
+diff --git a/src/sdk_port/dvd/DVD.c b/src/sdk_port/dvd/DVD.c
+--- a/src/sdk_port/dvd/DVD.c
++++ b/src/sdk_port/dvd/DVD.c
+@@ -216,6 +216,6 @@
+         if (strcmp(p, pathPtr) == 0) {
+-            return i;
++            return i + 1; // MUTANT: off-by-one in returned entrynum
+         }
+     }
+     return -1;
+ }

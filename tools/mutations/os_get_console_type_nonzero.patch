@@ -1,0 +1,10 @@
+diff --git a/src/sdk_port/os/OSSystem.c b/src/sdk_port/os/OSSystem.c
+--- a/src/sdk_port/os/OSSystem.c
++++ b/src/sdk_port/os/OSSystem.c
+@@ -7,4 +7,5 @@
+ uint32_t OSGetConsoleType(void) {
+     // Retail-like default (not DEVHW1).
+-    return 0;
++    // MUTANT: return DEVHW1 type instead of retail
++    return 0x10000006u;
+ }

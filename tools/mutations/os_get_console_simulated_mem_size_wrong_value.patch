@@ -1,0 +1,9 @@
+diff --git a/src/sdk_port/os/OSSystem.c b/src/sdk_port/os/OSSystem.c
+--- a/src/sdk_port/os/OSSystem.c
++++ b/src/sdk_port/os/OSSystem.c
+@@ -17,3 +17,4 @@
+ uint32_t OSGetConsoleSimulatedMemSize(void) {
+-    return 0x01800000u;
++    // MUTANT: return wrong memory size (half)
++    return 0x00C00000u;
+ }

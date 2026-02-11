@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1837,7 +1837,7 @@
+     reg = set_field(reg, 1, 9, (attn_fn != 2) ? 1u : 0u);
+     reg = set_field(reg, 1, 10, (attn_fn != 0) ? 1u : 0u);
+ 
+-    gx_write_xf_reg(idx + 14, reg);
++    gx_write_xf_reg(idx + 15, reg); // MUTANT
+     gc_gx_bp_sent_not = 1;
+     if (chan == GX_COLOR0A0) {
+         gx_write_xf_reg(16, reg);

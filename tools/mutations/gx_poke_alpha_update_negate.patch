@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1143,7 +1143,7 @@
+ }
+ 
+ void GXPokeAlphaUpdate(u8 enable) {
+-    gc_gx_poke_alpha_update_enable = (u32)enable;
++    gc_gx_poke_alpha_update_enable = (u32)!enable; // MUTANT
+ }
+ 
+ void GXPokeDither(u8 enable) {

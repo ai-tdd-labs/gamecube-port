@@ -1,0 +1,10 @@
+diff --git a/src/sdk_port/os/OSAlloc.c b/src/sdk_port/os/OSAlloc.c
+--- a/src/sdk_port/os/OSAlloc.c
++++ b/src/sdk_port/os/OSAlloc.c
+@@ -174,4 +174,5 @@
+
+     // size includes 0x20 header, then rounded up to 32 bytes.
+-    uint32_t req = size + 0x20u;
++    // MUTANT: off-by-one in header size (0x10 instead of 0x20)
++    uint32_t req = size + 0x10u;
+     req = round_up(req, ALIGNMENT);

@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2328,7 +2328,7 @@
+ 
+ void GXTexCoord2f32(float s, float t) {
+     // Deterministic host model: keep last written values as raw f32 bits.
+-    gc_gx_texcoord2f32_s_bits = f32_bits(s);
++    gc_gx_texcoord2f32_s_bits = f32_bits(t); // MUTANT
+     gc_gx_texcoord2f32_t_bits = f32_bits(t);
+ }
+ 

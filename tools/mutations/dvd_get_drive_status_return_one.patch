@@ -1,0 +1,10 @@
+diff --git a/src/sdk_port/dvd/DVD.c b/src/sdk_port/dvd/DVD.c
+--- a/src/sdk_port/dvd/DVD.c
++++ b/src/sdk_port/dvd/DVD.c
+@@ -26,5 +26,5 @@
+
+ u32 DVDGetDriveStatus(void) {
+     gc_dvd_drive_status = gc_sdk_state_load_u32_or(GC_SDK_OFF_DVD_DRIVE_STATUS, gc_dvd_drive_status);
+-    return gc_dvd_drive_status;
++    return 1u; // MUTANT: always report busy instead of actual status
+ }

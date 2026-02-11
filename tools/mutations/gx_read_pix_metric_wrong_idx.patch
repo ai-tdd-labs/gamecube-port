@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2094,7 +2094,7 @@
+ 
+ void GXReadPixMetric(u32 *top_in, u32 *top_out, u32 *bot_in, u32 *bot_out, u32 *clr_in, u32 *copy_clks) {
+     if (top_in) *top_in = gc_gx_pix_metrics[0];
+-    if (top_out) *top_out = gc_gx_pix_metrics[1];
++    if (top_out) *top_out = gc_gx_pix_metrics[2]; // MUTANT
+     if (bot_in) *bot_in = gc_gx_pix_metrics[2];
+     if (bot_out) *bot_out = gc_gx_pix_metrics[3];
+     if (clr_in) *clr_in = gc_gx_pix_metrics[4];

@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -811,7 +811,7 @@
+     gc_gx_vcd_hi = 0;
+     gc_gx_has_nrms = 0;
+     gc_gx_has_binrms = 0;
+-    gc_gx_dirty_state |= 8u;
++    gc_gx_dirty_state |= 4u; // MUTANT
+ }
+ 
+ void GXSetLineWidth(u8 width, u32 texOffsets) {

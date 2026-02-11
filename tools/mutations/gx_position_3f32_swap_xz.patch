@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2290,7 +2290,7 @@
+ }
+ 
+ void GXPosition3f32(float x, float y, float z) {
+-    gc_gx_pos3f32_x_bits = f32_bits(x);
++    gc_gx_pos3f32_x_bits = f32_bits(z); // MUTANT
+     gc_gx_pos3f32_y_bits = f32_bits(y);
+     gc_gx_pos3f32_z_bits = f32_bits(z);
+ }

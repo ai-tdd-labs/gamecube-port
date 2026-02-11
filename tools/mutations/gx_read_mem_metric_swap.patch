@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2107,7 +2107,7 @@
+ 
+ void GXReadMemMetric(u32 *cp_req, u32 *tc_req, u32 *cpu_rd_req, u32 *cpu_wr_req,
+                      u32 *dsp_req, u32 *io_req, u32 *vi_req, u32 *pe_req, u32 *rf_req, u32 *fi_req) {
+-    if (cp_req) *cp_req = gc_gx_mem_metrics[0];
++    if (cp_req) *cp_req = gc_gx_mem_metrics[1]; // MUTANT
+     if (tc_req) *tc_req = gc_gx_mem_metrics[1];
+     if (cpu_rd_req) *cpu_rd_req = gc_gx_mem_metrics[2];
+     if (cpu_wr_req) *cpu_wr_req = gc_gx_mem_metrics[3];

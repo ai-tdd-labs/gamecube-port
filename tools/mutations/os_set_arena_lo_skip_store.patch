@@ -1,0 +1,15 @@
+diff --git a/src/sdk_port/os/OSArena.c b/src/sdk_port/os/OSArena.c
+--- a/src/sdk_port/os/OSArena.c
++++ b/src/sdk_port/os/OSArena.c
+@@ -25,9 +25,10 @@
+ void OSSetArenaLo(void *addr) {
+     uint32_t v = (uint32_t)(uintptr_t)addr;
+     // If state page isn't mapped, keep a fallback so host code doesn't break.
+     if (!gc_sdk_state_ptr(GC_SDK_OFF_OS_ARENA_LO, 4)) {
+         g_os_arena_lo_fallback = addr;
+         return;
+     }
+-    gc_sdk_state_store_u32be(GC_SDK_OFF_OS_ARENA_LO, v);
++    // MUTANT: skip the actual store to RAM-backed state
++    (void)v;
+ }

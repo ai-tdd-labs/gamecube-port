@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -276,7 +276,7 @@
+ void GXSetDrawSync(u16 token) {
+     // Mirror the two RAS writes the SDK does and record the token for tests/smoke.
+     // The intermediate bitfield set is redundant since reg already contains token.
+-    u32 reg = ((u32)token) | 0x48000000u;
++    u32 reg = ((u32)token) | 0x47000000u; // MUTANT
+     gx_write_ras_reg(reg);
+     gx_write_ras_reg(reg);
+     gc_gx_last_draw_sync_token = token;

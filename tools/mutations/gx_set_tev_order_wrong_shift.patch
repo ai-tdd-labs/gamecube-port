@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2454,7 +2454,7 @@
+         *ptref = set_field(*ptref, 3, 19, rasc);
+         *ptref = set_field(*ptref, 1, 18, enable);
+     } else {
+-        *ptref = set_field(*ptref, 3, 0, tmap);
++        *ptref = set_field(*ptref, 3, 1, tmap); // MUTANT
+         *ptref = set_field(*ptref, 3, 3, tcoord);
+         *ptref = set_field(*ptref, 3, 7, rasc);
+         *ptref = set_field(*ptref, 1, 6, enable);

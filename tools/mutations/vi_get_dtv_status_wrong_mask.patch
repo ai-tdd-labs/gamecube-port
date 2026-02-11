@@ -1,0 +1,10 @@
+diff --git a/src/sdk_port/vi/VI.c b/src/sdk_port/vi/VI.c
+--- a/src/sdk_port/vi/VI.c
++++ b/src/sdk_port/vi/VI.c
+@@ -133,5 +133,5 @@
+     gc_vi_regs[VI_DTV_STAT] = r;
+     stat = ((u32)r & 3u);
+     VI_RestoreInterrupts(interrupt);
+-    return (stat & 1u);
++    return (stat & 3u); // MUTANT: wrong final mask leaks bit 1 into return
+ }

@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1346,7 +1346,7 @@
+     // Clamp lod_bias to [-4, 3.99] and pack as u8(32*bias) into mode0[9..16].
+     if (lod_bias < -4.0f) lod_bias = -4.0f;
+     else if (lod_bias >= 4.0f) lod_bias = 3.99f;
+-    u8 lbias = (u8)(32.0f * lod_bias);
++    u8 lbias = (u8)(16.0f * lod_bias); // MUTANT
+     obj->mode0 = set_field(obj->mode0, 8, 9, (u32)lbias);
+ 
+     // Filters: mag_filt==GX_LINEAR sets bit4, min_filt maps through GX2HWFiltConv into bits 5..7.
