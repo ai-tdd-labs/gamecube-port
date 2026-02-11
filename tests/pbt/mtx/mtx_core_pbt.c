@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "mtx_strict_oracle.h"
+
 typedef float f32;
 typedef f32 Mtx[3][4];
 typedef f32 Mtx44[4][4];
@@ -39,15 +41,27 @@ int main(int argc, char **argv) {
 
     for (uint32_t i = 0; i < iters; i++) {
         Mtx m;
+        strict_Mtx m_strict;
         for (int r = 0; r < 3; r++) {
             for (int c = 0; c < 4; c++) {
                 m[r][c] = rand_f32_range(&seed, -1000.0f, 1000.0f);
+                m_strict[r][c] = m[r][c];
             }
         }
         C_MTXIdentity(m);
+        strict_C_MTXIdentity(m_strict);
         if (!feq(m[0][0], 1.0f) || !feq(m[1][1], 1.0f) || !feq(m[2][2], 1.0f)) {
             fprintf(stderr, "PBT FAIL: C_MTXIdentity diagonal\n");
             return 1;
+        }
+        for (int r = 0; r < 3; r++) {
+            for (int c = 0; c < 4; c++) {
+                if (!feq(m[r][c], m_strict[r][c])) {
+                    fprintf(stderr, "PBT FAIL: strict mismatch C_MTXIdentity r=%d c=%d got=%f strict=%f\n",
+                            r, c, m[r][c], m_strict[r][c]);
+                    return 1;
+                }
+            }
         }
         for (int r = 0; r < 3; r++) {
             for (int c = 0; c < 4; c++) {
@@ -74,7 +88,9 @@ int main(int argc, char **argv) {
         float f = n + rand_f32_range(&seed, 0.01f, 1000.0f);
 
         Mtx44 o;
+        strict_Mtx44 o_strict;
         C_MTXOrtho(o, t, b, l, r, n, f);
+        strict_C_MTXOrtho(o_strict, t, b, l, r, n, f);
 
         float m00 = 2.0f / (r - l);
         float m11 = 2.0f / (t - b);
@@ -94,8 +110,17 @@ int main(int argc, char **argv) {
             fprintf(stderr, "PBT FAIL: C_MTXOrtho bottom-right\n");
             return 1;
         }
+        for (int rr = 0; rr < 4; rr++) {
+            for (int cc = 0; cc < 4; cc++) {
+                if (!feq(o[rr][cc], o_strict[rr][cc])) {
+                    fprintf(stderr, "PBT FAIL: strict mismatch C_MTXOrtho r=%d c=%d got=%f strict=%f\n",
+                            rr, cc, o[rr][cc], o_strict[rr][cc]);
+                    return 1;
+                }
+            }
+        }
     }
 
-    printf("PBT PASS: mtx_core %u iterations\n", iters);
+    printf("PBT PASS: mtx_core %u iterations (strict dualcheck)\n", iters);
     return 0;
 }

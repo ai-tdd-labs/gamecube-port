@@ -20,6 +20,10 @@ Oracle exactness hardening (new):
   Progress:
   - [x] Phase 1: strict dual-check added for CARD `__CARDCheckSum` (leaf) via `tools/run_oracle_dualcheck.sh`.
   - [ ] Phase 2: expand strict dual-checks to ARQ/OSAlloc/DVDFS/MTX where extraction is feasible.
+    - [x] MTX strict leaf oracle (`C_MTXIdentity`, `C_MTXOrtho`) wired into `tests/pbt/mtx/mtx_core_pbt.c`.
+    - [ ] ARQ strict extraction (separate from adapted queue oracle).
+    - [ ] OSAlloc strict extraction (leaf-safe pieces first).
+    - [ ] DVDFS strict extraction (path/entry leaf-safe pieces first).
 - [ ] Add retail-trace replay fixtures for hardware-sensitive behaviors (interrupt/callback ordering).
   Evidence target: `tests/oracles/mp4_rvz/*`, replay scripts in `tools/`
 - [ ] Merge/reconcile `codex/integration-all` into `main` after gate passes.

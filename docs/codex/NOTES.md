@@ -9,6 +9,16 @@ Rules:
 
 ## Confirmed Behaviors
 
+### PBT strict dualcheck (MTX)
+- Added strict decomp-derived leaf oracle for MTX core math:
+  - `strict_C_MTXIdentity`
+  - `strict_C_MTXOrtho`
+  Evidence: `tests/pbt/mtx/mtx_strict_oracle.h`.
+- MTX property test now compares sdk_port output against both invariant formulas and strict decomp leaf oracle output on each iteration.
+  Evidence: `tests/pbt/mtx/mtx_core_pbt.c`.
+- One-button dualcheck now includes MTX strict run in addition to CARD checksum strict run.
+  Evidence: `tools/run_oracle_dualcheck.sh`.
+
 ### Dolphin GDB Stub (macOS build on this machine)
 - Stop packets include PC/NIP in reg `0x40` (usable for PC-polling checkpoints).
   Evidence: `tools/ram_dump.py` `parse_stop_pc()`; observed stop example `T0540:800ba2f0;01:8019d798;` from real MP4 RVZ.

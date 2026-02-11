@@ -29,14 +29,16 @@ This file maps each PBT subsystem to its oracle source and replay command.
 
 ## MTX
 
-- Oracle type: decomp math invariants + snapshot suites.
-- Oracle tier: `DECOMP_ADAPTED` (branch-backed)
+- Oracle type: strict decomp leaf oracle + decomp-adapted invariant checks.
+- Oracle tier: `STRICT_DECOMP` + `DECOMP_ADAPTED`
 - Delta ledger: `docs/codex/oracle_deltas/mtx_oracle_delta.md`
 - Evidence:
   - `tests/sdk/mtx/mtx_identity/`
   - `tests/sdk/mtx/mtx_ortho/`
+  - `tests/pbt/mtx/mtx_strict_oracle.h`
 - Commands:
   - `tools/run_pbt.sh mtx_core 50000 0xC0DEC0DE`
+  - `tools/run_oracle_dualcheck.sh 500` (includes strict MTX dual-check)
 
 ## ARQ
 
