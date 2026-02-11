@@ -1413,3 +1413,16 @@ Notes:
   - `bash tools/run_gxtexture_property_test.sh --num-runs=50 --seed=0xC0DEC0DE`
   - `bash tools/run_osalarm_property_test.sh --num-runs=50 --seed=0xC0DEC0DE`
   - `bash tools/run_padclamp_property_test.sh --num-runs=50 --seed=0xC0DEC0DE`
+## 2026-02-11: Synced second latest PBT push into current branch
+
+- Pulled and merged updated `origin/pbt/remaining-sdk-coverage` (new commit batch) into `codex/macos-codex53-pbt-audit`.
+- New suites added in this sync:
+  - `tests/sdk/gx/property/gxproject_property_test.c`
+  - `tests/sdk/gx/property/gxz16_property_test.c`
+  - `tests/sdk/gx/property/gxyscale_property_test.c`
+  - `tests/sdk/thp/property/thpaudio_property_test.c`
+- Validation reruns on this branch (PASS):
+  - `bash tools/run_gxproject_property_test.sh --num-runs=20 --seed=0xC0DEC0DE`
+  - `bash tools/run_gxz16_property_test.sh --num-runs=20 --seed=0xC0DEC0DE`
+  - `bash tools/run_gxyscale_property_test.sh --num-runs=20 --seed=0xC0DEC0DE`
+  - `bash tools/run_thpaudio_property_test.sh --num-runs=20 --seed=0xC0DEC0DE`
