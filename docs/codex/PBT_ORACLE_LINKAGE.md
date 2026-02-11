@@ -19,15 +19,17 @@ This file maps each PBT subsystem to its oracle source and replay command.
 
 ## DVDFS
 
-- Oracle type: virtual-disc deterministic oracle (`gc_dvd_test_*`) + snapshot suites.
-- Oracle tier: `DECOMP_ADAPTED` (branch-backed)
+- Oracle type: strict leaf read-window oracle + virtual-disc deterministic oracle (`gc_dvd_test_*`) + snapshots.
+- Oracle tier: `STRICT_DECOMP` + `DECOMP_ADAPTED`
 - Delta ledger: `docs/codex/oracle_deltas/dvdfs_oracle_delta.md`
 - Evidence:
   - `tests/sdk/dvd/dvd_fast_open/`
   - `tests/sdk/dvd/dvd_read_async/`
   - `tests/sdk/dvd/dvd_convert_path_to_entrynum/`
+  - `tests/pbt/dvd/dvd_core_strict_oracle.h`
 - Commands:
   - `tools/run_pbt.sh dvd_core 20000 0xC0DEC0DE`
+  - `tools/run_oracle_dualcheck.sh 500` (includes strict dvd_core leaf arithmetic through `dvd_core_pbt`)
 
 ## MTX
 

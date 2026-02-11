@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "dvd_core_strict_oracle.h"
+
 #include "../../../src/sdk_port/gc_mem.h"
 #include "../../../src/sdk_port/sdk_state.h"
 
@@ -116,14 +118,9 @@ int main(int argc, char **argv) {
         int cb_before_async = g_cb_calls;
         s32 ok = DVDReadAsync(&fi, dst, len, off, use_cb ? test_cb : NULL);
 
-        s32 exp_n = -1;
-        if (off >= 0 && len >= 0 && (u32)off <= file_len) {
-            u32 avail = file_len - (u32)off;
-            u32 want = (u32)len;
-            exp_n = (s32)((want <= avail) ? want : avail);
-        }
-
-        s32 exp_ok = (exp_n < 0) ? 0 : 1;
+        strict_dvd_read_window_t strict = strict_dvd_read_window(file_len, off, len);
+        s32 exp_n = strict.n;
+        s32 exp_ok = strict.ok;
         if (ok != exp_ok) {
             fprintf(stderr, "PBT FAIL: DVDReadAsync return mismatch ok=%d exp=%d off=%d len=%d file_len=%u\n",
                     ok, exp_ok, off, len, file_len);
@@ -136,7 +133,7 @@ int main(int argc, char **argv) {
                 free(src);
                 return 1;
             }
-            s32 exp_cb = (exp_n < 0) ? -1 : exp_n;
+            s32 exp_cb = strict.sync_ret;
             if (g_cb_last_result != exp_cb) {
                 fprintf(stderr, "PBT FAIL: callback result got=%d exp=%d\n", g_cb_last_result, exp_cb);
                 free(src);
@@ -166,7 +163,7 @@ int main(int argc, char **argv) {
         uint8_t dst_sync[8192];
         memset(dst_sync, 0xEE, sizeof(dst_sync));
         int n_sync = DVDRead(&fi_open, dst_sync, len, off);
-        int exp_sync = (exp_n < 0) ? -1 : exp_n;
+        int exp_sync = strict.sync_ret;
         if (n_sync != exp_sync) {
             fprintf(stderr, "PBT FAIL: DVDRead return mismatch got=%d exp=%d\n", n_sync, exp_sync);
             free(src);
@@ -180,7 +177,7 @@ int main(int argc, char **argv) {
 
         // Prio wrappers should preserve result semantics.
         int n_prio = DVDReadPrio(&fi_open, dst_sync, len, off, 2);
-        int exp_prio = (exp_n < 0) ? -1 : 0;
+        int exp_prio = strict.prio_ret;
         if (n_prio != exp_prio) {
             fprintf(stderr, "PBT FAIL: DVDReadPrio return mismatch got=%d exp=%d\n", n_prio, exp_prio);
             free(src);

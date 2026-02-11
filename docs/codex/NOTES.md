@@ -29,6 +29,15 @@ Rules:
 - One-button dualcheck now includes the strict OS round suite.
   Evidence: `tools/run_oracle_dualcheck.sh`.
 
+### PBT strict dualcheck (DVDFS read-window leaf arithmetic)
+- Added strict leaf oracle for deterministic DVD read-window semantics:
+  - invalid offset/len -> fail
+  - clamp to file end when `off + len` exceeds file length
+  - wrapper return mapping (`ok`, `sync_ret`, `prio_ret`)
+  Evidence: `tests/pbt/dvd/dvd_core_strict_oracle.h`.
+- `dvd_core_pbt` now derives expected results from the strict leaf oracle instead of ad-hoc inline formulas.
+  Evidence: `tests/pbt/dvd/dvd_core_pbt.c`.
+
 ### Dolphin GDB Stub (macOS build on this machine)
 - Stop packets include PC/NIP in reg `0x40` (usable for PC-polling checkpoints).
   Evidence: `tools/ram_dump.py` `parse_stop_pc()`; observed stop example `T0540:800ba2f0;01:8019d798;` from real MP4 RVZ.
