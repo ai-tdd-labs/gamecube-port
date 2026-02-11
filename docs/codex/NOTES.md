@@ -1062,3 +1062,17 @@ Notes:
   - `tools/run_card_fat_property_test.sh --num-runs=50 -v` PASS
 - Updated chain matrix baseline with current ARQ/CARD-FAT status:
   - `docs/sdk/PBT_CHAIN_MATRIX.md`
+
+## 2026-02-11: One-button HuPadInit blocker harvest/replay loop
+- Added `tools/harvest_and_replay_hupadinit_blockers.sh` to run all four MP4 HuPadInit blockers in one command:
+  - `OSDisableInterrupts` / `OSRestoreInterrupts`
+  - `VISetPostRetraceCallback`
+  - `SISetSamplingRate`
+  - `PADControlMotor`
+- Verified end-to-end with short caps (`GC_MAX_UNIQUE=1 GC_MAX_HITS=20 GC_TIMEOUT=60`) on this machine.
+- Replay outcomes from the run:
+  - `OSDisableInterrupts`: replay PASS on harvested hits.
+  - `VISetPostRetraceCallback`: replay PASS (`old=0x0 new=0x80005CB4` case).
+  - `SISetSamplingRate`: replay PASS for sampled unique case.
+  - `PADControlMotor`: replay PASS for harvested hits (`chan=0 cmd=2` examples).
+- This loop is the current fastest way to expand retail-trace fixtures for HuPadInit blockers while keeping deterministic host replay validation in the same run.

@@ -257,6 +257,18 @@ tools/replay_trace_case_pad_clamp.sh tests/traces/pad_clamp/mp4_rvz/<hit_dir>
 tools/replay_trace_case_pad_reset.sh tests/traces/pad_reset/mp4_rvz_v2/<hit_dir>
 ```
 
+For MP4 HuPadInit blocker functions, use the one-button harvest/replay loop:
+
+```bash
+tools/harvest_and_replay_hupadinit_blockers.sh [optional_rvz_path]
+```
+
+This executes all four blocker traces in order:
+- `OSDisableInterrupts` / `OSRestoreInterrupts`
+- `VISetPostRetraceCallback`
+- `SISetSamplingRate`
+- `PADControlMotor`
+
 ### Host runner dump override (for trace replays)
 
 By default the host runner dumps `0x80300000..0x80300040` to the scenario's `actual/*.bin`.
