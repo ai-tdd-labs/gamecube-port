@@ -778,6 +778,36 @@ void port_OSInitCond(port_OSThreadState *st, uint32_t cond_addr)
     q_init(cond_addr + PORT_COND_QUEUE_HEAD);
 }
 
+/* ── OSWaitCond (OSMutex.c:140-165) ── */
+void port_OSWaitCond(port_OSThreadState *st, uint32_t cond_addr, uint32_t mutex_addr)
+{
+    uint32_t ct = st->currentThread;
+    int32_t count;
+
+    if (mtx_get32(mutex_addr, PORT_MUTEX_THREAD) != ct) return;
+
+    count = mtx_gets32(mutex_addr, PORT_MUTEX_COUNT);
+    mtx_sets32(mutex_addr, PORT_MUTEX_COUNT, 0);
+    port_MutexPopItem(ct, mutex_addr);
+    mtx_set32(mutex_addr, PORT_MUTEX_THREAD, 0);
+
+    if (thr_gets32(ct, PORT_THREAD_PRIORITY) <
+        thr_gets32(ct, PORT_THREAD_BASE)) {
+        thr_sets32(ct, PORT_THREAD_PRIORITY,
+                   port_OSGetEffectivePriority(ct));
+    }
+
+    st->reschedule++;
+    port_OSWakeupThread(st, mutex_addr + PORT_MUTEX_QUEUE_HEAD);
+    st->reschedule--;
+    port_OSSleepThread(st, cond_addr + PORT_COND_QUEUE_HEAD);
+
+    /* Set thread->mutex so ProcessPendingLocks will re-lock.
+     * Store saved count in val for restoration. */
+    thr_set32(ct, PORT_THREAD_MUTEX, mutex_addr);
+    thr_set32(ct, PORT_THREAD_VAL, (uint32_t)count);
+}
+
 /* ── OSSignalCond ── */
 void port_OSSignalCond(port_OSThreadState *st, uint32_t cond_addr)
 {
@@ -932,7 +962,18 @@ void port_ProcessPendingLocks(port_OSThreadState *st)
         if (thr_get16(ct, PORT_THREAD_STATE) != PORT_OS_THREAD_STATE_RUNNING)
             break;
 
-        thr_set32(ct, PORT_THREAD_MUTEX, 0);
-        port_OSLockMutex(st, m);
+        {
+            uint32_t saved_count = thr_get32(ct, PORT_THREAD_VAL);
+            thr_set32(ct, PORT_THREAD_MUTEX, 0);
+            port_OSLockMutex(st, m);
+            /* If lock was acquired and we had a saved count from WaitCond,
+             * restore it. */
+            if (saved_count > 0 &&
+                mtx_get32(m, PORT_MUTEX_THREAD) == ct &&
+                mtx_gets32(m, PORT_MUTEX_COUNT) == 1) {
+                mtx_sets32(m, PORT_MUTEX_COUNT, (int32_t)saved_count);
+                thr_set32(ct, PORT_THREAD_VAL, 0xFFFFFFFFu);
+            }
+        }
     }
 }

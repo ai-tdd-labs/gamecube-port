@@ -151,6 +151,7 @@ void port_OSLockMutex(port_OSThreadState *st, uint32_t mutex_addr);
 void port_OSUnlockMutex(port_OSThreadState *st, uint32_t mutex_addr);
 int  port_OSTryLockMutex(port_OSThreadState *st, uint32_t mutex_addr);
 void port_OSInitCond(port_OSThreadState *st, uint32_t cond_addr);
+void port_OSWaitCond(port_OSThreadState *st, uint32_t cond_addr, uint32_t mutex_addr);
 void port_OSSignalCond(port_OSThreadState *st, uint32_t cond_addr);
 int  port_OSJoinThread(port_OSThreadState *st, uint32_t thread_addr, uint32_t *val);
 void port_ProcessPendingLocks(port_OSThreadState *st);
