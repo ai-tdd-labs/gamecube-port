@@ -38,6 +38,8 @@ case "$suite" in
     cc -O2 -g0 \
       -I"$repo_root/src" -I"$repo_root/src/sdk_port" \
       "$repo_root/src/sdk_port/mtx/mtx.c" \
+      "$repo_root/src/sdk_port/mtx/vec.c" \
+      "$repo_root/src/sdk_port/mtx/quat.c" \
       "$repo_root/src/sdk_port/mtx/mtx44.c" \
       "$repo_root/tests/pbt/mtx/mtx_core_pbt.c" \
       -lm \

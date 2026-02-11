@@ -1,0 +1,10 @@
+diff --git a/src/sdk_port/vi/VI.c b/src/sdk_port/vi/VI.c
+--- a/src/sdk_port/vi/VI.c
++++ b/src/sdk_port/vi/VI.c
+@@ -170,5 +170,5 @@
+     c++;
+     gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_SET_BLACK_CALLS, &gc_vi_set_black_calls, c);
+-    u32 v = black ? 1u : 0u;
++    u32 v = black ? 0u : 1u; // MUTANT: inverted black flag logic
+     gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_BLACK, &gc_vi_black, v);
+ }

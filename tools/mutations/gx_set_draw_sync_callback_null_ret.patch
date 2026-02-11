@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -267,7 +267,7 @@
+ typedef void (*GXDrawSyncCallback)(u16 token);
+ 
+ GXDrawSyncCallback GXSetDrawSyncCallback(GXDrawSyncCallback cb) {
+-    GXDrawSyncCallback old = (GXDrawSyncCallback)gc_gx_token_cb_ptr;
++    GXDrawSyncCallback old = (GXDrawSyncCallback)0; // MUTANT
+     // Real SDK wraps with interrupt disable/restore; we model only the observable end state.
+     gc_gx_token_cb_ptr = (uintptr_t)cb;
+     return old;

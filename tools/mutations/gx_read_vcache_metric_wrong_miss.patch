@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2084,7 +2084,7 @@
+ 
+ void GXReadVCacheMetric(u32 *check, u32 *miss, u32 *stall) {
+     if (check) *check = gc_gx_vcache_sel;
+-    if (miss) *miss = 0;
++    if (miss) *miss = 1; // MUTANT
+     if (stall) *stall = 0;
+ }
+ 

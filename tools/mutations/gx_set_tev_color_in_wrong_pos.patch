@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2346,7 +2346,7 @@
+     if (stage >= 16) return;
+     u32 reg = gc_gx_tevc[stage];
+     reg = set_field(reg, 4, 12, a);
+-    reg = set_field(reg, 4, 8, b);
++    reg = set_field(reg, 4, 4, b); // MUTANT
+     reg = set_field(reg, 4, 4, c);
+     reg = set_field(reg, 4, 0, d);
+     gc_gx_tevc[stage] = reg;

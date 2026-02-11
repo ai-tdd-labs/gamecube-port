@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -943,7 +943,7 @@
+ void GXSetScissorBoxOffset(int32_t x_off, int32_t y_off) {
+     // GXTransform.c: hx=(x_off+342)>>1, hy=(y_off+342)>>1, pack into reg 0x59, bpSentNot=0
+     u32 reg = 0;
+-    u32 hx = (u32)(x_off + 342) >> 1;
++    u32 hx = (u32)(x_off + 342) >> 2; // MUTANT
+     u32 hy = (u32)(y_off + 342) >> 1;
+     reg = set_field(reg, 10, 0, hx);
+     reg = set_field(reg, 10, 10, hy);

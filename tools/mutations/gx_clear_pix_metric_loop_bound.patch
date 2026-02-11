@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2089,7 +2089,7 @@
+ }
+ 
+ void GXClearPixMetric(void) {
+-    for (u32 i = 0; i < 6; i++) gc_gx_pix_metrics[i] = 0;
++    for (u32 i = 0; i < 5; i++) gc_gx_pix_metrics[i] = 0; // MUTANT
+ }
+ 
+ void GXReadPixMetric(u32 *top_in, u32 *top_out, u32 *bot_in, u32 *bot_out, u32 *clr_in, u32 *copy_clks) {

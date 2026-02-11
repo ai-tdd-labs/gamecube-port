@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -459,7 +459,7 @@
+ void GXLoadLightObjImm(GXLightObj *lt_obj, u32 light) {
+     u32 idx = light_id_to_idx(light);
+     gc_gx_light_loaded[idx] = *lt_obj;
+-    gc_gx_light_loaded_mask |= (1u << idx);
++    gc_gx_light_loaded_mask &= (1u << idx); // MUTANT
+     gc_gx_bp_sent_not = 1;
+ }
+ 

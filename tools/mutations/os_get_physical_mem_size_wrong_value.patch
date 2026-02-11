@@ -1,0 +1,10 @@
+diff --git a/src/sdk_port/os/OSSystem.c b/src/sdk_port/os/OSSystem.c
+--- a/src/sdk_port/os/OSSystem.c
++++ b/src/sdk_port/os/OSSystem.c
+@@ -12,4 +12,5 @@
+ uint32_t OSGetPhysicalMemSize(void) {
+     // Chosen to avoid the special-case in MP4 InitMem.
+-    return 0x01800000u;
++    // MUTANT: return wrong memory size (triggers MP4 special case)
++    return 0x01000000u;
+ }

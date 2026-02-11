@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -934,7 +934,7 @@
+     // GXGeometry.c: front/back swap for hwMode, then genMode[14..15] = hwMode; dirtyState |= 4
+     u32 hwMode = mode;
+     // These values match GXEnum: GX_CULL_FRONT=1, GX_CULL_BACK=2.
+-    if (mode == 1u) hwMode = 2u;
++    if (mode == 1u) hwMode = 1u; // MUTANT
+     else if (mode == 2u) hwMode = 1u;
+     gc_gx_gen_mode = set_field(gc_gx_gen_mode, 2, 14, hwMode & 3u);
+     gc_gx_dirty_state |= 4u;

@@ -1,0 +1,13 @@
+diff --git a/src/sdk_port/os/OSStopwatch.c b/src/sdk_port/os/OSStopwatch.c
+index 1234567..abcdefg 100644
+--- a/src/sdk_port/os/OSStopwatch.c
++++ b/src/sdk_port/os/OSStopwatch.c
+@@ -42,7 +42,7 @@
+         interval = (long long)(OSGetTime() - sw->last);
+         sw->total += (u64)interval;
+         sw->running = 0;
+-        sw->hits++;
++        // MUTANT: skip incrementing hits counter
+         if (sw->max < (u64)interval) {
+             sw->max = (u64)interval;
+         }

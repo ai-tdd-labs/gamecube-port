@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2334,7 +2334,7 @@
+ 
+ void GXColor1x8(u8 c) {
+     // Deterministic host model: record last 8-bit color value.
+-    gc_gx_color1x8_last = (u32)c;
++    gc_gx_color1x8_last = 0; // MUTANT
+ }
+ 
+ void GXColor3u8(u8 r, u8 g, u8 b) {

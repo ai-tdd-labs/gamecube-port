@@ -1,12 +1,14 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 typedef uint32_t u32;
 typedef int32_t s32;
 
 // RAM-backed state (big-endian in MEM1) for dump comparability.
 #include "../sdk_state.h"
+#include "../gc_mem.h"
 
 u32 gc_dvd_initialized;
 u32 gc_dvd_drive_status;
@@ -55,8 +57,90 @@ typedef struct {
 
 static GcDvdTestFile g_dvd_test_files[512];
 
+/* Minimal FST state (decomp-style). */
+typedef struct {
+    u32 isDirAndStringOff;
+    u32 parentOrPosition;
+    u32 nextEntryOrLength;
+} GcFstEntry;
+
+/* Cached-addressed MEM1 pointers (0x8xxxxxxx). */
+static u32 g_fst_start_addr;
+static u32 g_fst_string_start_addr;
+static u32 g_fst_max_entry_num;
+static u32 g_current_directory;
+u32 __DVDLongFileNameFlag = 0;
+
 // Forward decl (defined later in this file).
 s32 DVDConvertPathToEntrynum(char *pathPtr);
+
+static inline u32 dvd_load_u32be(u32 addr) {
+    uint8_t *p = gc_mem_ptr(addr, 4);
+    if (!p) return 0;
+    return ((u32)p[0] << 24) | ((u32)p[1] << 16) | ((u32)p[2] << 8) | (u32)p[3];
+}
+
+static inline int dvd_load_u8(u32 addr) {
+    uint8_t *p = gc_mem_ptr(addr, 1);
+    if (!p) return -1;
+    return (int)p[0];
+}
+
+static inline u32 fst_field(u32 entry, u32 off) {
+    return dvd_load_u32be(g_fst_start_addr + entry * 12u + off);
+}
+
+static inline int fst_entry_is_dir(u32 entry) {
+    return (fst_field(entry, 0) & 0xff000000u) != 0u;
+}
+
+static inline u32 fst_string_off(u32 entry) {
+    return fst_field(entry, 0) & ~0xff000000u;
+}
+
+static inline u32 fst_parent_dir(u32 entry) {
+    return fst_field(entry, 4);
+}
+
+static inline u32 fst_next_dir(u32 entry) {
+    return fst_field(entry, 8);
+}
+
+static inline u32 fst_file_pos(u32 entry) {
+    return fst_field(entry, 4);
+}
+
+static inline u32 fst_file_len(u32 entry) {
+    return fst_field(entry, 8);
+}
+
+void __DVDFSInit(void) {
+    /* OSBootInfo at cached 0x80000000, FSTLocation at offset 0x30 */
+    u32 fst_loc = dvd_load_u32be(0x80000030u);
+    g_fst_start_addr = fst_loc;
+    g_fst_string_start_addr = 0;
+    g_fst_max_entry_num = 0;
+    g_current_directory = 0;
+
+    if (g_fst_start_addr != 0u) {
+        g_fst_max_entry_num = dvd_load_u32be(g_fst_start_addr + 8u); /* entry0.nextEntryOrLength */
+        g_fst_string_start_addr = g_fst_start_addr + g_fst_max_entry_num * 12u;
+    }
+}
+
+static int isSameMem(const char *path, u32 string_addr) {
+    int ch;
+    while ((ch = dvd_load_u8(string_addr++)) > 0) {
+        if (tolower((unsigned char)*path++) != tolower((unsigned char)ch)) {
+            return 0;
+        }
+    }
+
+    if ((*path == '/') || (*path == '\0')) {
+        return 1;
+    }
+    return 0;
+}
 
 static void gc_dvd_test_reset_files_internal(void) {
     for (u32 i = 0; i < (u32)(sizeof(g_dvd_test_files) / sizeof(g_dvd_test_files[0])); i++) {
@@ -94,7 +178,21 @@ int DVDGetCommandBlockStatus(DVDCommandBlock *block) {
 int DVDFastOpen(s32 entrynum, DVDFileInfo *file) {
     if (!file) return 0;
     if (entrynum < 0) return 0;
-    if ((u32)entrynum >= (u32)(sizeof(g_dvd_test_files) / sizeof(g_dvd_test_files[0]))) return 0;
+    if ((u32)entrynum >= (u32)(sizeof(g_dvd_test_files) / sizeof(g_dvd_test_files[0])) &&
+        (g_fst_max_entry_num == 0u || (u32)entrynum >= g_fst_max_entry_num)) return 0;
+
+    if (g_fst_max_entry_num != 0u) {
+        if ((u32)entrynum >= g_fst_max_entry_num) return 0;
+        if (fst_entry_is_dir((u32)entrynum)) return 0;
+
+        file->cb.state = 0;
+        file->entrynum = entrynum;
+        file->startAddr = fst_file_pos((u32)entrynum);
+        file->length = fst_file_len((u32)entrynum);
+        return 1;
+    }
+
+    /* fallback test backend */
     if (!g_dvd_test_files[entrynum].data) return 0;
 
     file->cb.state = 0;
@@ -211,15 +309,161 @@ s32 DVDConvertPathToEntrynum(char *pathPtr) {
     if (!pathPtr) {
         return -1;
     }
-    // Deterministic test backend: return the index for known paths.
-    for (s32 i = 0; i < g_dvd_test_path_count; i++) {
-        const char *p = g_dvd_test_paths[i];
-        if (!p) {
-            continue;
-        }
-        if (strcmp(p, pathPtr) == 0) {
-            return i;
+
+    /* Preferred path: real FST walk (decomp-style). */
+    if (g_fst_max_entry_num == 0u) {
+        __DVDFSInit();
+    }
+    if (g_fst_max_entry_num != 0u) {
+        const char *ptr;
+        u32 dirLookAt = g_current_directory;
+        const char *origPathPtr = pathPtr;
+        (void)origPathPtr;
+
+        while (1) {
+            if (*pathPtr == '\0') {
+                return (s32)dirLookAt;
+            } else if (*pathPtr == '/') {
+                dirLookAt = 0;
+                pathPtr++;
+                continue;
+            } else if (*pathPtr == '.') {
+                if (*(pathPtr + 1) == '.') {
+                    if (*(pathPtr + 2) == '/') {
+                        dirLookAt = fst_parent_dir(dirLookAt);
+                        pathPtr += 3;
+                        continue;
+                    } else if (*(pathPtr + 2) == '\0') {
+                        return (s32)fst_parent_dir(dirLookAt);
+                    }
+                } else if (*(pathPtr + 1) == '/') {
+                    pathPtr += 2;
+                    continue;
+                } else if (*(pathPtr + 1) == '\0') {
+                    return (s32)dirLookAt;
+                }
+            }
+
+            if (__DVDLongFileNameFlag == 0u) {
+                int extention = 0;
+                int illegal = 0;
+                const char *extentionStart = NULL;
+
+                for (ptr = pathPtr; (*ptr != '\0') && (*ptr != '/'); ptr++) {
+                    if (*ptr == '.') {
+                        if ((ptr - pathPtr > 8) || extention) {
+                            illegal = 1;
+                            break;
+                        }
+                        extention = 1;
+                        extentionStart = ptr + 1;
+                    } else if (*ptr == ' ') {
+                        illegal = 1;
+                    }
+                }
+
+                if (extention && extentionStart && (ptr - extentionStart > 3)) {
+                    illegal = 1;
+                }
+
+                if (illegal) {
+                    /* decomp panics here; sdk_port returns not-found */
+                    return -1;
+                }
+            } else {
+                for (ptr = pathPtr; (*ptr != '\0') && (*ptr != '/'); ptr++) {
+                    ;
+                }
+            }
+
+            int isDir = (*ptr == '\0') ? 0 : 1;
+            u32 length = (u32)(ptr - pathPtr);
+
+            u32 i;
+            for (i = dirLookAt + 1; i < fst_next_dir(dirLookAt);
+                 i = fst_entry_is_dir(i) ? fst_next_dir(i) : (i + 1)) {
+                if (!fst_entry_is_dir(i) && isDir) {
+                    continue;
+                }
+                if (isSameMem(pathPtr, g_fst_string_start_addr + fst_string_off(i))) {
+                    goto next_hier;
+                }
+            }
+            return -1;
+
+        next_hier:
+            if (!isDir) {
+                return (s32)i;
+            }
+            dirLookAt = i;
+            pathPtr += length + 1;
         }
     }
+
+    /* fallback test backend: path table */
+    for (s32 i = 0; i < g_dvd_test_path_count; i++) {
+        const char *p = g_dvd_test_paths[i];
+        if (!p) continue;
+        if (strcmp(p, pathPtr) == 0) return i;
+    }
     return -1;
+}
+
+static u32 myStrncpyMem(char* dest, u32 src_addr, u32 maxlen) {
+    u32 i = maxlen;
+    while (i > 0) {
+        int ch = dvd_load_u8(src_addr++);
+        if (ch <= 0) break;
+        *dest++ = (char)ch;
+        i--;
+    }
+    return (maxlen - i);
+}
+
+static u32 entryToPathRec(u32 entry, char* path, u32 maxlen) {
+    if (entry == 0) return 0;
+
+    u32 loc = entryToPathRec(fst_parent_dir(entry), path, maxlen);
+    if (loc == maxlen) return loc;
+
+    path[loc++] = '/';
+    loc += myStrncpyMem(path + loc, g_fst_string_start_addr + fst_string_off(entry), maxlen - loc);
+    return loc;
+}
+
+static int DVDConvertEntrynumToPath(s32 entrynum, char* path, u32 maxlen) {
+    if (!path || maxlen == 0) return 0;
+    if (g_fst_max_entry_num == 0u) return 0;
+    if (entrynum < 0 || (u32)entrynum >= g_fst_max_entry_num) return 0;
+
+    u32 loc = entryToPathRec((u32)entrynum, path, maxlen);
+    if (loc == maxlen) {
+        path[maxlen - 1] = '\0';
+        return 0;
+    }
+
+    if (fst_entry_is_dir((u32)entrynum)) {
+        if (loc == maxlen - 1) {
+            path[loc] = '\0';
+            return 0;
+        }
+        path[loc++] = '/';
+    }
+
+    path[loc] = '\0';
+    return 1;
+}
+
+int DVDGetCurrentDir(char* path, u32 maxlen) {
+    if (g_fst_max_entry_num == 0u) __DVDFSInit();
+    return DVDConvertEntrynumToPath((s32)g_current_directory, path, maxlen);
+}
+
+int DVDChangeDir(char* dirName) {
+    if (g_fst_max_entry_num == 0u) __DVDFSInit();
+    s32 entry = DVDConvertPathToEntrynum(dirName);
+    if (entry < 0) return 0;
+    if (!fst_entry_is_dir((u32)entry)) return 0;
+    g_current_directory = (u32)entry;
+    return 1;
 }

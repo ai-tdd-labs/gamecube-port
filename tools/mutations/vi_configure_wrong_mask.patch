@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/vi/VI.c b/src/sdk_port/vi/VI.c
+--- a/src/sdk_port/vi/VI.c
++++ b/src/sdk_port/vi/VI.c
+@@ -210,7 +210,7 @@
+     u32 non_inter = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_NON_INTER, gc_vi_non_inter);
+     u32 change_mode = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_CHANGE_MODE, gc_vi_change_mode);
+
+-    u32 new_non_inter = rm->viTVmode & 3u;
++    u32 new_non_inter = rm->viTVmode & 7u; // MUTANT: wrong mask widens non_inter range
+     if (non_inter != new_non_inter) {
+         change_mode = 1;
+         non_inter = new_non_inter;

@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/vi/VI.c b/src/sdk_port/vi/VI.c
+--- a/src/sdk_port/vi/VI.c
++++ b/src/sdk_port/vi/VI.c
+@@ -261,7 +261,7 @@
+
+     // helper() is called 5 times in the legacy testcase.
+     u32 helpers = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_HELPER_CALLS, gc_vi_helper_calls);
+-    helpers += 5u;
++    helpers += 6u; // MUTANT: off-by-one in helper call count
+     gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_HELPER_CALLS, &gc_vi_helper_calls, helpers);
+     OSRestoreInterrupts(1);
+ }

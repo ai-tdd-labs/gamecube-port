@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1569,7 +1569,7 @@
+         break;
+     }
+ 
+-    tileBytes = ((format & 0x3Fu) == GX_TF_RGBA8) ? 64u : 32u;
++    tileBytes = ((format & 0x3Fu) == GX_TF_RGBA8) ? 64u : 64u; // MUTANT
+ 
+     if (mipmap == 1) {
+         // Match SDK behavior: for mipmapped textures, sum levels up to max_lod.

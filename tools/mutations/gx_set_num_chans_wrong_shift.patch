@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -960,7 +960,7 @@
+ 
+ void GXSetNumChans(u8 nChans) {
+     // GXLight.c: genMode[4..6]=nChans; dirtyState |= 4
+-    gc_gx_gen_mode = set_field(gc_gx_gen_mode, 3, 4, (u32)nChans);
++    gc_gx_gen_mode = set_field(gc_gx_gen_mode, 3, 0, (u32)nChans); // MUTANT
+     gc_gx_dirty_state |= 4u;
+ }
+ 

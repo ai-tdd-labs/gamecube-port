@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2409,7 +2409,7 @@
+ 
+     regRA = set_field(regRA, 11, 0, (u32)color.r);
+     regRA = set_field(regRA, 11, 12, (u32)color.a);
+-    regRA = set_field(regRA, 8, 24, (u32)(224u + id * 2u));
++    regRA = set_field(regRA, 8, 24, (u32)(224u + id * 3u)); // MUTANT
+ 
+     regBG = set_field(regBG, 11, 0, (u32)color.b);
+     regBG = set_field(regBG, 11, 12, (u32)color.g);

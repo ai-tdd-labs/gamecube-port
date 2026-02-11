@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2357,7 +2357,7 @@
+ void GXSetTevAlphaIn(u32 stage, u32 a, u32 b, u32 c, u32 d) {
+     if (stage >= 16) return;
+     u32 reg = gc_gx_teva[stage];
+-    reg = set_field(reg, 3, 13, a);
++    reg = set_field(reg, 4, 13, a); // MUTANT
+     reg = set_field(reg, 3, 10, b);
+     reg = set_field(reg, 3, 7, c);
+     reg = set_field(reg, 3, 4, d);

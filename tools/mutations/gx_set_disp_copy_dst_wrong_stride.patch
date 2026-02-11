@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -983,7 +983,7 @@
+ 
+ void GXSetDispCopyDst(u16 wd, u16 ht) {
+     (void)ht;
+-    u16 stride = (u16)(wd * 2u);
++    u16 stride = (u16)(wd * 3u); // MUTANT
+     u32 reg = 0;
+     reg = set_field(reg, 10, 0, (u32)(stride >> 5));
+     reg = set_field(reg, 8, 24, 0x4D);

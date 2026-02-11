@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -968,7 +968,7 @@
+     u32 reg = 0;
+     reg = set_field(reg, 10, 0, left);
+     reg = set_field(reg, 10, 10, top);
+-    reg = set_field(reg, 8, 24, 0x49);
++    reg = set_field(reg, 8, 24, 0x4B); // MUTANT
+     gc_sdk_state_store_u32_mirror(GC_SDK_OFF_GX_CP_DISP_SRC, &gc_gx_cp_disp_src, reg);
+ 
+     reg = 0;

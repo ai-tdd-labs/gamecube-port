@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1512,7 +1512,7 @@
+     // Address BP reg 0x4B with phyAddr>>5 in low 21 bits.
+     reg = 0;
+     reg = set_field(reg, 21, 0, (phyAddr >> 5));
+-    reg = set_field(reg, 8, 24, 0x4Bu);
++    reg = set_field(reg, 8, 24, 0x4Au); // MUTANT
+     gc_gx_cp_tex_addr_reg = reg;
+ 
+     // cpTex write (0x52) sets clear bit11, and sets bit14=0 (tex copy).

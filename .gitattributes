@@ -1,3 +1,7 @@
 
 # Use bd merge for beads JSONL files
 .beads/issues.jsonl merge=beads
+
+# Force LF for mutation patches and scripts (cross-platform consistency)
+tools/mutations/*.patch text eol=lf
+tools/mutations/*.sh text eol=lf

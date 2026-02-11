@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/mtx/mtx44.c b/src/sdk_port/mtx/mtx44.c
+--- a/src/sdk_port/mtx/mtx44.c
++++ b/src/sdk_port/mtx/mtx44.c
+@@ -12,7 +12,7 @@
+     m[0][0] = 2.0f * tmp;
+     m[0][1] = 0.0f;
+     m[0][2] = 0.0f;
+-    m[0][3] = -(r + l) * tmp;
++    m[0][3] = (r + l) * tmp; // MUTANT: wrong sign on x-translation term
+
+     tmp = 1.0f / (t - b);
+     m[1][0] = 0.0f;

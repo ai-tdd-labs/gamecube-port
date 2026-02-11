@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1704,7 +1704,7 @@
+     fog0 = set_field(fog0, 11, 0, (a_hex >> 12) & 0x7FFu);
+     fog0 = set_field(fog0, 8, 11, (a_hex >> 23) & 0xFFu);
+     fog0 = set_field(fog0, 1, 19, (a_hex >> 31));
+-    fog0 = set_field(fog0, 8, 24, 0xEEu);
++    fog0 = set_field(fog0, 8, 24, 0xEFu); // MUTANT
+ 
+     fog3 = 0;
+     fog3 = set_field(fog3, 11, 0, (c_hex >> 12) & 0x7FFu);

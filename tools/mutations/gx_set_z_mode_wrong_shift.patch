@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1789,7 +1789,7 @@
+     // Layout: bit0 enable, bits1..3 func, bit4 update enable, high byte 0x40.
+     gc_gx_zmode = 0;
+     gc_gx_zmode = set_field(gc_gx_zmode, 1, 0, (u32)enable);
+-    gc_gx_zmode = set_field(gc_gx_zmode, 3, 1, func & 7u);
++    gc_gx_zmode = set_field(gc_gx_zmode, 3, 0, func & 7u); // MUTANT
+     gc_gx_zmode = set_field(gc_gx_zmode, 1, 4, (u32)update_enable);
+     gc_gx_zmode = set_field(gc_gx_zmode, 8, 24, 0x40u);
+ }

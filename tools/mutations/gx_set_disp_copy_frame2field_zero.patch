@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1131,7 +1131,7 @@
+ }
+ 
+ void GXSetDispCopyFrame2Field(u32 mode) {
+-    gc_gx_copy_frame2field = mode;
++    gc_gx_copy_frame2field = 0; // MUTANT
+ }
+ 
+ void GXClearBoundingBox(void) {

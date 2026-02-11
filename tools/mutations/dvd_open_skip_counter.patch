@@ -1,0 +1,11 @@
+diff --git a/src/sdk_port/dvd/DVD.c b/src/sdk_port/dvd/DVD.c
+--- a/src/sdk_port/dvd/DVD.c
++++ b/src/sdk_port/dvd/DVD.c
+@@ -109,6 +109,5 @@
+     s32 entry = DVDConvertPathToEntrynum((char *)path);
+
+-    gc_dvd_open_calls = gc_sdk_state_load_u32_or(GC_SDK_OFF_DVD_OPEN_CALLS, gc_dvd_open_calls) + 1u;
+-    gc_sdk_state_store_u32be(GC_SDK_OFF_DVD_OPEN_CALLS, gc_dvd_open_calls);
++    // MUTANT: skip tracking open calls
+     return DVDFastOpen(entry, file);
+ }

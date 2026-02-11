@@ -1,0 +1,10 @@
+diff --git a/src/sdk_port/vi/VI.c b/src/sdk_port/vi/VI.c
+--- a/src/sdk_port/vi/VI.c
++++ b/src/sdk_port/vi/VI.c
+@@ -160,6 +160,5 @@
+ u32 VIGetRetraceCount(void) {
+     u32 c = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_GET_RETRACE_COUNT_CALLS, gc_vi_get_retrace_count_calls);
+-    c++;
+     gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_GET_RETRACE_COUNT_CALLS, &gc_vi_get_retrace_count_calls, c);
+     gc_vi_retrace_count = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_RETRACE_COUNT, gc_vi_retrace_count);
+     return gc_vi_retrace_count;

@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1122,7 +1122,7 @@
+ }
+ 
+ void GXSetFieldMode(u8 field_mode, u8 half_aspect) {
+-    gc_gx_field_mode_field_mode = (u32)field_mode;
++    gc_gx_field_mode_field_mode = (u32)half_aspect; // MUTANT
+     gc_gx_field_mode_half_aspect = (u32)half_aspect;
+ }
+ 

@@ -1,0 +1,9 @@
+diff --git a/src/sdk_port/os/OSArena.c b/src/sdk_port/os/OSArena.c
+--- a/src/sdk_port/os/OSArena.c
++++ b/src/sdk_port/os/OSArena.c
+@@ -46,3 +46,4 @@
+ uint32_t OSRoundUp32B(uint32_t x) {
+-    return (x + 31u) & ~31u;
++    // MUTANT: off-by-one in addend (32 instead of 31)
++    return (x + 32u) & ~31u;
+ }

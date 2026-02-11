@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2303,7 +2303,7 @@
+     // Deterministic host model: keep last written values.
+     // Store as 32-bit sign-extended values (matches how callers typically
+     // promote s16 when doing comparisons/logging).
+-    gc_gx_pos2s16_x = (u32)(s32)x;
++    gc_gx_pos2s16_x = (u32)(u16)x; // MUTANT
+     gc_gx_pos2s16_y = (u32)(s32)y;
+ }
+ 
