@@ -1,9 +1,10 @@
 /*
- * sdk_port/os/osthread.c --- Host-side port of GC SDK OSThread scheduler.
+ * sdk_port/os/osthread.c --- Host-side port of GC SDK OSThread + OSMutex.
  *
  * Source of truth: external/mp4-decomp/src/dolphin/os/OSThread.c
+ *                  external/mp4-decomp/src/dolphin/os/OSMutex.c
  *
- * Same logic as decomp, but thread structs and queues live in gc_mem
+ * Same logic as decomp, but thread/mutex structs and queues live in gc_mem
  * (big-endian).  Queue pointers are GC addresses (u32, 0 = NULL).
  */
 #include <stdint.h>
@@ -64,8 +65,15 @@ static void q_init(uint32_t q)
     q_set_tail(q, 0);
 }
 
+/* ── Mutex field access ── */
+
+static inline uint32_t mtx_get32(uint32_t m, int off) { return load_u32be(m + (uint32_t)off); }
+static inline void     mtx_set32(uint32_t m, int off, uint32_t v) { store_u32be(m + (uint32_t)off, v); }
+static inline int32_t  mtx_gets32(uint32_t m, int off) { return (int32_t)load_u32be(m + (uint32_t)off); }
+static inline void     mtx_sets32(uint32_t m, int off, int32_t v) { store_u32be(m + (uint32_t)off, (uint32_t)v); }
+
 /* ────────────────────────────────────────────────────────────────────
- * Queue operations (parameterized by link field offsets)
+ * Thread queue operations (parameterized by link field offsets)
  *
  * next_off / prev_off select which link to use:
  *   link:       PORT_THREAD_LINK_NEXT / PORT_THREAD_LINK_PREV
@@ -125,7 +133,6 @@ static void port_RemoveItem(uint32_t queue, uint32_t thread,
         thr_set32(prev, next_off, next);
 }
 
-/* RemoveHead: returns the removed thread's GC address via pointer */
 static uint32_t port_RemoveHead(uint32_t queue,
                                 int next_off, int prev_off)
 {
@@ -145,6 +152,52 @@ static uint32_t port_RemoveHead(uint32_t queue,
 #define LINK_PREV PORT_THREAD_LINK_PREV
 #define ACT_NEXT  PORT_THREAD_ACTIVE_NEXT
 #define ACT_PREV  PORT_THREAD_ACTIVE_PREV
+
+/* ────────────────────────────────────────────────────────────────────
+ * Mutex queue operations (for thread's owned-mutex list)
+ *
+ * The mutex linked list uses PORT_MUTEX_LINK_NEXT/PREV within mutex
+ * structs, and the queue head/tail lives in the thread at
+ * PORT_THREAD_MUTEX_HEAD/PORT_THREAD_MUTEX_TAIL.
+ * ──────────────────────────────────────────────────────────────────── */
+
+static void port_MutexPushTail(uint32_t thread, uint32_t mutex)
+{
+    uint32_t prev = thr_get32(thread, PORT_THREAD_MUTEX_TAIL);
+    if (prev == 0)
+        thr_set32(thread, PORT_THREAD_MUTEX_HEAD, mutex);
+    else
+        mtx_set32(prev, PORT_MUTEX_LINK_NEXT, mutex);
+    mtx_set32(mutex, PORT_MUTEX_LINK_PREV, prev);
+    mtx_set32(mutex, PORT_MUTEX_LINK_NEXT, 0);
+    thr_set32(thread, PORT_THREAD_MUTEX_TAIL, mutex);
+}
+
+static uint32_t port_MutexPopHead(uint32_t thread)
+{
+    uint32_t mutex = thr_get32(thread, PORT_THREAD_MUTEX_HEAD);
+    uint32_t next = mtx_get32(mutex, PORT_MUTEX_LINK_NEXT);
+    if (next == 0)
+        thr_set32(thread, PORT_THREAD_MUTEX_TAIL, 0);
+    else
+        mtx_set32(next, PORT_MUTEX_LINK_PREV, 0);
+    thr_set32(thread, PORT_THREAD_MUTEX_HEAD, next);
+    return mutex;
+}
+
+static void port_MutexPopItem(uint32_t thread, uint32_t mutex)
+{
+    uint32_t next = mtx_get32(mutex, PORT_MUTEX_LINK_NEXT);
+    uint32_t prev = mtx_get32(mutex, PORT_MUTEX_LINK_PREV);
+    if (next == 0)
+        thr_set32(thread, PORT_THREAD_MUTEX_TAIL, prev);
+    else
+        mtx_set32(next, PORT_MUTEX_LINK_PREV, prev);
+    if (prev == 0)
+        thr_set32(thread, PORT_THREAD_MUTEX_HEAD, next);
+    else
+        mtx_set32(prev, PORT_MUTEX_LINK_NEXT, next);
+}
 
 /* ────────────────────────────────────────────────────────────────────
  * cntlzw
@@ -167,12 +220,30 @@ static uint32_t port_cntlzw(uint32_t x)
 }
 
 /* ────────────────────────────────────────────────────────────────────
- * __OSGetEffectivePriority (no mutexes: returns base)
+ * __OSGetEffectivePriority (with mutex support)
+ *
+ * Scan thread's owned mutexes.  For each, check if a higher-priority
+ * thread is waiting.  Return the minimum (= highest) priority.
  * ──────────────────────────────────────────────────────────────────── */
 
 static int32_t port_OSGetEffectivePriority(uint32_t thread)
 {
-    return thr_gets32(thread, PORT_THREAD_BASE);
+    int32_t priority = thr_gets32(thread, PORT_THREAD_BASE);
+    uint32_t mutex;
+
+    for (mutex = thr_get32(thread, PORT_THREAD_MUTEX_HEAD);
+         mutex;
+         mutex = mtx_get32(mutex, PORT_MUTEX_LINK_NEXT))
+    {
+        uint32_t blocked = q_head(mutex + PORT_MUTEX_QUEUE_HEAD);
+        if (blocked) {
+            int32_t bp = thr_gets32(blocked, PORT_THREAD_PRIORITY);
+            if (bp < priority) {
+                priority = bp;
+            }
+        }
+    }
+    return priority;
 }
 
 /* ────────────────────────────────────────────────────────────────────
@@ -200,7 +271,7 @@ static void port_UnsetRun(port_OSThreadState *st, uint32_t thread)
 }
 
 /* ────────────────────────────────────────────────────────────────────
- * SetEffectivePriority / UpdatePriority
+ * SetEffectivePriority (with mutex chain)
  * ──────────────────────────────────────────────────────────────────── */
 
 static uint32_t port_SetEffectivePriority(port_OSThreadState *st,
@@ -218,6 +289,13 @@ static uint32_t port_SetEffectivePriority(port_OSThreadState *st,
             port_RemoveItem(q, thread, LINK_NEXT, LINK_PREV);
             thr_sets32(thread, PORT_THREAD_PRIORITY, priority);
             port_AddPrio(q, thread, LINK_NEXT, LINK_PREV);
+            /* Chain to mutex owner for priority inheritance */
+            {
+                uint32_t m = thr_get32(thread, PORT_THREAD_MUTEX);
+                if (m) {
+                    return mtx_get32(m, PORT_MUTEX_THREAD);
+                }
+            }
             break;
         }
         case PORT_OS_THREAD_STATE_RUNNING:
@@ -225,8 +303,12 @@ static uint32_t port_SetEffectivePriority(port_OSThreadState *st,
             thr_sets32(thread, PORT_THREAD_PRIORITY, priority);
             break;
     }
-    return 0; /* no mutex chain */
+    return 0;
 }
+
+/* ────────────────────────────────────────────────────────────────────
+ * UpdatePriority
+ * ──────────────────────────────────────────────────────────────────── */
 
 static void port_UpdatePriority(port_OSThreadState *st, uint32_t thread)
 {
@@ -236,6 +318,21 @@ static void port_UpdatePriority(port_OSThreadState *st, uint32_t thread)
         if (0 < thr_gets32(t, PORT_THREAD_SUSPEND)) break;
         priority = port_OSGetEffectivePriority(t);
         if (thr_gets32(t, PORT_THREAD_PRIORITY) == priority) break;
+        t = port_SetEffectivePriority(st, t, priority);
+    } while (t);
+}
+
+/* ────────────────────────────────────────────────────────────────────
+ * __OSPromoteThread (reconstructed)
+ * ──────────────────────────────────────────────────────────────────── */
+
+static void port_OSPromoteThread(port_OSThreadState *st,
+                                 uint32_t thread, int32_t priority)
+{
+    uint32_t t = thread;
+    do {
+        if (0 < thr_gets32(t, PORT_THREAD_SUSPEND)) break;
+        if (thr_gets32(t, PORT_THREAD_PRIORITY) <= priority) break;
         t = port_SetEffectivePriority(st, t, priority);
     } while (t);
 }
@@ -300,8 +397,24 @@ static void port_OSReschedule(port_OSThreadState *st)
     port_SelectThread(st, 0);
 }
 
+/* ── __OSUnlockAllMutex ── */
+
+static void port_OSUnlockAllMutex(port_OSThreadState *st, uint32_t thread)
+{
+    uint32_t mutex;
+    uint32_t mq; /* mutex's waiting-thread queue addr */
+
+    while (thr_get32(thread, PORT_THREAD_MUTEX_HEAD)) {
+        mutex = port_MutexPopHead(thread);
+        mtx_sets32(mutex, PORT_MUTEX_COUNT, 0);
+        mtx_set32(mutex, PORT_MUTEX_THREAD, 0);
+        mq = mutex + PORT_MUTEX_QUEUE_HEAD;
+        port_OSWakeupThread(st, mq);
+    }
+}
+
 /* ════════════════════════════════════════════════════════════════════
- *  Public API functions
+ *  Public API functions — Thread scheduler
  * ════════════════════════════════════════════════════════════════════ */
 
 /* ── __OSThreadInit ── */
@@ -342,6 +455,7 @@ void port_OSThreadInit(port_OSThreadState *st, uint32_t gc_base)
     thr_sets32(def_addr, PORT_THREAD_SUSPEND, 0);
     thr_set32(def_addr, PORT_THREAD_VAL, 0xFFFFFFFFu);
     thr_set32(def_addr, PORT_THREAD_QUEUE, 0);
+    thr_set32(def_addr, PORT_THREAD_MUTEX, 0);
 
     st->currentThread = def_addr;
 
@@ -367,6 +481,9 @@ int port_OSCreateThread(port_OSThreadState *st, int slot,
     thr_set32(t, PORT_THREAD_QUEUE, 0);
     thr_set32(t, PORT_THREAD_LINK_NEXT, 0);
     thr_set32(t, PORT_THREAD_LINK_PREV, 0);
+    thr_set32(t, PORT_THREAD_MUTEX, 0);
+    thr_set32(t, PORT_THREAD_MUTEX_HEAD, 0);
+    thr_set32(t, PORT_THREAD_MUTEX_TAIL, 0);
     /* init queueJoin */
     thr_set32(t, PORT_THREAD_JOIN_HEAD, 0);
     thr_set32(t, PORT_THREAD_JOIN_TAIL, 0);
@@ -403,6 +520,12 @@ int32_t port_OSResumeThread(port_OSThreadState *st, uint32_t thread)
                 prio = port_OSGetEffectivePriority(thread);
                 thr_sets32(thread, PORT_THREAD_PRIORITY, prio);
                 port_AddPrio(q, thread, LINK_NEXT, LINK_PREV);
+                {
+                    uint32_t m = thr_get32(thread, PORT_THREAD_MUTEX);
+                    if (m) {
+                        port_UpdatePriority(st, mtx_get32(m, PORT_MUTEX_THREAD));
+                    }
+                }
                 break;
             }
         }
@@ -435,6 +558,12 @@ int32_t port_OSSuspendThread(port_OSThreadState *st, uint32_t thread)
                 port_RemoveItem(q, thread, LINK_NEXT, LINK_PREV);
                 thr_sets32(thread, PORT_THREAD_PRIORITY, 32);
                 port_AddTail(q, thread, LINK_NEXT, LINK_PREV);
+                {
+                    uint32_t m = thr_get32(thread, PORT_THREAD_MUTEX);
+                    if (m) {
+                        port_UpdatePriority(st, mtx_get32(m, PORT_MUTEX_THREAD));
+                    }
+                }
                 break;
             }
         }
@@ -495,6 +624,12 @@ void port_OSCancelThread(port_OSThreadState *st, uint32_t thread)
             uint32_t q = thr_get32(thread, PORT_THREAD_QUEUE);
             port_RemoveItem(q, thread, LINK_NEXT, LINK_PREV);
             thr_set32(thread, PORT_THREAD_QUEUE, 0);
+            if (!(0 < thr_gets32(thread, PORT_THREAD_SUSPEND))) {
+                uint32_t m = thr_get32(thread, PORT_THREAD_MUTEX);
+                if (m) {
+                    port_UpdatePriority(st, mtx_get32(m, PORT_MUTEX_THREAD));
+                }
+            }
             break;
         }
         default:
@@ -508,15 +643,9 @@ void port_OSCancelThread(port_OSThreadState *st, uint32_t thread)
         thr_set16(thread, PORT_THREAD_STATE, PORT_OS_THREAD_STATE_MORIBUND);
     }
 
-    /* __OSUnlockAllMutex — stub */
+    port_OSUnlockAllMutex(st, thread);
 
-    /* OSWakeupThread(&thread->queueJoin) */
     join_q = thread + PORT_THREAD_JOIN_HEAD;
-    /* queueJoin is embedded in the thread struct at JOIN_HEAD/JOIN_TAIL.
-     * We need to treat it as a queue starting at that address.
-     * Since our queue functions expect PORT_QUEUE_HEAD at offset 0 and
-     * PORT_QUEUE_TAIL at offset 4, and JOIN_HEAD/JOIN_TAIL are adjacent
-     * (36/40), we can pass the address of JOIN_HEAD directly. */
     port_OSWakeupThread(st, join_q);
 
     port_OSReschedule(st);
@@ -536,9 +665,8 @@ void port_OSExitThread(port_OSThreadState *st, uint32_t val)
         thr_set32(ct, PORT_THREAD_VAL, val);
     }
 
-    /* __OSUnlockAllMutex — stub */
+    port_OSUnlockAllMutex(st, ct);
 
-    /* OSWakeupThread(&ct->queueJoin) */
     join_q = ct + PORT_THREAD_JOIN_HEAD;
     port_OSWakeupThread(st, join_q);
 
@@ -555,4 +683,144 @@ int32_t port_OSDisableScheduler(port_OSThreadState *st)
 int32_t port_OSEnableScheduler(port_OSThreadState *st)
 {
     return st->reschedule--;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+ *  Mutex API functions
+ * ════════════════════════════════════════════════════════════════════ */
+
+/* ── OSInitMutex ── */
+void port_OSInitMutex(port_OSThreadState *st, uint32_t mutex_addr)
+{
+    (void)st;
+    q_init(mutex_addr + PORT_MUTEX_QUEUE_HEAD);
+    mtx_set32(mutex_addr, PORT_MUTEX_THREAD, 0);
+    mtx_sets32(mutex_addr, PORT_MUTEX_COUNT, 0);
+}
+
+/* ── OSLockMutex (single-iteration, see oracle for explanation) ── */
+void port_OSLockMutex(port_OSThreadState *st, uint32_t mutex_addr)
+{
+    uint32_t ct = st->currentThread;
+    uint32_t owner = mtx_get32(mutex_addr, PORT_MUTEX_THREAD);
+
+    if (owner == 0) {
+        /* Unlocked: acquire */
+        mtx_set32(mutex_addr, PORT_MUTEX_THREAD, ct);
+        mtx_sets32(mutex_addr, PORT_MUTEX_COUNT,
+                   mtx_gets32(mutex_addr, PORT_MUTEX_COUNT) + 1);
+        port_MutexPushTail(ct, mutex_addr);
+    }
+    else if (owner == ct) {
+        /* Recursive lock */
+        mtx_sets32(mutex_addr, PORT_MUTEX_COUNT,
+                   mtx_gets32(mutex_addr, PORT_MUTEX_COUNT) + 1);
+    }
+    else {
+        /* Contended: promote owner and sleep */
+        thr_set32(ct, PORT_THREAD_MUTEX, mutex_addr);
+        port_OSPromoteThread(st, owner, thr_gets32(ct, PORT_THREAD_PRIORITY));
+        port_OSSleepThread(st, mutex_addr + PORT_MUTEX_QUEUE_HEAD);
+    }
+}
+
+/* ── OSUnlockMutex ── */
+void port_OSUnlockMutex(port_OSThreadState *st, uint32_t mutex_addr)
+{
+    uint32_t ct = st->currentThread;
+
+    if (mtx_get32(mutex_addr, PORT_MUTEX_THREAD) == ct) {
+        int32_t count = mtx_gets32(mutex_addr, PORT_MUTEX_COUNT) - 1;
+        mtx_sets32(mutex_addr, PORT_MUTEX_COUNT, count);
+        if (count == 0) {
+            port_MutexPopItem(ct, mutex_addr);
+            mtx_set32(mutex_addr, PORT_MUTEX_THREAD, 0);
+            if (thr_gets32(ct, PORT_THREAD_PRIORITY) <
+                thr_gets32(ct, PORT_THREAD_BASE)) {
+                thr_sets32(ct, PORT_THREAD_PRIORITY,
+                           port_OSGetEffectivePriority(ct));
+            }
+            port_OSWakeupThread(st, mutex_addr + PORT_MUTEX_QUEUE_HEAD);
+        }
+    }
+}
+
+/* ── OSTryLockMutex ── */
+int port_OSTryLockMutex(port_OSThreadState *st, uint32_t mutex_addr)
+{
+    uint32_t ct = st->currentThread;
+    uint32_t owner = mtx_get32(mutex_addr, PORT_MUTEX_THREAD);
+    int locked;
+
+    if (owner == 0) {
+        mtx_set32(mutex_addr, PORT_MUTEX_THREAD, ct);
+        mtx_sets32(mutex_addr, PORT_MUTEX_COUNT,
+                   mtx_gets32(mutex_addr, PORT_MUTEX_COUNT) + 1);
+        port_MutexPushTail(ct, mutex_addr);
+        locked = 1;
+    }
+    else if (owner == ct) {
+        mtx_sets32(mutex_addr, PORT_MUTEX_COUNT,
+                   mtx_gets32(mutex_addr, PORT_MUTEX_COUNT) + 1);
+        locked = 1;
+    }
+    else {
+        locked = 0;
+    }
+    (void)st;
+    return locked;
+}
+
+/* ── OSInitCond ── */
+void port_OSInitCond(port_OSThreadState *st, uint32_t cond_addr)
+{
+    (void)st;
+    q_init(cond_addr + PORT_COND_QUEUE_HEAD);
+}
+
+/* ── OSSignalCond ── */
+void port_OSSignalCond(port_OSThreadState *st, uint32_t cond_addr)
+{
+    port_OSWakeupThread(st, cond_addr + PORT_COND_QUEUE_HEAD);
+}
+
+/* ── OSJoinThread (non-blocking path only) ── */
+int port_OSJoinThread(port_OSThreadState *st, uint32_t thread_addr, uint32_t *val)
+{
+    uint16_t attr = thr_get16(thread_addr, PORT_THREAD_ATTR);
+    uint16_t state = thr_get16(thread_addr, PORT_THREAD_STATE);
+
+    (void)st;
+
+    if (attr & PORT_OS_THREAD_ATTR_DETACH) {
+        return 0;
+    }
+
+    if (state == PORT_OS_THREAD_STATE_MORIBUND) {
+        if (val) *val = thr_get32(thread_addr, PORT_THREAD_VAL);
+        port_RemoveItem(PORT_ACTIVEQ_ADDR(st), thread_addr, ACT_NEXT, ACT_PREV);
+        thr_set16(thread_addr, PORT_THREAD_STATE, 0);
+        return 1;
+    }
+
+    return 0;
+}
+
+/* ── ProcessPendingLocks ── */
+void port_ProcessPendingLocks(port_OSThreadState *st)
+{
+    uint32_t ct;
+    uint32_t m;
+
+    while (1) {
+        ct = st->currentThread;
+        if (!ct) break;
+        m = thr_get32(ct, PORT_THREAD_MUTEX);
+        if (!m) break;
+        if (thr_get16(ct, PORT_THREAD_STATE) != PORT_OS_THREAD_STATE_RUNNING)
+            break;
+
+        thr_set32(ct, PORT_THREAD_MUTEX, 0);
+        port_OSLockMutex(st, m);
+    }
 }

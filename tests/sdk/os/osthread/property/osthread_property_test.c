@@ -1,19 +1,22 @@
 /*
- * osthread_property_test.c --- Property-based parity test for OSThread.
+ * osthread_property_test.c --- Property-based parity test for OSThread + OSMutex.
  *
  * Oracle:  decomp scheduler (native structs) in osthread_oracle.h
  * Port:    sdk_port scheduler (big-endian gc_mem) in osthread.c
  *
  * For each seed:
  *   1. Random thread set (different priorities, some detached)
- *   2. Random mix of Resume/Suspend/Sleep/Wakeup/Yield/Cancel
+ *   2. Random mix of scheduler + mutex operations
  *   3. After each operation: compare observable state
  *
  * Test levels:
  *   L0: Basic lifecycle (create, resume, verify scheduling)
  *   L1: Suspend/Resume cycles with priority preemption
  *   L2: Sleep/Wakeup with wait queues
- *   L3: Random integration (all operations)
+ *   L3: Random integration (all operations including mutex)
+ *   L4: Mutex basic (lock/unlock/trylock)
+ *   L5: Priority inheritance (contended lock promotes owner)
+ *   L6: JoinThread (collect exit val from moribund thread)
  */
 #include <stdint.h>
 #include <stdio.h>
@@ -72,11 +75,13 @@ static int32_t gc_load_s32(uint32_t addr)
     return (int32_t)gc_load_u32(addr);
 }
 
-/* ── Thread tracking ── */
+/* ── Thread / mutex tracking ── */
 #define MAX_TEST_THREADS 16
 #define MAX_TEST_WAITQ   8
+#define MAX_TEST_MUTEXES 8
 static int g_thread_created[MAX_TEST_THREADS];
 static int g_num_created;
+static int g_mutex_inited[MAX_TEST_MUTEXES];
 
 /* ── CLI options ── */
 static int opt_verbose  = 0;
@@ -89,6 +94,20 @@ static int g_total_checks = 0;
 static int g_total_pass   = 0;
 static int g_total_fail   = 0;
 
+/* ── Oracle pointer → GC address conversion ── */
+
+static uint32_t oracle_thread_to_gc(oracle_OSThread *t)
+{
+    if (!t) return 0;
+    return GC_BASE + PORT_THREADS_OFFSET + (uint32_t)t->id * PORT_THREAD_SIZE;
+}
+
+static uint32_t oracle_mutex_to_gc(oracle_OSMutex *m)
+{
+    if (!m) return 0;
+    return GC_BASE + PORT_MUTEXQ_OFFSET + (uint32_t)m->id * PORT_MUTEX_SIZE;
+}
+
 /* ── Helpers ── */
 
 static void init_gc_mem(void)
@@ -99,12 +118,24 @@ static void init_gc_mem(void)
 
 static void init_both(void)
 {
+    int i;
     init_gc_mem();
     oracle_OSThreadInit();
     port_OSThreadInit(&g_ps, GC_BASE);
     memset(g_thread_created, 0, sizeof(g_thread_created));
     g_thread_created[0] = 1; /* default thread */
     g_num_created = 1;
+    memset(g_mutex_inited, 0, sizeof(g_mutex_inited));
+
+    /* Init all mutexes and conds in both oracle and port */
+    for (i = 0; i < MAX_TEST_MUTEXES; i++) {
+        oracle_OSInitMutex(&oracle_MutexPool[i]);
+        port_OSInitMutex(&g_ps, PORT_MUTEX_ADDR(&g_ps, i));
+    }
+    for (i = 0; i < ORACLE_MAX_CONDS; i++) {
+        oracle_OSInitCond(&oracle_CondPool[i]);
+        port_OSInitCond(&g_ps, PORT_COND_ADDR(&g_ps, i));
+    }
 }
 
 static void create_both(int slot, int32_t priority, uint16_t attr)
@@ -113,6 +144,12 @@ static void create_both(int slot, int32_t priority, uint16_t attr)
     port_OSCreateThread(&g_ps, slot, priority, attr);
     g_thread_created[slot] = 1;
     g_num_created++;
+}
+
+static void process_pending_both(void)
+{
+    oracle_ProcessPendingLocks();
+    port_ProcessPendingLocks(&g_ps);
 }
 
 /* ── State comparison ── */
@@ -161,6 +198,7 @@ static int compare_state(const char *op, uint32_t seed)
         uint32_t pt;
         uint16_t o_state, p_state;
         int32_t o_susp, p_susp, o_prio, p_prio, o_base, p_base;
+        uint32_t o_mtx, p_mtx, o_mh, p_mh, o_mt, p_mt;
 
         if (!g_thread_created[i]) continue;
 
@@ -189,6 +227,63 @@ static int compare_state(const char *op, uint32_t seed)
             }
             mismatches++;
         }
+
+        /* Thread mutex fields */
+        o_mtx = oracle_mutex_to_gc(ot->mutex);
+        p_mtx = gc_load_u32(pt + PORT_THREAD_MUTEX);
+        o_mh = oracle_mutex_to_gc(ot->queueMutex.head);
+        p_mh = gc_load_u32(pt + PORT_THREAD_MUTEX_HEAD);
+        o_mt = oracle_mutex_to_gc(ot->queueMutex.tail);
+        p_mt = gc_load_u32(pt + PORT_THREAD_MUTEX_TAIL);
+
+        if (o_mtx != p_mtx || o_mh != p_mh || o_mt != p_mt) {
+            if (mismatches < 5) {
+                fprintf(stderr,
+                    "  MISMATCH %s seed=%u thread[%d] mutex: "
+                    "mtx o=0x%X p=0x%X, mh o=0x%X p=0x%X, mt o=0x%X p=0x%X\n",
+                    op, seed, i,
+                    o_mtx, p_mtx, o_mh, p_mh, o_mt, p_mt);
+            }
+            mismatches++;
+        }
+    }
+
+    /* Per-mutex state */
+    for (i = 0; i < MAX_TEST_MUTEXES; i++) {
+        oracle_OSMutex *om = &oracle_MutexPool[i];
+        uint32_t pm = PORT_MUTEX_ADDR(&g_ps, i);
+        uint32_t o_qh, p_qh, o_qt, p_qt, o_thr, p_thr;
+        int32_t o_cnt, p_cnt;
+        uint32_t o_ln, p_ln, o_lp, p_lp;
+
+        o_qh = oracle_thread_to_gc(om->queue.head);
+        p_qh = gc_load_u32(pm + PORT_MUTEX_QUEUE_HEAD);
+        o_qt = oracle_thread_to_gc(om->queue.tail);
+        p_qt = gc_load_u32(pm + PORT_MUTEX_QUEUE_TAIL);
+        o_thr = oracle_thread_to_gc(om->thread);
+        p_thr = gc_load_u32(pm + PORT_MUTEX_THREAD);
+        o_cnt = om->count;
+        p_cnt = gc_load_s32(pm + PORT_MUTEX_COUNT);
+        o_ln = oracle_mutex_to_gc(om->link.next);
+        p_ln = gc_load_u32(pm + PORT_MUTEX_LINK_NEXT);
+        o_lp = oracle_mutex_to_gc(om->link.prev);
+        p_lp = gc_load_u32(pm + PORT_MUTEX_LINK_PREV);
+
+        if (o_qh != p_qh || o_qt != p_qt || o_thr != p_thr ||
+            o_cnt != p_cnt || o_ln != p_ln || o_lp != p_lp) {
+            if (mismatches < 5) {
+                fprintf(stderr,
+                    "  MISMATCH %s seed=%u mutex[%d]: "
+                    "qh o=0x%X p=0x%X, qt o=0x%X p=0x%X, "
+                    "thr o=0x%X p=0x%X, cnt o=%d p=%d, "
+                    "ln o=0x%X p=0x%X, lp o=0x%X p=0x%X\n",
+                    op, seed, i,
+                    o_qh, p_qh, o_qt, p_qt,
+                    o_thr, p_thr, o_cnt, p_cnt,
+                    o_ln, p_ln, o_lp, p_lp);
+            }
+            mismatches++;
+        }
     }
 
     return mismatches;
@@ -204,6 +299,13 @@ static int check(const char *op, uint32_t seed)
     }
     g_total_pass++;
     return 0;
+}
+
+/* check with ProcessPendingLocks first */
+static int check_pending(const char *op, uint32_t seed)
+{
+    process_pending_both();
+    return check(op, seed);
 }
 
 /* ── L0: Basic lifecycle ── */
@@ -386,11 +488,11 @@ static int test_sleep_wakeup(uint32_t seed)
     return fail;
 }
 
-/* ── L3: Random integration ── */
+/* ── L3: Random integration (includes mutex ops) ── */
 
 static int test_random_mix(uint32_t seed)
 {
-    int n_threads, i, op;
+    int n_threads, n_mutexes, i, op;
     int fail = 0;
     int n_ops;
 
@@ -412,10 +514,16 @@ static int test_random_mix(uint32_t seed)
         fail += check("L3-InitResume", seed);
     }
 
+    /* Number of mutexes used in this run */
+    n_mutexes = (int)rand_range(1, MAX_TEST_MUTEXES);
+    for (i = 0; i < n_mutexes; i++) {
+        g_mutex_inited[i] = 1;
+    }
+
     /* Random operations */
     n_ops = (int)rand_range(30, 100);
     for (op = 0; op < n_ops && fail == 0; op++) {
-        uint32_t r = xorshift32() % 100;
+        uint32_t r = xorshift32() % 130;
 
         if (r < 20) {
             /* Resume a random thread */
@@ -434,7 +542,7 @@ static int test_random_mix(uint32_t seed)
                     g_total_checks++;
                     return 1;
                 }
-                fail += check("L3-Resume", seed);
+                fail += check_pending("L3-Resume", seed);
             }
         } else if (r < 40) {
             /* Suspend a random thread */
@@ -453,7 +561,7 @@ static int test_random_mix(uint32_t seed)
                     g_total_checks++;
                     return 1;
                 }
-                fail += check("L3-Suspend", seed);
+                fail += check_pending("L3-Suspend", seed);
             }
         } else if (r < 55 && oracle_CurrentThread != NULL &&
                    oracle_CurrentThread->state == ORACLE_OS_THREAD_STATE_RUNNING &&
@@ -467,19 +575,19 @@ static int test_random_mix(uint32_t seed)
             int wq = (int)(xorshift32() % MAX_TEST_WAITQ);
             oracle_OSSleepThread(&oracle_WaitQueues[wq]);
             port_OSSleepThread(&g_ps, PORT_WAITQ_ADDR(&g_ps, wq));
-            fail += check("L3-Sleep", seed);
+            fail += check_pending("L3-Sleep", seed);
         } else if (r < 70) {
             /* Wakeup random wait queue */
             int wq = (int)(xorshift32() % MAX_TEST_WAITQ);
             oracle_OSWakeupThread(&oracle_WaitQueues[wq]);
             port_OSWakeupThread(&g_ps, PORT_WAITQ_ADDR(&g_ps, wq));
-            fail += check("L3-Wakeup", seed);
+            fail += check_pending("L3-Wakeup", seed);
         } else if (r < 80 && oracle_CurrentThread != NULL &&
                    oracle_CurrentThread->state == ORACLE_OS_THREAD_STATE_RUNNING) {
             /* Yield (only when currentThread is actually RUNNING) */
             oracle_OSYieldThread();
             port_OSYieldThread(&g_ps);
-            fail += check("L3-Yield", seed);
+            fail += check_pending("L3-Yield", seed);
         } else if (r < 87) {
             /* Cancel a random non-current thread */
             int slot = (int)rand_range(1, (uint32_t)n_threads);
@@ -488,7 +596,7 @@ static int test_random_mix(uint32_t seed)
                 ot != oracle_CurrentThread) {
                 oracle_OSCancelThread(ot);
                 port_OSCancelThread(&g_ps, PORT_THREAD_ADDR(&g_ps, slot));
-                fail += check("L3-Cancel", seed);
+                fail += check_pending("L3-Cancel", seed);
             }
         } else if (r < 93 && oracle_CurrentThread != NULL &&
                    oracle_CurrentThread->state == ORACLE_OS_THREAD_STATE_RUNNING &&
@@ -497,13 +605,10 @@ static int test_random_mix(uint32_t seed)
             /* ExitThread: current thread exits (not default thread 0,
              * and only if another thread can take over) */
             uint32_t val = xorshift32();
-            int exit_id = oracle_CurrentThread->id;
             oracle_OSExitThread(val);
             port_OSExitThread(&g_ps, val);
-            fail += check("L3-Exit", seed);
-            /* Mark slot as no longer usable for new operations */
-            (void)exit_id;
-        } else {
+            fail += check_pending("L3-Exit", seed);
+        } else if (r < 100) {
             /* Disable/Enable scheduler toggle */
             if (oracle_Reschedule == 0) {
                 oracle_OSDisableScheduler();
@@ -512,15 +617,396 @@ static int test_random_mix(uint32_t seed)
             } else {
                 oracle_OSEnableScheduler();
                 port_OSEnableScheduler(&g_ps);
-                fail += check("L3-EnableSched", seed);
+                fail += check_pending("L3-EnableSched", seed);
+            }
+        } else if (r < 110 && oracle_CurrentThread != NULL &&
+                   oracle_CurrentThread->state == ORACLE_OS_THREAD_STATE_RUNNING) {
+            /* TryLock a random mutex */
+            int mi = (int)(xorshift32() % (uint32_t)n_mutexes);
+            int rc_o, rc_p;
+            rc_o = oracle_OSTryLockMutex(&oracle_MutexPool[mi]);
+            rc_p = port_OSTryLockMutex(&g_ps, PORT_MUTEX_ADDR(&g_ps, mi));
+            if (rc_o != rc_p) {
+                fprintf(stderr,
+                    "  FAIL L3-TryLock seed=%u mutex=%d: rc o=%d p=%d\n",
+                    seed, mi, rc_o, rc_p);
+                g_total_fail++;
+                g_total_checks++;
+                return 1;
+            }
+            fail += check_pending("L3-TryLock", seed);
+        } else if (r < 120 && oracle_CurrentThread != NULL &&
+                   oracle_CurrentThread->state == ORACLE_OS_THREAD_STATE_RUNNING) {
+            /* Unlock a random mutex (only if owned by current thread) */
+            int mi = (int)(xorshift32() % (uint32_t)n_mutexes);
+            oracle_OSMutex *om = &oracle_MutexPool[mi];
+            if (om->thread == oracle_CurrentThread && om->count > 0) {
+                oracle_OSUnlockMutex(om);
+                port_OSUnlockMutex(&g_ps, PORT_MUTEX_ADDR(&g_ps, mi));
+                fail += check_pending("L3-Unlock", seed);
+            }
+        } else if (r < 130 && oracle_CurrentThread != NULL &&
+                   oracle_CurrentThread->state == ORACLE_OS_THREAD_STATE_RUNNING &&
+                   oracle_Reschedule == 0 &&
+                   oracle_RunQueueBits != 0) {
+            /* Lock a random mutex (may contend and sleep) */
+            int mi = (int)(xorshift32() % (uint32_t)n_mutexes);
+            oracle_OSLockMutex(&oracle_MutexPool[mi]);
+            port_OSLockMutex(&g_ps, PORT_MUTEX_ADDR(&g_ps, mi));
+            fail += check_pending("L3-Lock", seed);
+        }
+    }
+
+    if (opt_verbose && fail == 0) {
+        printf("  L3-Random: %d threads, %d mutexes, %d ops, cur=%d OK\n",
+               n_threads, n_mutexes, n_ops,
+               oracle_CurrentThread ? oracle_CurrentThread->id : -1);
+    }
+
+    return fail;
+}
+
+/* ── L4: Mutex basic (lock/unlock/trylock) ── */
+
+static int test_mutex_basic(uint32_t seed)
+{
+    int n_threads, n_mutexes, i, op;
+    int fail = 0;
+    int n_ops;
+
+    init_both();
+
+    /* Create and resume threads */
+    n_threads = (int)rand_range(3, 8);
+    if (n_threads > MAX_TEST_THREADS - 1) n_threads = MAX_TEST_THREADS - 1;
+
+    for (i = 1; i <= n_threads; i++) {
+        int32_t prio = (int32_t)rand_range(0, 31);
+        create_both(i, prio, 1); /* all detached for simplicity */
+    }
+    for (i = 1; i <= n_threads && fail == 0; i++) {
+        oracle_OSResumeThread(&oracle_ThreadPool[i]);
+        port_OSResumeThread(&g_ps, PORT_THREAD_ADDR(&g_ps, i));
+        fail += check("L4-InitResume", seed);
+    }
+
+    n_mutexes = (int)rand_range(2, MAX_TEST_MUTEXES);
+
+    /* Random mutex operations */
+    n_ops = (int)rand_range(30, 80);
+    for (op = 0; op < n_ops && fail == 0; op++) {
+        uint32_t r = xorshift32() % 100;
+
+        if (!oracle_CurrentThread ||
+            oracle_CurrentThread->state != ORACLE_OS_THREAD_STATE_RUNNING)
+            continue;
+
+        if (r < 30) {
+            /* TryLock */
+            int mi = (int)(xorshift32() % (uint32_t)n_mutexes);
+            int rc_o, rc_p;
+            rc_o = oracle_OSTryLockMutex(&oracle_MutexPool[mi]);
+            rc_p = port_OSTryLockMutex(&g_ps, PORT_MUTEX_ADDR(&g_ps, mi));
+            if (rc_o != rc_p) {
+                fprintf(stderr,
+                    "  FAIL L4-TryLock seed=%u mutex=%d: rc o=%d p=%d\n",
+                    seed, mi, rc_o, rc_p);
+                g_total_fail++;
+                g_total_checks++;
+                return 1;
+            }
+            fail += check("L4-TryLock", seed);
+        } else if (r < 55) {
+            /* Unlock (only if owned by current thread) */
+            int mi = (int)(xorshift32() % (uint32_t)n_mutexes);
+            oracle_OSMutex *om = &oracle_MutexPool[mi];
+            if (om->thread == oracle_CurrentThread && om->count > 0) {
+                oracle_OSUnlockMutex(om);
+                port_OSUnlockMutex(&g_ps, PORT_MUTEX_ADDR(&g_ps, mi));
+                fail += check_pending("L4-Unlock", seed);
+            }
+        } else if (r < 75 && oracle_Reschedule == 0 &&
+                   oracle_RunQueueBits != 0) {
+            /* Lock (may contend and sleep) */
+            int mi = (int)(xorshift32() % (uint32_t)n_mutexes);
+            oracle_OSLockMutex(&oracle_MutexPool[mi]);
+            port_OSLockMutex(&g_ps, PORT_MUTEX_ADDR(&g_ps, mi));
+            fail += check_pending("L4-Lock", seed);
+        } else if (r < 85) {
+            /* Yield to mix up current thread */
+            oracle_OSYieldThread();
+            port_OSYieldThread(&g_ps);
+            fail += check_pending("L4-Yield", seed);
+        } else {
+            /* Resume/Suspend to mix thread states */
+            int slot = (int)rand_range(1, (uint32_t)n_threads);
+            oracle_OSThread *ot = &oracle_ThreadPool[slot];
+            if (ot->state != 0) {
+                if (xorshift32() % 2 == 0) {
+                    oracle_OSResumeThread(ot);
+                    port_OSResumeThread(&g_ps,
+                        PORT_THREAD_ADDR(&g_ps, slot));
+                    fail += check_pending("L4-Resume", seed);
+                } else {
+                    if (ot != oracle_CurrentThread) {
+                        oracle_OSSuspendThread(ot);
+                        port_OSSuspendThread(&g_ps,
+                            PORT_THREAD_ADDR(&g_ps, slot));
+                        fail += check_pending("L4-Suspend", seed);
+                    }
+                }
             }
         }
     }
 
     if (opt_verbose && fail == 0) {
-        printf("  L3-Random: %d threads, %d ops, cur=%d OK\n",
-               n_threads, n_ops,
-               oracle_CurrentThread ? oracle_CurrentThread->id : -1);
+        printf("  L4-MutexBasic: %d threads, %d mutexes, %d ops OK\n",
+               n_threads, n_mutexes, n_ops);
+    }
+
+    return fail;
+}
+
+/* ── L5: Priority inheritance ── */
+
+static int test_priority_inheritance(uint32_t seed)
+{
+    int fail = 0;
+    int32_t prio_low, prio_high, prio_mid;
+    int mi;
+
+    init_both();
+
+    /* Pick three distinct priority levels:
+     * high (low number) < mid < low (high number) */
+    prio_high = (int32_t)rand_range(0, 8);
+    prio_mid  = (int32_t)rand_range(10, 20);
+    prio_low  = (int32_t)rand_range(22, 31);
+
+    /* T0 is default (prio 16, detached, running) */
+    /* T1 = low priority worker, T2 = high priority requester */
+    create_both(1, prio_low, 1);  /* detached */
+    create_both(2, prio_high, 1); /* detached */
+    /* T3 = mid priority thread (to verify it doesn't preempt promoted T1) */
+    create_both(3, prio_mid, 1);  /* detached */
+
+    /* Pick a mutex */
+    mi = (int)(xorshift32() % MAX_TEST_MUTEXES);
+
+    /* Resume T1 — T0 still current (prio 16 < prio_low) */
+    oracle_OSResumeThread(&oracle_ThreadPool[1]);
+    port_OSResumeThread(&g_ps, PORT_THREAD_ADDR(&g_ps, 1));
+    fail += check("L5-ResumeT1", seed);
+    if (fail) return fail;
+
+    /* Suspend T0 to make T1 current */
+    oracle_OSSuspendThread(&oracle_ThreadPool[0]);
+    port_OSSuspendThread(&g_ps, PORT_THREAD_ADDR(&g_ps, 0));
+    fail += check("L5-SuspendT0", seed);
+    if (fail) return fail;
+
+    /* T1 is now current. T1 locks mutex → acquires (unlocked) */
+    oracle_OSLockMutex(&oracle_MutexPool[mi]);
+    port_OSLockMutex(&g_ps, PORT_MUTEX_ADDR(&g_ps, mi));
+    fail += check("L5-T1Lock", seed);
+    if (fail) return fail;
+
+    /* Verify T1 owns mutex */
+    if (oracle_MutexPool[mi].thread != &oracle_ThreadPool[1]) {
+        fprintf(stderr, "  FAIL L5 seed=%u: T1 doesn't own mutex\n", seed);
+        g_total_fail++; g_total_checks++;
+        return 1;
+    }
+
+    /* Resume T0 — T0 preempts T1 (prio 16 < prio_low) */
+    oracle_OSResumeThread(&oracle_ThreadPool[0]);
+    port_OSResumeThread(&g_ps, PORT_THREAD_ADDR(&g_ps, 0));
+    fail += check("L5-ResumeT0", seed);
+    if (fail) return fail;
+
+    /* Resume T2 (high prio) — T2 preempts T0 */
+    oracle_OSResumeThread(&oracle_ThreadPool[2]);
+    port_OSResumeThread(&g_ps, PORT_THREAD_ADDR(&g_ps, 2));
+    fail += check("L5-ResumeT2", seed);
+    if (fail) return fail;
+
+    /* Resume T3 (mid prio) — still T2 running */
+    oracle_OSResumeThread(&oracle_ThreadPool[3]);
+    port_OSResumeThread(&g_ps, PORT_THREAD_ADDR(&g_ps, 3));
+    fail += check("L5-ResumeT3", seed);
+    if (fail) return fail;
+
+    /* T2 is now current (highest prio). T2 calls LockMutex(M):
+     * - Contended: T1 owns M
+     * - T2->mutex = M
+     * - PromoteThread(T1, prio_high) → T1.priority = prio_high
+     * - T2 sleeps on M.queue
+     * - Reschedule: T1 (promoted to prio_high) becomes current */
+    oracle_OSLockMutex(&oracle_MutexPool[mi]);
+    port_OSLockMutex(&g_ps, PORT_MUTEX_ADDR(&g_ps, mi));
+    process_pending_both();
+    fail += check("L5-T2Lock", seed);
+    if (fail) return fail;
+
+    /* Verify T1 is current and promoted */
+    if (!oracle_CurrentThread || oracle_CurrentThread->id != 1) {
+        fprintf(stderr, "  FAIL L5 seed=%u: expected T1 current, got %d\n",
+                seed, oracle_CurrentThread ? oracle_CurrentThread->id : -1);
+        g_total_fail++; g_total_checks++;
+        return 1;
+    }
+    if (oracle_ThreadPool[1].priority != prio_high) {
+        fprintf(stderr, "  FAIL L5 seed=%u: T1 prio=%d expected=%d\n",
+                seed, oracle_ThreadPool[1].priority, prio_high);
+        g_total_fail++; g_total_checks++;
+        return 1;
+    }
+
+    /* T1 unlocks M:
+     * - M released, T1 prio restored to base (prio_low)
+     * - WakeupThread wakes T2
+     * - Reschedule: T2 (prio_high) preempts T1 (prio_low)
+     * - ProcessPendingLocks: T2 current, T2->mutex = M → acquires M */
+    oracle_OSUnlockMutex(&oracle_MutexPool[mi]);
+    port_OSUnlockMutex(&g_ps, PORT_MUTEX_ADDR(&g_ps, mi));
+    process_pending_both();
+    fail += check("L5-T1Unlock", seed);
+    if (fail) return fail;
+
+    /* Verify T2 is current and owns the mutex */
+    if (!oracle_CurrentThread || oracle_CurrentThread->id != 2) {
+        fprintf(stderr, "  FAIL L5 seed=%u: expected T2 current, got %d\n",
+                seed, oracle_CurrentThread ? oracle_CurrentThread->id : -1);
+        g_total_fail++; g_total_checks++;
+        return 1;
+    }
+    if (oracle_MutexPool[mi].thread != &oracle_ThreadPool[2]) {
+        fprintf(stderr, "  FAIL L5 seed=%u: T2 doesn't own mutex after unlock\n",
+                seed);
+        g_total_fail++; g_total_checks++;
+        return 1;
+    }
+    /* T1 priority should be restored to base */
+    if (oracle_ThreadPool[1].priority != prio_low) {
+        fprintf(stderr, "  FAIL L5 seed=%u: T1 prio=%d not restored to base=%d\n",
+                seed, oracle_ThreadPool[1].priority, prio_low);
+        g_total_fail++; g_total_checks++;
+        return 1;
+    }
+
+    /* T2 unlocks M — clean up */
+    oracle_OSUnlockMutex(&oracle_MutexPool[mi]);
+    port_OSUnlockMutex(&g_ps, PORT_MUTEX_ADDR(&g_ps, mi));
+    process_pending_both();
+    fail += check("L5-T2Unlock", seed);
+    if (fail) return fail;
+
+    if (opt_verbose && fail == 0) {
+        printf("  L5-PrioInherit: hi=%d mid=%d lo=%d mutex=%d OK\n",
+               prio_high, prio_mid, prio_low, mi);
+    }
+
+    return fail;
+}
+
+/* ── L6: JoinThread ── */
+
+static int test_join_thread(uint32_t seed)
+{
+    int n_threads, i;
+    int fail = 0;
+
+    init_both();
+
+    /* Create several non-detached threads */
+    n_threads = (int)rand_range(3, 8);
+    if (n_threads > MAX_TEST_THREADS - 1) n_threads = MAX_TEST_THREADS - 1;
+
+    for (i = 1; i <= n_threads; i++) {
+        int32_t prio = (int32_t)rand_range(0, 31);
+        create_both(i, prio, 0); /* non-detached */
+    }
+    for (i = 1; i <= n_threads && fail == 0; i++) {
+        oracle_OSResumeThread(&oracle_ThreadPool[i]);
+        port_OSResumeThread(&g_ps, PORT_THREAD_ADDR(&g_ps, i));
+        fail += check("L6-InitResume", seed);
+    }
+    if (fail) return fail;
+
+    /* Exit some threads (not thread 0, and not the current thread) to
+     * create MORIBUND targets for JoinThread */
+    for (i = 1; i <= n_threads && fail == 0; i++) {
+        oracle_OSThread *ot = &oracle_ThreadPool[i];
+
+        /* Only exit if this thread is current and another can take over */
+        if (ot != oracle_CurrentThread) continue;
+        if (oracle_RunQueueBits == 0) continue;
+
+        {
+            uint32_t val = xorshift32();
+            oracle_OSExitThread(val);
+            port_OSExitThread(&g_ps, val);
+            fail += check("L6-Exit", seed);
+        }
+    }
+    if (fail) return fail;
+
+    /* Now join any MORIBUND threads from the current thread */
+    for (i = 1; i <= n_threads && fail == 0; i++) {
+        oracle_OSThread *ot = &oracle_ThreadPool[i];
+
+        if (ot->state != ORACLE_OS_THREAD_STATE_MORIBUND) continue;
+
+        {
+            uint32_t oval = 0, pval = 0;
+            int rc_o, rc_p;
+
+            rc_o = oracle_OSJoinThread(ot, &oval);
+            rc_p = port_OSJoinThread(&g_ps,
+                PORT_THREAD_ADDR(&g_ps, i), &pval);
+
+            if (rc_o != rc_p) {
+                fprintf(stderr,
+                    "  FAIL L6-Join seed=%u slot=%d: rc o=%d p=%d\n",
+                    seed, i, rc_o, rc_p);
+                g_total_fail++; g_total_checks++;
+                return 1;
+            }
+            if (rc_o == 1 && oval != pval) {
+                fprintf(stderr,
+                    "  FAIL L6-Join seed=%u slot=%d: val o=0x%X p=0x%X\n",
+                    seed, i, oval, pval);
+                g_total_fail++; g_total_checks++;
+                return 1;
+            }
+            fail += check("L6-Join", seed);
+        }
+    }
+
+    /* Also test that JoinThread on detached returns 0 */
+    if (fail == 0 && oracle_CurrentThread != NULL &&
+        oracle_CurrentThread->state == ORACLE_OS_THREAD_STATE_RUNNING) {
+        /* Create a detached thread and try joining */
+        int dslot = n_threads + 1;
+        if (dslot < MAX_TEST_THREADS) {
+            int rc_o, rc_p;
+            create_both(dslot, 16, ORACLE_OS_THREAD_ATTR_DETACH);
+            rc_o = oracle_OSJoinThread(&oracle_ThreadPool[dslot], NULL);
+            rc_p = port_OSJoinThread(&g_ps,
+                PORT_THREAD_ADDR(&g_ps, dslot), NULL);
+            if (rc_o != rc_p || rc_o != 0) {
+                fprintf(stderr,
+                    "  FAIL L6-JoinDetach seed=%u: rc o=%d p=%d expected=0\n",
+                    seed, rc_o, rc_p);
+                g_total_fail++; g_total_checks++;
+                return 1;
+            }
+            fail += check("L6-JoinDetach", seed);
+        }
+    }
+
+    if (opt_verbose && fail == 0) {
+        printf("  L6-JoinThread: %d threads OK\n", n_threads);
     }
 
     return fail;
@@ -554,12 +1040,34 @@ static int run_seed(uint32_t seed)
         fail += test_sleep_wakeup(seed);
     }
 
-    /* L3: Random mix */
+    /* L3: Random mix (threads + mutexes) */
     if (!opt_op || strstr("RANDOM", opt_op) || strstr("L3", opt_op) ||
         strstr("THREAD", opt_op)) {
         g_rng = seed ^ 0x55AA55AAu;
         if (g_rng == 0) g_rng = 1;
         fail += test_random_mix(seed);
+    }
+
+    /* L4: Mutex basic */
+    if (!opt_op || strstr("MUTEX", opt_op) || strstr("L4", opt_op)) {
+        g_rng = seed ^ 0xDEADBEEFu;
+        if (g_rng == 0) g_rng = 1;
+        fail += test_mutex_basic(seed);
+    }
+
+    /* L5: Priority inheritance */
+    if (!opt_op || strstr("PRIO", opt_op) || strstr("L5", opt_op) ||
+        strstr("INHERIT", opt_op)) {
+        g_rng = seed ^ 0xCAFEBABEu;
+        if (g_rng == 0) g_rng = 1;
+        fail += test_priority_inheritance(seed);
+    }
+
+    /* L6: JoinThread */
+    if (!opt_op || strstr("JOIN", opt_op) || strstr("L6", opt_op)) {
+        g_rng = seed ^ 0xBAADF00Du;
+        if (g_rng == 0) g_rng = 1;
+        fail += test_join_thread(seed);
     }
 
     return fail;
@@ -598,7 +1106,7 @@ int main(int argc, char **argv)
 
     parse_args(argc, argv);
 
-    printf("=== OSThread Property Test ===\n");
+    printf("=== OSThread + OSMutex Property Test ===\n");
 
     if (opt_seed >= 0) {
         total_seeds = 1;
