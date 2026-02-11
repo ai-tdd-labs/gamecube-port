@@ -5,6 +5,23 @@ evidence-based. Mark items DONE with a commit hash.
 
 ## Now (priority order)
 
+Oracle exactness hardening (new):
+- [ ] Add tier tag to each oracle (`STRICT_DECOMP`, `DECOMP_ADAPTED`, `MODEL_OR_SYNTHETIC`) and print in test output.
+  Evidence target: `tests/sdk/*/property/*_oracle.h`, `tools/run_*property*.sh`
+- [ ] Build delta ledgers for current adapted oracles:
+  - `ARQ`: interrupt + callback + DMA mocking deltas
+  - `CARD FAT`: update-fat erase/write callback deltas
+  - `OSAlloc`: struct/layout/assert host deltas
+  - `DVDFS`: physical-mem mapping + path-rule deltas
+  - `MTX`: asm removed / C fallback deltas
+  Evidence target: `docs/sdk/*/ORACLE_DELTA.md`
+- [ ] Add strict-vs-adapted dual-run checks where feasible (same fixtures, compare outputs).
+  Evidence target: `tools/run_oracle_dualcheck.sh`
+- [ ] Add retail-trace replay fixtures for hardware-sensitive behaviors (interrupt/callback ordering).
+  Evidence target: `tests/oracles/mp4_rvz/*`, replay scripts in `tools/`
+- [ ] Merge/reconcile `codex/integration-all` into `main` after gate passes.
+  Evidence target: merge commit + green gate run
+
 PBT chain program (whole-chain quality gate):
 - [x] Define subsystem-level DoD and gating policy for OSAlloc/DVDFS/ARQ/CARD-FAT/MTX.
   Evidence: `docs/codex/PBT_CHAIN_PROGRAM.md`
