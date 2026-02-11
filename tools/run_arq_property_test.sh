@@ -29,14 +29,22 @@ for arg in "$@"; do
     esac
 done
 
+# --- Linker dead-strip flags (platform-dependent) ---
+ld_gc_flags=()
+case "$(uname -s)" in
+    Darwin) ld_gc_flags+=(-Wl,-dead_strip) ;;
+    *)      ld_gc_flags+=(-Wl,--gc-sections) ;;
+esac
+
 # --- Find compiler ---
 CC="${CC:-}"
 if [[ -z "$CC" ]]; then
-    for try in clang gcc cc; do
-        if command -v "$try" &>/dev/null; then CC="$try"; break; fi
+    for try in cc clang gcc; do
+        if command -v "$try" >/dev/null 2>&1; then CC="$try"; break; fi
     done
 fi
 if [[ -z "$CC" ]]; then
+    # MSYS2 / Windows fallback
     for try in "/c/Program Files/LLVM/bin/clang" "/mingw64/bin/gcc"; do
         if [[ -x "$try" ]]; then CC="$try"; break; fi
     done
@@ -56,6 +64,7 @@ echo "[arq-property-build] CC=$CC"
   "$test_src/arq_property_test.c" \
   "$port_src/arq.c" \
   "$gc_mem_src/gc_mem.c" \
+  "${ld_gc_flags[@]}" \
   -o "$build_dir/arq_property_test"
 
 echo "[arq-property-build] OK -> $build_dir/arq_property_test"
