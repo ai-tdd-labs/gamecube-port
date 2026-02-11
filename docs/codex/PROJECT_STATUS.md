@@ -196,7 +196,15 @@ compared against the `sdk_port` implementation using `gc_mem` big-endian emulati
 | **GXInitFogAdjTable** | Straightforward sqrtf loop, 10 entries, not worth PBT |
 | **GXSetIndTexMtx** | Simple `(int)(1024*val) & 0x7FF` for 6 values, too simple |
 
-### PBT coverage expansion (ongoing)
+### PBT coverage — complete
 
-- Mutation gate enforcement for all suites
+All decomp source files have been exhaustively scanned. Every pure-computation
+function suitable for PBT has been identified and implemented (17 suites).
+Remaining decomp functions are all hardware-coupled (register manipulation,
+async I/O callbacks, interrupt handlers, PPC-specific instructions) and cannot
+be meaningfully property-tested without extensive hardware mocking.
+
+**Next steps (non-PBT):**
+- Mutation gate enforcement for all 17 suites
 - Retail-trace replay for hardware-sensitive behaviors
+- One-button gate script (`tools/run_pbt_chain_gate.sh`)
