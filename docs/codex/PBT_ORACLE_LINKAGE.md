@@ -46,13 +46,15 @@ This file maps each PBT subsystem to its oracle source and replay command.
 
 ## ARQ
 
-- Oracle type: embedded decomp oracle (`tests/sdk/ar/property/arq_oracle.h`) vs sdk_port.
-- Oracle tier: `DECOMP_ADAPTED`
+- Oracle type: embedded decomp oracle (`arq_oracle.h`) + strict leaf callback-normalization oracle.
+- Oracle tier: `STRICT_DECOMP` + `DECOMP_ADAPTED`
 - Delta ledger: `docs/codex/oracle_deltas/ar_oracle_delta.md`
 - Evidence:
   - `tests/sdk/ar/property/arq_property_test.c`
+  - `tests/sdk/ar/property/arq_strict_leaf_oracle.h`
 - Commands:
   - `tools/run_arq_property_test.sh --num-runs=50 -v`
+  - `tools/run_oracle_dualcheck.sh 500` (includes strict ARQ leaf check via property suite)
 
 ## CARD-FAT
 

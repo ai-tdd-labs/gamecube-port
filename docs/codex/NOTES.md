@@ -38,6 +38,13 @@ Rules:
 - `dvd_core_pbt` now derives expected results from the strict leaf oracle instead of ad-hoc inline formulas.
   Evidence: `tests/pbt/dvd/dvd_core_pbt.c`.
 
+### PBT strict dualcheck (ARQ callback normalization leaf)
+- Added strict leaf oracle for ARQ callback normalization from decomp semantics:
+  callback field is always normalized to non-null (`__ARQCallbackHack` fallback).
+  Evidence: `tests/sdk/ar/property/arq_strict_leaf_oracle.h`.
+- ARQ property suite now randomizes `has_callback` input and enforces strict normalization parity in addition to existing adapted-oracle parity checks.
+  Evidence: `tests/sdk/ar/property/arq_property_test.c`.
+
 ### Dolphin GDB Stub (macOS build on this machine)
 - Stop packets include PC/NIP in reg `0x40` (usable for PC-polling checkpoints).
   Evidence: `tools/ram_dump.py` `parse_stop_pc()`; observed stop example `T0540:800ba2f0;01:8019d798;` from real MP4 RVZ.

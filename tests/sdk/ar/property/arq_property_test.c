@@ -21,6 +21,7 @@
 
 /* Oracle (native, self-contained) */
 #include "arq_oracle.h"
+#include "arq_strict_leaf_oracle.h"
 
 /* Port (big-endian via gc_mem) */
 #include "arq.h"
@@ -70,6 +71,13 @@ static void init_gc_mem(void)
 {
     memset(g_gc_ram, 0, sizeof(g_gc_ram));
     gc_mem_set(GC_ARQ_BASE, sizeof(g_gc_ram), g_gc_ram);
+}
+
+static uint32_t load_u32be_gc(uint32_t addr)
+{
+    uint8_t *p = gc_mem_ptr(addr, 4);
+    return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) |
+           ((uint32_t)p[2] << 8)  | (uint32_t)p[3];
 }
 
 /* GC address for request slot i */
@@ -129,14 +137,27 @@ static int compare_dma_logs(port_ARQState *ps, uint32_t seed,
 }
 
 /* Post same request to both oracle and port */
-static void post_both(port_ARQState *ps, int slot,
+static int post_both(port_ARQState *ps, int slot,
                       uint32_t owner, uint32_t type, uint32_t priority,
-                      uint32_t source, uint32_t dest, uint32_t length)
+                      uint32_t source, uint32_t dest, uint32_t length,
+                      int has_callback)
 {
     oracle_ARQPostRequest(&g_oracle_reqs[slot], owner, type, priority,
-                          source, dest, length, 1);
+                          source, dest, length, has_callback);
     port_ARQPostRequest(ps, req_addr(slot), owner, type, priority,
-                        source, dest, length, 1);
+                        source, dest, length, has_callback);
+
+    // Strict leaf dualcheck: ARQ callback normalization must always store
+    // a non-null callback in request metadata.
+    uint32_t cb_field = load_u32be_gc(req_addr(slot) + PORT_ARQ_REQ_CALLBACK);
+    uint32_t exp_cb = (uint32_t)strict_ARQNormalizeCallback(has_callback);
+    if (cb_field != exp_cb) {
+        fprintf(stderr,
+                "  MISMATCH strict-leaf callback normalize slot=%d has_cb=%d got=%u exp=%u\n",
+                slot, has_callback, cb_field, exp_cb);
+        return 1;
+    }
+    return 0;
 }
 
 /* Simulate ISR on both */
@@ -176,7 +197,10 @@ static int test_single_request(uint32_t seed)
     dest     = (rand_range(0x00100000u, 0x00900000u)) & ~31u;
     length   = (rand_range(32, 8192)) & ~31u;
 
-    post_both(&ps, 0, 1, type, priority, source, dest, length);
+    if (post_both(&ps, 0, 1, type, priority, source, dest, length, (int)(xorshift32() & 1u))) {
+        g_total_fail++;
+        return 1;
+    }
 
     /* First PostRequest should have started DMA (nothing pending before) */
     drain_all(&ps);
@@ -215,20 +239,26 @@ static int test_priority_ordering(uint32_t seed)
     /* Post 3 Lo requests, then 2 Hi requests.
      * All small enough to fit in one chunk. */
     for (i = 0; i < 3; i++) {
-        post_both(&ps, i, (uint32_t)(i + 1),
+        if (post_both(&ps, i, (uint32_t)(i + 1),
                   ORACLE_ARQ_TYPE_MRAM_TO_ARAM,
                   ORACLE_ARQ_PRIORITY_LOW,
                   src_base + (uint32_t)i * 0x1000,
                   dst_base + (uint32_t)i * 0x1000,
-                  1024);
+                  1024, (int)(xorshift32() & 1u))) {
+            g_total_fail++;
+            return 1;
+        }
     }
     for (i = 0; i < 2; i++) {
-        post_both(&ps, 3 + i, (uint32_t)(10 + i),
+        if (post_both(&ps, 3 + i, (uint32_t)(10 + i),
                   ORACLE_ARQ_TYPE_ARAM_TO_MRAM,
                   ORACLE_ARQ_PRIORITY_HIGH,
                   src_base + (uint32_t)(3 + i) * 0x1000,
                   dst_base + (uint32_t)(3 + i) * 0x1000,
-                  2048);
+                  2048, (int)(xorshift32() & 1u))) {
+            g_total_fail++;
+            return 1;
+        }
     }
 
     /* Drain all */
@@ -278,8 +308,11 @@ static int test_random_mix(uint32_t seed)
         /* Length: sometimes > chunkSize to test chunking */
         uint32_t length   = (rand_range(32, 20000)) & ~31u;
 
-        post_both(&ps, slot, (uint32_t)(i + 1), type, priority,
-                  source, dest, length);
+        if (post_both(&ps, slot, (uint32_t)(i + 1), type, priority,
+                      source, dest, length, (int)(xorshift32() & 1u))) {
+            g_total_fail++;
+            return 1;
+        }
         slot++;
 
         /* Randomly simulate some ISR events between posts */
