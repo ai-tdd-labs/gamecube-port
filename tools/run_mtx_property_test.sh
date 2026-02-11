@@ -36,11 +36,18 @@ for arg in "$@"; do
     esac
 done
 
+# --- Linker dead-strip flags (platform-dependent) ---
+ld_gc_flags=()
+case "$(uname -s)" in
+    Darwin) ld_gc_flags+=(-Wl,-dead_strip) ;;
+    *)      ld_gc_flags+=(-Wl,--gc-sections) ;;
+esac
+
 # --- Find compiler ---
 CC="${CC:-}"
 if [[ -z "$CC" ]]; then
-    for try in clang gcc cc; do
-        if command -v "$try" &>/dev/null; then CC="$try"; break; fi
+    for try in cc clang gcc; do
+        if command -v "$try" >/dev/null 2>&1; then CC="$try"; break; fi
     done
 fi
 if [[ -z "$CC" ]]; then
@@ -65,13 +72,8 @@ echo "[mtx-property-build] CC=$CC"
   "$port_src/vec.c" \
   "$port_src/quat.c" \
   "$port_src/mtx44.c" \
+  "${ld_gc_flags[@]}" \
   -o "$build_dir/mtx_property_test"
-
-# Link math library on non-Windows (MSVC linker doesn't need -lm)
-case "$(uname -s)" in
-    MINGW*|MSYS*|CYGWIN*|*_NT*) ;; # Windows: no -lm needed
-    *) ;; # On Linux/Mac, math is often linked by default with clang/gcc
-esac
 
 echo "[mtx-property-build] OK -> $build_dir/mtx_property_test"
 echo ""
