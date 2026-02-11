@@ -80,7 +80,7 @@ compared against the `sdk_port` implementation using `gc_mem` big-endian emulati
 | **OSStopwatch** | `tests/sdk/os/stopwatch/property/` | `tools/run_stopwatch_property_test.sh` | 2000 | ~622k | PASS |
 | **ARQ** | `tests/sdk/ar/property/` | `tools/run_arq_property_test.sh` | — | — | PASS |
 | **CARD-FAT** | `tests/sdk/card/property/` | `tools/run_card_fat_property_test.sh` | — | — | PASS |
-| **DVDFS** | `tests/sdk/dvd/dvdfs/property/` | `tools/run_dvdfs_property_test.sh` | — | — | PASS |
+| **DVDFS** | `tests/sdk/dvd/dvdfs/property/` | `tools/run_property_dvdfs.sh` | — | — | PASS |
 
 ### OSThread+Mutex+Message Test Levels
 

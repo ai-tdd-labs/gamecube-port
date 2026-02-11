@@ -1371,3 +1371,17 @@ Notes:
   - `tools/pbt_minimize_failure.sh`
 - Updated workflow wording to avoid over-claiming framework-grade PBT semantics:
   - `docs/codex/WORKFLOW.md`
+## 2026-02-11: Full PBT/replay consistency sweep
+
+- Fixed runner reference mismatch in status doc:
+  - `docs/codex/PROJECT_STATUS.md` now points DVDFS to `tools/run_property_dvdfs.sh`.
+- Normalized property runner script permissions so they can be run directly (`./...`):
+  - `tools/run_property_test.sh`
+  - `tools/run_mtx_property_test.sh`
+  - `tools/run_osthread_property_test.sh`
+  - `tools/run_ostime_property_test.sh`
+  - `tools/run_stopwatch_property_test.sh`
+- Fixed stale task doc target for not-yet-existing OSUnlink replay script:
+  - `docs/codex/TASKS.md` now states this script still needs to be created.
+- Verification run (all PASS, 20 deterministic seeds):
+  - OSAlloc, MTX, OSThread, OSTime, OSStopwatch, DVDFS, ARQ, CARD-FAT property/parity runners.
