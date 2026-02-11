@@ -788,15 +788,121 @@ static void oracle_OSSignalCond(oracle_OSCond *cond)
 
 /* ── OSWaitCond (OSMutex.c:140-165)
  *
- * Like LockMutex, the post-sleep code (re-lock + restore count)
- * can't execute correctly without real context switching.
- * Implemented as: release mutex, wake waiters, sleep on cond.
- * The test driver handles re-acquisition via ProcessPendingLocks
- * using a saved-count mechanism.
+ * Release mutex, wake waiters, sleep on cond queue.
+ * When woken, re-lock mutex and restore saved count.
  *
- * For simplicity, WaitCond is NOT included in the random test mix.
- * It can be tested in controlled sequences.
+ * In our single-threaded oracle, the sleep+re-lock sequence is modeled
+ * as: release mutex, sleep on cond.  When the thread is woken and
+ * becomes current again, ProcessPendingLocks re-acquires the mutex
+ * because we set thread->mutex to point to the mutex (same mechanism
+ * as contended LockMutex).  We store the saved count in thread->val
+ * temporarily (since val is only used for exit values of moribund
+ * threads, and a running thread won't be moribund).
  * ── */
+static void oracle_OSWaitCond(oracle_OSCond *cond, oracle_OSMutex *mutex)
+{
+    oracle_OSThread *currentThread = oracle_CurrentThread;
+    int32_t count;
+
+    if (mutex->thread != currentThread) return;
+
+    count = mutex->count;
+    mutex->count = 0;
+    oracle_MutexPopItem(&currentThread->queueMutex, mutex, link);
+    mutex->thread = NULL;
+
+    if (currentThread->priority < currentThread->base) {
+        currentThread->priority =
+            oracle_OSGetEffectivePriority(currentThread);
+    }
+
+    oracle_Reschedule++;
+    oracle_OSWakeupThread(&mutex->queue);
+    oracle_Reschedule--;
+    oracle_OSSleepThread(&cond->queue);
+
+    /* When woken, we need to re-lock the mutex and restore count.
+     * Set thread->mutex so ProcessPendingLocks will call LockMutex.
+     * Store saved count in val for restoration. */
+    currentThread->mutex = mutex;
+    currentThread->val = (uint32_t)count;
+}
+
+/* ── IsMember (OSMutex.c:172-181) ── */
+static int oracle_IsMember(oracle_OSMutexQueue *queue, oracle_OSMutex *mutex)
+{
+    oracle_OSMutex *member;
+    for (member = queue->head; member; member = member->link.next) {
+        if (mutex == member)
+            return 1;
+    }
+    return 0;
+}
+
+/* ── __OSCheckMutex (OSMutex.c:183-218) ── */
+static int oracle_OSCheckMutex(oracle_OSMutex *mutex)
+{
+    oracle_OSThread *thread;
+    oracle_OSThreadQueue *queue;
+    int32_t priority = 0;
+
+    queue = &mutex->queue;
+    if (!(queue->head == NULL || queue->head->link.prev == NULL))
+        return 0;
+    if (!(queue->tail == NULL || queue->tail->link.next == NULL))
+        return 0;
+    for (thread = queue->head; thread; thread = thread->link.next) {
+        if (!(thread->link.next == NULL || thread == thread->link.next->link.prev))
+            return 0;
+        if (!(thread->link.prev == NULL || thread == thread->link.prev->link.next))
+            return 0;
+
+        if (thread->state != ORACLE_OS_THREAD_STATE_WAITING)
+            return 0;
+
+        if (thread->priority < priority)
+            return 0;
+        priority = thread->priority;
+    }
+
+    if (mutex->thread) {
+        if (mutex->count <= 0)
+            return 0;
+    } else {
+        if (0 != mutex->count)
+            return 0;
+    }
+
+    return 1;
+}
+
+/* ── __OSCheckDeadLock (OSMutex.c:220-231) ── */
+static int oracle_OSCheckDeadLock(oracle_OSThread *thread)
+{
+    oracle_OSMutex *mutex;
+
+    mutex = thread->mutex;
+    while (mutex && mutex->thread) {
+        if (mutex->thread == thread)
+            return 1;
+        mutex = mutex->thread->mutex;
+    }
+    return 0;
+}
+
+/* ── __OSCheckMutexes (OSMutex.c:233-244) ── */
+static int oracle_OSCheckMutexes(oracle_OSThread *thread)
+{
+    oracle_OSMutex *mutex;
+
+    for (mutex = thread->queueMutex.head; mutex; mutex = mutex->link.next) {
+        if (mutex->thread != thread)
+            return 0;
+        if (!oracle_OSCheckMutex(mutex))
+            return 0;
+    }
+    return 1;
+}
 
 /* ── OSJoinThread (not in decomp, reconstructed)
  *
@@ -846,9 +952,20 @@ static void oracle_ProcessPendingLocks(void)
         if (ct->state != ORACLE_OS_THREAD_STATE_RUNNING) break;
 
         m = ct->mutex;
-        ct->mutex = NULL;
-        /* Retry the lock — same logic as OSLockMutex */
-        oracle_OSLockMutex(m);
+        /* Check if this is a WaitCond re-lock (val holds saved count) */
+        {
+            uint32_t saved_count = ct->val;
+            ct->mutex = NULL;
+            /* Retry the lock — same logic as OSLockMutex */
+            oracle_OSLockMutex(m);
+            /* If lock was acquired and we had a saved count from WaitCond,
+             * restore it.  saved_count > 0 means WaitCond; the lock itself
+             * adds 1, so final count = saved_count. */
+            if (saved_count > 0 && m->thread == ct && m->count == 1) {
+                m->count = (int32_t)saved_count;
+                ct->val = 0xFFFFFFFFu; /* restore default */
+            }
+        }
     }
 }
 

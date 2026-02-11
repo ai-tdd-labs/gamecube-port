@@ -20,6 +20,8 @@
  *   L7: Message queue basic (send/receive non-blocking)
  *   L8: Message queue jam (LIFO) + wraparound
  *   L9: Message queue with threads (blocking sequences)
+ *   L10: WaitCond/SignalCond (condition variable sequences)
+ *   L11: Mutex invariant checks (__OSCheckMutex, __OSCheckDeadLock, __OSCheckMutexes)
  */
 #include <stdint.h>
 #include <stdio.h>
@@ -1385,6 +1387,321 @@ static int test_msg_threads(uint32_t seed)
     return fail;
 }
 
+/* ── L10: WaitCond / SignalCond ──
+ *
+ * Controlled sequence:
+ *   1. Thread A (current) locks mutex M
+ *   2. Thread A calls WaitCond(cond, M) → releases M, sleeps on cond
+ *   3. Thread B becomes current, signals cond → A wakes
+ *   4. ProcessPendingLocks → A re-locks M with saved count restored
+ *
+ * We also test recursive lock count preservation.
+ */
+
+static int test_waitcond(uint32_t seed)
+{
+    int fail = 0;
+    int n_rounds, round;
+
+    init_both();
+
+    n_rounds = (int)rand_range(5, 20);
+
+    for (round = 0; round < n_rounds && fail == 0; round++) {
+        int slot_a = 1, slot_b = 2;
+        int32_t prio_a, prio_b;
+        int cond_idx, mutex_idx;
+        int recursive_locks, i;
+
+        /* Fresh state each round */
+        init_both();
+
+        /* Random priorities: B must be lower prio number (higher priority)
+         * so it can run when A sleeps, OR we ensure B is resumed and A
+         * sleeps so B gets to run. */
+        prio_a = (int32_t)rand_range(10, 25);
+        prio_b = (int32_t)rand_range(0, 9);
+
+        create_both(slot_a, prio_a, 1); /* detached */
+        create_both(slot_b, prio_b, 1); /* detached */
+
+        /* Resume A first — it has lower priority than default (16),
+         * but we need it running. Resume B as well. */
+        oracle_OSResumeThread(&oracle_ThreadPool[slot_a]);
+        port_OSResumeThread(&g_ps, PORT_THREAD_ADDR(&g_ps, slot_a));
+
+        oracle_OSResumeThread(&oracle_ThreadPool[slot_b]);
+        port_OSResumeThread(&g_ps, PORT_THREAD_ADDR(&g_ps, slot_b));
+        fail += check("L10-Setup", seed);
+        if (fail) break;
+
+        /* B should be current (highest priority) */
+        /* Suspend B so A can run */
+        oracle_OSSuspendThread(&oracle_ThreadPool[slot_b]);
+        port_OSSuspendThread(&g_ps, PORT_THREAD_ADDR(&g_ps, slot_b));
+        fail += check("L10-SuspB", seed);
+        if (fail) break;
+
+        /* Now A (or default thread 0) should be current.
+         * If A's priority > 16 (lower than default), default is current.
+         * Make sure A runs by suspending default if needed. */
+        if (oracle_CurrentThread != &oracle_ThreadPool[slot_a]) {
+            /* A is not current; skip this round's scenario */
+            continue;
+        }
+
+        cond_idx = (int)(xorshift32() % ORACLE_MAX_CONDS);
+        mutex_idx = (int)(xorshift32() % MAX_TEST_MUTEXES);
+
+        /* Lock mutex (possibly recursively) */
+        recursive_locks = (int)rand_range(1, 4);
+        for (i = 0; i < recursive_locks; i++) {
+            oracle_OSLockMutex(&oracle_MutexPool[mutex_idx]);
+            port_OSLockMutex(&g_ps, PORT_MUTEX_ADDR(&g_ps, mutex_idx));
+            process_pending_both();
+        }
+        fail += check("L10-Lock", seed);
+        if (fail) break;
+
+        /* WaitCond: A releases mutex, sleeps on cond */
+        oracle_OSWaitCond(&oracle_CondPool[cond_idx],
+                          &oracle_MutexPool[mutex_idx]);
+        port_OSWaitCond(&g_ps, PORT_COND_ADDR(&g_ps, cond_idx),
+                        PORT_MUTEX_ADDR(&g_ps, mutex_idx));
+        fail += check("L10-WaitCond", seed);
+        if (fail) break;
+
+        /* Resume B — B should become current */
+        oracle_OSResumeThread(&oracle_ThreadPool[slot_b]);
+        port_OSResumeThread(&g_ps, PORT_THREAD_ADDR(&g_ps, slot_b));
+        fail += check("L10-ResumeB", seed);
+        if (fail) break;
+
+        /* B signals the cond — A wakes up */
+        oracle_OSSignalCond(&oracle_CondPool[cond_idx]);
+        port_OSSignalCond(&g_ps, PORT_COND_ADDR(&g_ps, cond_idx));
+        fail += check("L10-Signal", seed);
+        if (fail) break;
+
+        /* ProcessPendingLocks: A re-locks mutex with saved count */
+        process_pending_both();
+        fail += check("L10-Pending", seed);
+        if (fail) break;
+
+        /* Verify: mutex should be locked by whoever is current.
+         * If A got the lock, count should be restored. */
+        {
+            oracle_OSMutex *om = &oracle_MutexPool[mutex_idx];
+            if (om->thread == &oracle_ThreadPool[slot_a]) {
+                /* A re-acquired: count should match recursive_locks */
+                uint32_t pm = PORT_MUTEX_ADDR(&g_ps, mutex_idx);
+                int32_t o_cnt = om->count;
+                int32_t p_cnt = gc_load_s32(pm + PORT_MUTEX_COUNT);
+                if (o_cnt != recursive_locks || p_cnt != recursive_locks) {
+                    fprintf(stderr,
+                        "  FAIL L10 seed=%u: count mismatch "
+                        "expected=%d oracle=%d port=%d\n",
+                        seed, recursive_locks, o_cnt, p_cnt);
+                    g_total_fail++;
+                    g_total_checks++;
+                    fail++;
+                    break;
+                }
+            }
+        }
+
+        /* Unlock the mutex (all recursive levels) */
+        if (oracle_CurrentThread &&
+            oracle_MutexPool[mutex_idx].thread == oracle_CurrentThread) {
+            for (i = 0; i < recursive_locks; i++) {
+                oracle_OSUnlockMutex(&oracle_MutexPool[mutex_idx]);
+                port_OSUnlockMutex(&g_ps, PORT_MUTEX_ADDR(&g_ps, mutex_idx));
+                process_pending_both();
+            }
+            fail += check("L10-Unlock", seed);
+        }
+    }
+
+    if (opt_verbose && fail == 0) {
+        printf("  L10-WaitCond: %d rounds OK\n", n_rounds);
+    }
+
+    return fail;
+}
+
+/* ── L11: Mutex invariant checks ──
+ *
+ * Random mix of thread + mutex operations (like L3) but after every
+ * operation we also verify:
+ *   - __OSCheckMutex passes for every inited mutex
+ *   - __OSCheckDeadLock is false for current thread
+ *   - __OSCheckMutexes passes for every created thread
+ */
+
+static int check_invariants(const char *op, uint32_t seed)
+{
+    int i;
+    int mismatches = 0;
+
+    /* Check all mutexes */
+    for (i = 0; i < MAX_TEST_MUTEXES; i++) {
+        if (!oracle_OSCheckMutex(&oracle_MutexPool[i])) {
+            if (mismatches < 3)
+                fprintf(stderr,
+                    "  INVARIANT %s seed=%u: __OSCheckMutex(%d) FAILED\n",
+                    op, seed, i);
+            mismatches++;
+        }
+    }
+
+    /* Check no deadlock for current thread */
+    if (oracle_CurrentThread &&
+        oracle_CurrentThread->state == ORACLE_OS_THREAD_STATE_RUNNING) {
+        if (oracle_OSCheckDeadLock(oracle_CurrentThread)) {
+            if (mismatches < 3)
+                fprintf(stderr,
+                    "  INVARIANT %s seed=%u: __OSCheckDeadLock(cur=%d) TRUE\n",
+                    op, seed, oracle_CurrentThread->id);
+            mismatches++;
+        }
+    }
+
+    /* Check all created threads' mutex lists */
+    for (i = 0; i < MAX_TEST_THREADS; i++) {
+        if (!g_thread_created[i]) continue;
+        if (oracle_ThreadPool[i].state == 0) continue; /* dead */
+        if (!oracle_OSCheckMutexes(&oracle_ThreadPool[i])) {
+            if (mismatches < 3)
+                fprintf(stderr,
+                    "  INVARIANT %s seed=%u: __OSCheckMutexes(thread %d) FAILED\n",
+                    op, seed, i);
+            mismatches++;
+        }
+    }
+
+    return mismatches;
+}
+
+static int check_with_invariants(const char *op, uint32_t seed)
+{
+    int m = compare_state(op, seed);
+    int inv = check_invariants(op, seed);
+    g_total_checks++;
+    if (m > 0 || inv > 0) {
+        g_total_fail++;
+        return 1;
+    }
+    g_total_pass++;
+    return 0;
+}
+
+static int test_mutex_invariants(uint32_t seed)
+{
+    int n_threads, i, op;
+    int fail = 0;
+    int n_ops;
+
+    init_both();
+
+    /* Create and resume threads */
+    n_threads = (int)rand_range(4, 8);
+    if (n_threads > MAX_TEST_THREADS - 1) n_threads = MAX_TEST_THREADS - 1;
+
+    for (i = 1; i <= n_threads; i++) {
+        int32_t prio = (int32_t)rand_range(0, 31);
+        create_both(i, prio, 1); /* detached */
+    }
+    for (i = 1; i <= n_threads && fail == 0; i++) {
+        oracle_OSResumeThread(&oracle_ThreadPool[i]);
+        port_OSResumeThread(&g_ps, PORT_THREAD_ADDR(&g_ps, i));
+        fail += check_with_invariants("L11-Init", seed);
+    }
+
+    /* Random ops with invariant checks after each */
+    n_ops = (int)rand_range(30, 80);
+    for (op = 0; op < n_ops && fail == 0; op++) {
+        uint32_t r = xorshift32() % 100;
+
+        if (r < 20 && oracle_CurrentThread &&
+            oracle_CurrentThread->state == ORACLE_OS_THREAD_STATE_RUNNING) {
+            /* TryLock a random mutex */
+            int mi = (int)(xorshift32() % MAX_TEST_MUTEXES);
+            int ro = oracle_OSTryLockMutex(&oracle_MutexPool[mi]);
+            int rp = port_OSTryLockMutex(&g_ps, PORT_MUTEX_ADDR(&g_ps, mi));
+            if (ro != rp) {
+                fprintf(stderr,
+                    "  FAIL L11 seed=%u: TryLock(%d) oracle=%d port=%d\n",
+                    seed, mi, ro, rp);
+                g_total_fail++; g_total_checks++;
+                return 1;
+            }
+            fail += check_with_invariants("L11-TryLock", seed);
+        }
+        else if (r < 40 && oracle_CurrentThread &&
+                 oracle_CurrentThread->state == ORACLE_OS_THREAD_STATE_RUNNING) {
+            /* Unlock a random mutex (only if we own it) */
+            int mi = (int)(xorshift32() % MAX_TEST_MUTEXES);
+            oracle_OSMutex *om = &oracle_MutexPool[mi];
+            if (om->thread == oracle_CurrentThread) {
+                oracle_OSUnlockMutex(om);
+                port_OSUnlockMutex(&g_ps, PORT_MUTEX_ADDR(&g_ps, mi));
+                process_pending_both();
+                fail += check_with_invariants("L11-Unlock", seed);
+            }
+        }
+        else if (r < 55) {
+            /* Yield */
+            if (oracle_CurrentThread &&
+                oracle_CurrentThread->state == ORACLE_OS_THREAD_STATE_RUNNING) {
+                oracle_OSYieldThread();
+                port_OSYieldThread(&g_ps);
+                fail += check_with_invariants("L11-Yield", seed);
+            }
+        }
+        else if (r < 70) {
+            /* Suspend a random thread */
+            int slot = (int)rand_range(1, (uint32_t)n_threads);
+            oracle_OSThread *ot = &oracle_ThreadPool[slot];
+            if (ot->state != 0 && ot->state != ORACLE_OS_THREAD_STATE_MORIBUND) {
+                int32_t rc_o = oracle_OSSuspendThread(ot);
+                int32_t rc_p = port_OSSuspendThread(&g_ps,
+                    PORT_THREAD_ADDR(&g_ps, slot));
+                (void)rc_o; (void)rc_p;
+                fail += check_with_invariants("L11-Suspend", seed);
+            }
+        }
+        else if (r < 85) {
+            /* Resume a random thread */
+            int slot = (int)rand_range(1, (uint32_t)n_threads);
+            oracle_OSThread *ot = &oracle_ThreadPool[slot];
+            if (ot->state != 0 && ot->state != ORACLE_OS_THREAD_STATE_MORIBUND) {
+                oracle_OSResumeThread(ot);
+                port_OSResumeThread(&g_ps, PORT_THREAD_ADDR(&g_ps, slot));
+                fail += check_with_invariants("L11-Resume", seed);
+            }
+        }
+        else {
+            /* Lock a random mutex (only if unlocked or self-owned) */
+            int mi = (int)(xorshift32() % MAX_TEST_MUTEXES);
+            oracle_OSMutex *om = &oracle_MutexPool[mi];
+            if (oracle_CurrentThread &&
+                oracle_CurrentThread->state == ORACLE_OS_THREAD_STATE_RUNNING &&
+                (om->thread == NULL || om->thread == oracle_CurrentThread)) {
+                oracle_OSLockMutex(om);
+                port_OSLockMutex(&g_ps, PORT_MUTEX_ADDR(&g_ps, mi));
+                process_pending_both();
+                fail += check_with_invariants("L11-Lock", seed);
+            }
+        }
+    }
+
+    if (opt_verbose && fail == 0) {
+        printf("  L11-Invariants: %d threads, %d ops OK\n", n_threads, n_ops);
+    }
+
+    return fail;
+}
+
 /* ── Run one seed ── */
 
 static int run_seed(uint32_t seed)
@@ -1463,6 +1780,21 @@ static int run_seed(uint32_t seed)
         g_rng = seed ^ 0xACE0BA5Eu;
         if (g_rng == 0) g_rng = 1;
         fail += test_msg_threads(seed);
+    }
+
+    /* L10: WaitCond / SignalCond */
+    if (!opt_op || strstr("L10", opt_op) || strstr("COND", opt_op) ||
+        strstr("WAITCOND", opt_op)) {
+        g_rng = seed ^ 0x7E57C0DEu;
+        if (g_rng == 0) g_rng = 1;
+        fail += test_waitcond(seed);
+    }
+
+    /* L11: Mutex invariant checks */
+    if (!opt_op || strstr("L11", opt_op) || strstr("INVARIANT", opt_op)) {
+        g_rng = seed ^ 0xC0FFEE42u;
+        if (g_rng == 0) g_rng = 1;
+        fail += test_mutex_invariants(seed);
     }
 
     return fail;
