@@ -1361,3 +1361,13 @@ Notes:
   - Some suites remain scenario-centric vs explicit full leaf ladder (notably DVDFS).
 - Evidence report:
   - `docs/codex/PBT_LEAF_AUDIT_CLAUDE_2026-02-11.md`
+## 2026-02-11: Micropolis-alignment cleanup for PBT workflow
+
+- Added explicit alignment report:
+  - `docs/codex/MICROPOLIS_ALIGNMENT.md`
+- Added replay gate runner so replay verification is one-command:
+  - `tools/run_replay_gate.sh`
+- Added deterministic failure minimizer helper for parity/PBT regressions:
+  - `tools/pbt_minimize_failure.sh`
+- Updated workflow wording to avoid over-claiming framework-grade PBT semantics:
+  - `docs/codex/WORKFLOW.md`
