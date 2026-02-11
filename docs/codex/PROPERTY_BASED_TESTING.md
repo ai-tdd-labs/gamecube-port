@@ -2,6 +2,9 @@
 
 Goal: add a *second* net under the existing bit-exact snapshot tests.
 
+OSAlloc-style standardization reference:
+- `docs/codex/PBT_OSALLOC_STANDARD_MATRIX.md`
+
 We do **not** replace:
 - DOL (Dolphin) expected.bin vs host actual.bin
 - Retail trace replay (RVZ break at entry/exit, then replay on host)
@@ -63,4 +66,3 @@ PBT is **not** a ground truth oracle.
 It is a safety net:
 - If PBT fails: the port is almost certainly wrong (or the property is wrong).
 - If PBT passes: it increases confidence, but does not prove bit-exact parity.
-

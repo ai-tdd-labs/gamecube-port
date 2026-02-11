@@ -1,22 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Property-style parity test runner for OSStopwatch.
-#
-# Self-contained test: oracle (decomp copy) and port (sdk_port copy) are
-# both inlined in the test file with shared mock time.  No external
-# source files needed.
+# Property-style parity test runner for GXGetTexBufferSize.
 #
 # Usage:
-#   tools/run_stopwatch_property_test.sh [--seed=N] [--num-runs=N] [-v]
+#   tools/run_gxtexture_property_test.sh [--seed=N] [--num-runs=N] [-v]
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
-build_dir="$repo_root/tests/build/stopwatch_property"
-test_src="$repo_root/tests/sdk/os/stopwatch/property"
+build_dir="$repo_root/tests/build/gxtexture_property"
+test_src="$repo_root/tests/sdk/gx/property"
 
 mkdir -p "$build_dir"
 
-# --- Collect pass-through args ---
 args=()
 opt_flags=(-O1 -g)
 
@@ -27,14 +22,12 @@ for arg in "$@"; do
     esac
 done
 
-# --- Linker dead-strip flags (platform-dependent) ---
 ld_gc_flags=()
 case "$(uname -s)" in
     Darwin) ld_gc_flags+=(-Wl,-dead_strip) ;;
     *)      ld_gc_flags+=(-Wl,--gc-sections) ;;
 esac
 
-# --- Find compiler ---
 CC="${CC:-}"
 if [[ -z "$CC" ]]; then
     for try in cc clang gcc; do
@@ -47,18 +40,18 @@ if [[ -z "$CC" ]]; then
     done
 fi
 if [[ -z "$CC" ]]; then
-    echo "ERROR: no C compiler found. Set CC= or install clang/gcc."
+    echo "ERROR: no C compiler found."
     exit 2
 fi
 
-echo "[stopwatch-property-build] CC=$CC"
+echo "[gxtexture-property-build] CC=$CC"
 "$CC" "${opt_flags[@]}" -ffunction-sections -fdata-sections \
   -D_XOPEN_SOURCE=700 -D_CRT_SECURE_NO_WARNINGS \
   -Wno-implicit-function-declaration \
-  "$test_src/stopwatch_property_test.c" \
+  "$test_src/gxtexture_property_test.c" \
   "${ld_gc_flags[@]}" \
-  -o "$build_dir/stopwatch_property_test"
+  -o "$build_dir/gxtexture_property_test"
 
-echo "[stopwatch-property-build] OK -> $build_dir/stopwatch_property_test"
+echo "[gxtexture-property-build] OK -> $build_dir/gxtexture_property_test"
 echo ""
-"$build_dir/stopwatch_property_test" "${args[@]}"
+"$build_dir/gxtexture_property_test" "${args[@]}"

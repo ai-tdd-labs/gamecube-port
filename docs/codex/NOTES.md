@@ -9,6 +9,28 @@ Rules:
 
 ## Confirmed Behaviors
 
+### Integration sync: pbt/remaining-sdk-coverage -> codex/integration-all (2026-02-11)
+- Integrated remote commits:
+  - `d245941` ("todo: add SDK port coverage overview (69% of game-needed functions)")
+  - `169d526` ("todo: add AR module, fix ARQ coverage in SDK overview")
+  Evidence: `todo/SDK_PORT_COVERAGE.md`.
+- Replay gate robustness: optional harvest scripts that exit with code `2` are treated as skip (missing RVZ/trace corpus), not hard failure.
+  Evidence: `tools/run_replay_gate.sh`.
+- Validation after integration:
+  - `tools/run_pbt_chain_gate.sh` => PASS (including mutation checks).
+  - `tools/run_replay_gate.sh` => PASS with explicit SKIPs when assets are unavailable.
+  - `tools/run_tests.sh all tests/sdk` => PASS (`rc:0`) in integration-all worktree run log.
+  Evidence logs: `/tmp/gc-intall-pbt.log`, `/tmp/gc-intall-replay2.log`, `/tmp/gc-intall-sdk2.log`.
+
+### Pre-main test sweep stabilization (2026-02-11)
+- `tests/sdk` full expected sweep now completes end-to-end (`tools/run_tests.sh all tests/sdk`) after resolving PAD test helper symbol collisions.
+  Evidence: renamed local dump helpers in:
+  - `tests/sdk/pad/pad_reset/dol/mp4/realistic_padreadvsync_001/pad_reset_realistic_padreadvsync_001.c`
+  - `tests/sdk/pad/pad_read/dol/mp4/realistic_padreadvsync_001/pad_read_realistic_padreadvsync_001.c`
+  - `tests/sdk/pad/pad_clamp/dol/mp4/realistic_padreadvsync_001/pad_clamp_realistic_padreadvsync_001.c`
+- Replay gate now treats exit code `2` from optional harvest/replay scripts as a non-fatal "missing external asset/corpus" skip, while preserving hard-fail behavior for real test failures.
+  Evidence: `tools/run_replay_gate.sh` (`run_if_exists` rc handling).
+
 ### PBT strict dualcheck (MTX)
 - Added strict decomp-derived leaf oracle for MTX core math:
   - `strict_C_MTXIdentity`
@@ -1352,3 +1374,139 @@ Notes:
   - `bash tools/run_card_fat_property_test.sh --num-runs=200 --seed=0xC0DEC0DE` (CARD FAT)
 - Practical note from verification:
   - ARQ/CARD property binaries report `Seeds: 1` when a fixed `--seed` is supplied (deterministic single-seed mode), while gate-mode without fixed seed iterates multiple seeds.
+## 2026-02-11: Claude PBT leaf-audit (bottom-up completeness check)
+
+- Audited merged Claude PBT suites for "leaf-first then upward levels" structure (OSAlloc-style baseline).
+- Result:
+  - Not uniform 100% leaf-complete across all suites.
+  - Strong layered suites exist (OSAlloc, OSThread, ARQ, CARD FAT, MTX family).
+  - Some suites remain scenario-centric vs explicit full leaf ladder (notably DVDFS).
+- Evidence report:
+  - `docs/codex/PBT_LEAF_AUDIT_CLAUDE_2026-02-11.md`
+## 2026-02-11: Micropolis-alignment cleanup for PBT workflow
+
+- Added explicit alignment report:
+  - `docs/codex/MICROPOLIS_ALIGNMENT.md`
+- Added replay gate runner so replay verification is one-command:
+  - `tools/run_replay_gate.sh`
+- Added deterministic failure minimizer helper for parity/PBT regressions:
+  - `tools/pbt_minimize_failure.sh`
+- Updated workflow wording to avoid over-claiming framework-grade PBT semantics:
+  - `docs/codex/WORKFLOW.md`
+## 2026-02-11: Full PBT/replay consistency sweep
+
+- Fixed runner reference mismatch in status doc:
+  - `docs/codex/PROJECT_STATUS.md` now points DVDFS to `tools/run_property_dvdfs.sh`.
+- Normalized property runner script permissions so they can be run directly (`./...`):
+  - `tools/run_property_test.sh`
+  - `tools/run_mtx_property_test.sh`
+  - `tools/run_osthread_property_test.sh`
+  - `tools/run_ostime_property_test.sh`
+  - `tools/run_stopwatch_property_test.sh`
+- Fixed stale task doc target for not-yet-existing OSUnlink replay script:
+  - `docs/codex/TASKS.md` now states this script still needs to be created.
+- Verification run (all PASS, 20 deterministic seeds):
+  - OSAlloc, MTX, OSThread, OSTime, OSStopwatch, DVDFS, ARQ, CARD-FAT property/parity runners.
+## 2026-02-11: OSAlloc-style PBT standardization sweep (step-up)
+
+- Added standard matrix and checklist baseline:
+  - `docs/codex/PBT_OSALLOC_STANDARD_MATRIX.md`
+- Added cross-suite leaf-to-level mapping:
+  - `docs/codex/leaf_maps/PBT_LEAF_MAPS.md`
+- Added focused level targeting where missing:
+  - `tests/sdk/os/stopwatch/property/stopwatch_property_test.c` now supports `--op=L0|L1|RANDOM|MULTI`
+  - `tests/sdk/dvd/dvdfs/property/dvdfs_property_test.c` now supports `--op=L0|L1|L2|L3|L4|MIX`
+- Updated DVDFS property README with per-level run commands:
+  - `tests/sdk/dvd/dvdfs/property/README.md`
+- Validation:
+  - `./tools/run_stopwatch_property_test.sh --seed=0xC0DEC0DE --op=L0 -v` PASS
+  - `./tools/run_stopwatch_property_test.sh --seed=0xC0DEC0DE --op=L1 -v` PASS
+  - `./tools/run_property_dvdfs.sh --seed=0xC0DEC0DE --op=L0..L4 -v` PASS
+## 2026-02-11: Pulled latest Claude PBT batch into current branch
+
+- Merged remote branch `origin/pbt/remaining-sdk-coverage` into `codex/macos-codex53-pbt-audit`.
+- New suites added by that batch:
+  - `tests/sdk/dvd/property/dvdqueue_property_test.c`
+  - `tests/sdk/gx/property/gxtexture_property_test.c`
+  - `tests/sdk/os/osalarm/property/osalarm_property_test.c`
+  - `tests/sdk/pad/property/padclamp_property_test.c`
+- Validation reruns on this branch (all PASS, deterministic seed):
+  - `bash tools/run_dvdqueue_property_test.sh --num-runs=50 --seed=0xC0DEC0DE`
+  - `bash tools/run_gxtexture_property_test.sh --num-runs=50 --seed=0xC0DEC0DE`
+  - `bash tools/run_osalarm_property_test.sh --num-runs=50 --seed=0xC0DEC0DE`
+  - `bash tools/run_padclamp_property_test.sh --num-runs=50 --seed=0xC0DEC0DE`
+## 2026-02-11: Synced second latest PBT push into current branch
+
+- Pulled and merged updated `origin/pbt/remaining-sdk-coverage` (new commit batch) into `codex/macos-codex53-pbt-audit`.
+- New suites added in this sync:
+  - `tests/sdk/gx/property/gxproject_property_test.c`
+  - `tests/sdk/gx/property/gxz16_property_test.c`
+  - `tests/sdk/gx/property/gxyscale_property_test.c`
+  - `tests/sdk/thp/property/thpaudio_property_test.c`
+- Validation reruns on this branch (PASS):
+  - `bash tools/run_gxproject_property_test.sh --num-runs=20 --seed=0xC0DEC0DE`
+  - `bash tools/run_gxz16_property_test.sh --num-runs=20 --seed=0xC0DEC0DE`
+  - `bash tools/run_gxyscale_property_test.sh --num-runs=20 --seed=0xC0DEC0DE`
+  - `bash tools/run_thpaudio_property_test.sh --num-runs=20 --seed=0xC0DEC0DE`
+## 2026-02-11: OSAlloc-style `--op` targeting added for new 3 suites
+
+- Upgraded these suites to OSAlloc-style focused level execution:
+  - `tests/sdk/dvd/property/dvdqueue_property_test.c`
+  - `tests/sdk/gx/property/gxtexture_property_test.c`
+  - `tests/sdk/os/osalarm/property/osalarm_property_test.c`
+- Added `--op=` parsing + per-level gating in `run_seed`:
+  - dvdqueue: `L0..L4` + `PUSH|DEQUEUE|INQUEUE|PROP|FULL|MIX`
+  - gxtexture: `L0..L4` + `PARITY|NOMIP|MONO|RGBA8|TILE`
+  - osalarm: `L0..L4` + `INSERT|CANCEL|FIRE|PERIODIC|FULL|MIX`
+- Validation (PASS):
+  - `bash tools/run_dvdqueue_property_test.sh --seed=0xC0DEC0DE --op=L0 -v`
+  - `bash tools/run_dvdqueue_property_test.sh --seed=0xC0DEC0DE --op=L4 -v`
+  - `bash tools/run_gxtexture_property_test.sh --seed=0xC0DEC0DE --op=L1 -v`
+  - `bash tools/run_gxtexture_property_test.sh --seed=0xC0DEC0DE --op=L4 -v`
+  - `bash tools/run_osalarm_property_test.sh --seed=0xC0DEC0DE --op=L0 -v`
+  - `bash tools/run_osalarm_property_test.sh --seed=0xC0DEC0DE --op=L4 -v`
+## 2026-02-11: OSAlloc-style `--op` targeting added for latest 4 suites
+
+- Upgraded these suites to OSAlloc-style focused level execution:
+  - `tests/sdk/gx/property/gxproject_property_test.c`
+  - `tests/sdk/gx/property/gxz16_property_test.c`
+  - `tests/sdk/gx/property/gxyscale_property_test.c`
+  - `tests/sdk/thp/property/thpaudio_property_test.c`
+- Added `--op=` parsing + per-level gating in `run_seed`:
+  - GXProject: `L0..L5` + `PARITY|IDENTITY|ORTHO|DEPTH|CENTER|FULL|MIX`
+  - GXZ16: `L0..L5` + `PARITY|ROUNDTRIP|IDEMPOTENCE|RANGE|EXHAUSTIVE|FULL|MIX`
+  - GXYScale: `L0..L5` + `NUMXFB|YSCALE|RESULT|BOUNDED|IDENTITY|FULL|MIX`
+  - THPAudio: `L0..L4` + `MONO|STEREO|CHANNEL|SATURATION|FULL|MIX`
+- Validation (PASS):
+  - `bash tools/run_gxproject_property_test.sh --seed=0xC0DEC0DE --op=L0 -v`
+  - `bash tools/run_gxproject_property_test.sh --seed=0xC0DEC0DE --op=L5 -v`
+  - `bash tools/run_gxz16_property_test.sh --seed=0xC0DEC0DE --op=L1 -v`
+  - `bash tools/run_gxz16_property_test.sh --seed=0xC0DEC0DE --op=L5 -v`
+  - `bash tools/run_gxyscale_property_test.sh --seed=0xC0DEC0DE --op=L2 -v`
+  - `bash tools/run_gxyscale_property_test.sh --seed=0xC0DEC0DE --op=L5 -v`
+  - `bash tools/run_thpaudio_property_test.sh --seed=0xC0DEC0DE --op=L0 -v`
+  - `bash tools/run_thpaudio_property_test.sh --seed=0xC0DEC0DE --op=L4 -v`
+## 2026-02-11: Synced latest candidate-coverage doc push
+
+- Merged latest `origin/pbt/remaining-sdk-coverage` updates into `codex/macos-codex53-pbt-audit`.
+- `docs/codex/PROJECT_STATUS.md` now includes the "PBT coverage — complete" status block from that push.
+- Kept local OSAlloc-style `--op` upgrades in all new suites during conflict resolution.
+- Quick regression checks after merge (PASS):
+  - `bash tools/run_dvdqueue_property_test.sh --num-runs=5 --seed=0xC0DEC0DE --op=L0`
+  - `bash tools/run_gxproject_property_test.sh --num-runs=5 --seed=0xC0DEC0DE --op=L5`
+  - `bash tools/run_thpaudio_property_test.sh --num-runs=5 --seed=0xC0DEC0DE --op=L4`
+## 2026-02-11: Branch consolidation into codex/integration-all
+
+- Merged latest remote work from:
+  - `origin/codex/macos-codex53-pbt-audit`
+  - `origin/pbt/remaining-sdk-coverage`
+- Resolved add/add conflicts for new PBT suite files by keeping integration-all copies with OSAlloc-style `--op` targeting.
+- Verified no remote branch remains ahead of `codex/integration-all` after consolidation (`ahead_of_integration_all` list empty).
+- Post-merge validation (PASS):
+  - `tools/run_dvdqueue_property_test.sh --num-runs=20 --seed=0xC0DEC0DE --op=L4`
+  - `tools/run_gxtexture_property_test.sh --num-runs=20 --seed=0xC0DEC0DE --op=L4`
+  - `tools/run_osalarm_property_test.sh --num-runs=20 --seed=0xC0DEC0DE --op=L4`
+  - `tools/run_gxproject_property_test.sh --num-runs=10 --seed=0xC0DEC0DE --op=L5`
+  - `tools/run_gxz16_property_test.sh --num-runs=10 --seed=0xC0DEC0DE --op=L5`
+  - `tools/run_gxyscale_property_test.sh --num-runs=10 --seed=0xC0DEC0DE --op=L5`
+  - `tools/run_thpaudio_property_test.sh --num-runs=10 --seed=0xC0DEC0DE --op=L4`
