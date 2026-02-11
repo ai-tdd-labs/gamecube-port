@@ -36,7 +36,10 @@ echo "[property-build] dvdfs_property_test (CC=$CC)"
 "$CC" "${opt_flags[@]}" -ffunction-sections -fdata-sections \
   -D_XOPEN_SOURCE=700 -D_CRT_SECURE_NO_WARNINGS \
   -I"$repo_root/tests" \
+  -I"$repo_root/src/sdk_port" \
   "$repo_root/tests/sdk/dvd/dvdfs/property/dvdfs_property_test.c" \
+  "$repo_root/src/sdk_port/gc_mem.c" \
+  "$repo_root/src/sdk_port/dvd/DVD.c" \
   "${ld_gc_flags[@]}" \
   -o "$exe"
 

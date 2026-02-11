@@ -16,6 +16,7 @@
 #include <ctype.h>
 
 #include "dvdfs_oracle.h"
+#include "gc_mem.h"
 
 typedef uint8_t  u8;
 typedef uint32_t u32;
@@ -74,198 +75,12 @@ typedef struct FSTEntryHost_s {
 #define parentDir_h(fst, i)  ((fst)[(i)].parentOrPosition)
 #define nextDir_h(fst, i)    ((fst)[(i)].nextEntryOrLength)
 
-/* --------------------------------------------------------------------------
- * Port implementation under test (independent from oracle)
- * -------------------------------------------------------------------------- */
-
-typedef struct {
-    OSBootInfoHost *boot;
-    FSTEntryHost *fst;
-    char *str;
-    u32 max_entry;
-    u32 cur_dir;
-    u32 long_names;
-} DvdfsPort;
-
-static void dvdfs_port_reset(DvdfsPort *p) {
-    memset(p, 0, sizeof(*p));
-}
-
-static void dvdfs_port_init(DvdfsPort *p, void *mem_base_0x80000000) {
-    dvdfs_port_reset(p);
-
-    /* Our host layout: bootinfo lives at offset 0 in the buffer. */
-    p->boot = (OSBootInfoHost *)mem_base_0x80000000;
-    p->fst = (FSTEntryHost *)p->boot->FSTLocation;
-    if (p->fst) {
-        p->max_entry = p->fst[0].nextEntryOrLength;
-        p->str = (char *)&p->fst[p->max_entry];
-    }
-    p->cur_dir = 0;
-    p->long_names = 0;
-}
-
-static int port_is_same(const char *path, const char *s) {
-    while (*s != '\0') {
-        if (tolower((unsigned char)*path++) != tolower((unsigned char)*s++)) {
-            return 0;
-        }
-    }
-
-    return (*path == '/' || *path == '\0') ? 1 : 0;
-}
-
-static int port_path_is_illegal_83(const char *seg, u32 *out_len) {
-    const char *ptr;
-    const char *ext_start = NULL;
-    int ext = 0;
-
-    for (ptr = seg; *ptr != '\0' && *ptr != '/'; ptr++) {
-        if (*ptr == ' ') {
-            *out_len = (u32)(ptr - seg);
-            return 1;
-        }
-        if (*ptr == '.') {
-            if (ext) {
-                *out_len = (u32)(ptr - seg);
-                return 1;
-            }
-            if ((u32)(ptr - seg) > 8u) {
-                *out_len = (u32)(ptr - seg);
-                return 1;
-            }
-            ext = 1;
-            ext_start = ptr + 1;
-        }
-    }
-
-    *out_len = (u32)(ptr - seg);
-
-    if (ext && ext_start) {
-        if ((u32)(ptr - ext_start) > 3u) return 1;
-    }
-    return 0;
-}
-
-static s32 dvdfs_port_path_to_entry(DvdfsPort *p, char *path) {
-    u32 dirLookAt = p->cur_dir;
-
-    while (1) {
-        const char *ptr;
-        char *name;
-        BOOL isDir;
-        u32 length;
-        u32 i;
-
-        if (*path == '\0') {
-            return (s32)dirLookAt;
-        } else if (*path == '/') {
-            dirLookAt = 0;
-            path++;
-            continue;
-        } else if (*path == '.') {
-            if (*(path + 1) == '.') {
-                if (*(path + 2) == '/') {
-                    dirLookAt = parentDir_h(p->fst, dirLookAt);
-                    path += 3;
-                    continue;
-                } else if (*(path + 2) == '\0') {
-                    return (s32)parentDir_h(p->fst, dirLookAt);
-                }
-            } else if (*(path + 1) == '/') {
-                path += 2;
-                continue;
-            } else if (*(path + 1) == '\0') {
-                return (s32)dirLookAt;
-            }
-        }
-
-        /* Find segment end. */
-        for (ptr = path; (*ptr != '\0') && (*ptr != '/'); ptr++) {
-            ;
-        }
-
-        if (p->long_names == 0) {
-            u32 dummy_len = 0;
-            if (port_path_is_illegal_83(path, &dummy_len)) {
-                return -1;
-            }
-        }
-
-        isDir = (*ptr == '\0') ? FALSE : TRUE;
-        length = (u32)(ptr - path);
-
-        for (i = dirLookAt + 1; i < nextDir_h(p->fst, dirLookAt);
-             i = entryIsDir_h(p->fst, i) ? nextDir_h(p->fst, i) : (i + 1)) {
-
-            if ((entryIsDir_h(p->fst, i) == FALSE) && (isDir == TRUE)) {
-                continue;
-            }
-
-            name = p->str + stringOff_h(p->fst, i);
-            if (port_is_same(path, name)) {
-                goto next_hier;
-            }
-        }
-
-        return -1;
-
-    next_hier:
-        if (!isDir) {
-            return (s32)i;
-        }
-        dirLookAt = i;
-        path += length + 1;
-    }
-}
-
-static u32 port_my_strncpy(char *dst, const char *src, u32 maxlen) {
-    u32 i = maxlen;
-    while (i > 0 && *src != '\0') {
-        *dst++ = *src++;
-        i--;
-    }
-    return maxlen - i;
-}
-
-static u32 port_entry_to_path_rec(DvdfsPort *p, u32 entry, char *path, u32 maxlen) {
-    if (entry == 0) return 0;
-
-    u32 loc = port_entry_to_path_rec(p, parentDir_h(p->fst, entry), path, maxlen);
-    if (loc == maxlen) return loc;
-
-    const char *name = p->str + stringOff_h(p->fst, entry);
-    path[loc++] = '/';
-    loc += port_my_strncpy(path + loc, name, maxlen - loc);
-    return loc;
-}
-
-static BOOL dvdfs_port_entry_to_path(DvdfsPort *p, s32 entry, char *out, u32 maxlen) {
-    u32 loc = port_entry_to_path_rec(p, (u32)entry, out, maxlen);
-    if (loc == maxlen) {
-        out[maxlen - 1] = '\0';
-        return FALSE;
-    }
-
-    if (entryIsDir_h(p->fst, (u32)entry)) {
-        if (loc == maxlen - 1) {
-            out[loc] = '\0';
-            return FALSE;
-        }
-        out[loc++] = '/';
-    }
-
-    out[loc] = '\0';
-    return TRUE;
-}
-
-static BOOL dvdfs_port_chdir(DvdfsPort *p, char *path) {
-    s32 entry = dvdfs_port_path_to_entry(p, path);
-    if (entry < 0) return FALSE;
-    if (!entryIsDir_h(p->fst, (u32)entry)) return FALSE;
-    p->cur_dir = (u32)entry;
-    return TRUE;
-}
+/* sdk_port functions under test */
+extern void __DVDFSInit(void);
+extern s32 DVDConvertPathToEntrynum(char *pathPtr);
+extern int DVDChangeDir(char *dirName);
+extern int DVDGetCurrentDir(char *path, u32 maxlen);
+extern void gc_dvd_test_reset_paths(void);
 
 /* --------------------------------------------------------------------------
  * Test data generation
@@ -278,6 +93,7 @@ static BOOL dvdfs_port_chdir(DvdfsPort *p, char *path) {
 #define MAX_STR       32768
 
 static u8 g_mem[MEM_SIZE];
+static u8 g_mem_sdk[MEM_SIZE];
 static char g_str_tmp[MAX_STR];
 static u32 g_parent[MAX_ENTRIES];
 
@@ -442,6 +258,41 @@ static int build_simple_tree(uint32_t seed, FstBuild *out) {
     return 0;
 }
 
+static inline void store_u32be_mem(u8 *mem, u32 off, u32 v) {
+    mem[off + 0] = (u8)(v >> 24);
+    mem[off + 1] = (u8)(v >> 16);
+    mem[off + 2] = (u8)(v >> 8);
+    mem[off + 3] = (u8)(v >> 0);
+}
+
+/* Serialize host-endian synthetic tree to big-endian MEM1 image for sdk_port. */
+static int build_sdk_mem_image(const FstBuild *fb) {
+    memset(g_mem_sdk, 0, sizeof(g_mem_sdk));
+
+    const u32 fst_cached_addr = 0x80000000u + FST_OFF;
+    const u32 str_off = FST_OFF + fb->n_entries * 12u;
+    const u32 str_cached_addr = 0x80000000u + str_off;
+
+    if (str_off + fb->str_len + 1 >= MEM_SIZE) return 1;
+
+    /* OSBootInfo.FSTLocation at offset 0x30 (big-endian pointer). */
+    store_u32be_mem(g_mem_sdk, 0x30, fst_cached_addr);
+    store_u32be_mem(g_mem_sdk, 0x34, 0);
+
+    /* FST entries in big-endian. */
+    for (u32 i = 0; i < fb->n_entries; i++) {
+        const FSTEntryHost *e = &fb->fst[i];
+        const u32 base = FST_OFF + i * 12u;
+        store_u32be_mem(g_mem_sdk, base + 0, e->isDirAndStringOff);
+        store_u32be_mem(g_mem_sdk, base + 4, e->parentOrPosition);
+        store_u32be_mem(g_mem_sdk, base + 8, e->nextEntryOrLength);
+    }
+
+    memcpy(g_mem_sdk + str_off, fb->str, fb->str_len + 1);
+    (void)str_cached_addr;
+    return 0;
+}
+
 /* Build canonical absolute path for an entry (dirs end with /). */
 static int build_canonical_path(FSTEntryHost *fst, char *str, u32 entry, char *out, u32 maxlen) {
     u32 stack[64];
@@ -508,18 +359,20 @@ int main(int argc, char **argv) {
         }
     }
 
-    DvdfsPort port;
-
     for (int run = 0; run < (seed ? 1 : num_runs); run++) {
         uint32_t s = seed ? seed : (0x9E3779B9u ^ (uint32_t)run * 0x85EBCA6Bu);
         uint32_t rng = s ? s : 1;
 
         FstBuild fb;
         if (build_simple_tree(s, &fb) != 0) die("tree build failed");
+        if (build_sdk_mem_image(&fb) != 0) die("sdk mem image build failed");
 
         /* init both */
         dvdfs_oracle_init(g_mem);
-        dvdfs_port_init(&port, g_mem);
+        gc_mem_set(0x80000000u, MEM_SIZE, g_mem_sdk);
+        gc_dvd_test_reset_paths();
+        __DVDFSInit();
+        (void)DVDChangeDir("/");
 
         /* Sanity: both should resolve canonical paths for every entry. */
         for (u32 e = 0; e < fb.n_entries; e++) {
@@ -527,7 +380,7 @@ int main(int argc, char **argv) {
             if (build_canonical_path(fb.fst, fb.str, e, path, sizeof(path)) != 0) continue;
 
             s32 oe = dvdfs_oracle_path_to_entry(path);
-            s32 pe = dvdfs_port_path_to_entry(&port, path);
+            s32 pe = DVDConvertPathToEntrynum(path);
             if (oe != pe || oe != (s32)e) {
                 fail_case(s, run, (int)e, "canon_path_to_entry", path);
                 fprintf(stderr, "  entry=%u oracle=%d port=%d path='%s'\n", e, oe, pe, path);
@@ -537,9 +390,18 @@ int main(int argc, char **argv) {
             if (entryIsDir_h(fb.fst, e)) {
                 char o_out[512], p_out[512];
                 BOOL ok1 = dvdfs_oracle_entry_to_path((s32)e, o_out, sizeof(o_out));
-                BOOL ok2 = dvdfs_port_entry_to_path(&port, (s32)e, p_out, sizeof(p_out));
-                if (ok1 != ok2 || strcmp(o_out, p_out) != 0) {
+                BOOL ok2 = (BOOL)DVDChangeDir(path);
+                if (ok1 != ok2) {
                     fail_case(s, run, (int)e, "entry_to_path", "mismatch");
+                    fprintf(stderr, "  oracle='%s' chdir_ok=%d port_chdir_ok=%d\n", o_out, ok1, ok2);
+                    return 1;
+                }
+                if (!DVDGetCurrentDir(p_out, sizeof(p_out))) {
+                    fail_case(s, run, (int)e, "entry_to_path", "DVDGetCurrentDir failed");
+                    return 1;
+                }
+                if (strcmp(o_out, p_out) != 0) {
+                    fail_case(s, run, (int)e, "entry_to_path", "path mismatch");
                     fprintf(stderr, "  oracle='%s' port='%s'\n", o_out, p_out);
                     return 1;
                 }
@@ -557,23 +419,41 @@ int main(int argc, char **argv) {
                 if (build_canonical_path(fb.fst, fb.str, e, path, sizeof(path)) != 0) continue;
 
                 s32 oe = dvdfs_oracle_path_to_entry(path);
-                s32 pe = dvdfs_port_path_to_entry(&port, path);
+                s32 pe = DVDConvertPathToEntrynum(path);
                 if (oe != pe) {
                     fail_case(s, run, step, "path_to_entry", "mismatch");
                     fprintf(stderr, "  path='%s' oracle=%d port=%d\n", path, oe, pe);
                     return 1;
                 }
             } else if (op == 1) {
-                /* entry -> path */
-                u32 e = xorshift32(&rng) % fb.n_entries;
+                /* entry -> path for directories */
+                u32 tries = 0;
+                u32 e;
+                do {
+                    e = xorshift32(&rng) % fb.n_entries;
+                    tries++;
+                } while (tries < 20 && !entryIsDir_h(fb.fst, e));
+                if (!entryIsDir_h(fb.fst, e)) {
+                    continue;
+                }
                 char o_out[256], p_out[256];
                 BOOL ok1 = dvdfs_oracle_entry_to_path((s32)e, o_out, sizeof(o_out));
-                BOOL ok2 = dvdfs_port_entry_to_path(&port, (s32)e, p_out, sizeof(p_out));
-                if (ok1 != ok2 || strcmp(o_out, p_out) != 0) {
+                BOOL ok2 = (BOOL)DVDChangeDir(o_out);
+                if (ok1 != ok2) {
                     fail_case(s, run, step, "entry_to_path", "mismatch");
-                    fprintf(stderr, "  entry=%u oracle_ok=%d port_ok=%d\n", e, ok1, ok2);
-                    fprintf(stderr, "  oracle='%s' port='%s'\n", o_out, p_out);
+                    fprintf(stderr, "  entry=%u oracle_ok=%d port_ok=%d path='%s'\n", e, ok1, ok2, o_out);
                     return 1;
+                }
+                if (ok2) {
+                    if (!DVDGetCurrentDir(p_out, sizeof(p_out))) {
+                        fail_case(s, run, step, "entry_to_path", "DVDGetCurrentDir failed");
+                        return 1;
+                    }
+                    if (strcmp(o_out, p_out) != 0) {
+                        fail_case(s, run, step, "entry_to_path", "path mismatch");
+                        fprintf(stderr, "  oracle='%s' port='%s'\n", o_out, p_out);
+                        return 1;
+                    }
                 }
             } else if (op == 2) {
                 /* chdir to a directory (pick a dir entry, or root) */
@@ -588,7 +468,7 @@ int main(int argc, char **argv) {
                 if (build_canonical_path(fb.fst, fb.str, e, path, sizeof(path)) != 0) continue;
 
                 BOOL ok1 = dvdfs_oracle_chdir(path);
-                BOOL ok2 = dvdfs_port_chdir(&port, path);
+                BOOL ok2 = (BOOL)DVDChangeDir(path);
                 if (ok1 != ok2) {
                     fail_case(s, run, step, "chdir", "mismatch");
                     fprintf(stderr, "  path='%s' oracle_ok=%d port_ok=%d\n", path, ok1, ok2);
@@ -599,7 +479,7 @@ int main(int argc, char **argv) {
                 char bad[64];
                 make_name_83(bad, &rng, 1);
                 s32 oe = dvdfs_oracle_path_to_entry(bad);
-                s32 pe = dvdfs_port_path_to_entry(&port, bad);
+                s32 pe = DVDConvertPathToEntrynum(bad);
                 if (oe != pe) {
                     fail_case(s, run, step, "illegal_83", "mismatch");
                     fprintf(stderr, "  path='%s' oracle=%d port=%d\n", bad, oe, pe);
