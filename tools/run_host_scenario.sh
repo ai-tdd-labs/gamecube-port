@@ -152,6 +152,7 @@ case "$subsystem" in
       "$repo_root/src/sdk_port/os/OSSystem.c"
       "$repo_root/src/sdk_port/os/OSRtc.c"
       "$repo_root/src/sdk_port/os/OSStopwatch.c"
+      "$repo_root/src/sdk_port/os/OSModule.c"
     )
     ;;
 esac
@@ -255,6 +256,7 @@ cc "${opt_flags[@]}" -ffunction-sections -fdata-sections \
   "${extra_cflags[@]+${extra_cflags[@]}}" \
   -I"$repo_root/tests" \
   -I"$repo_root/tests/harness" \
+  -I"$repo_root/tests/workload/include" \
   -I"$repo_root/src" \
   -I"$repo_root/src/sdk_port" \
   "${extra_includes[@]+${extra_includes[@]}}" \

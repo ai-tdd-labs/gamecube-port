@@ -118,6 +118,62 @@ Rules:
   `HuSysInit -> HuPrcInit -> HuPadInit -> GWInit`.
   Evidence: `tests/workload/mp4/mp4_gwinit_001_scenario.c`; `tests/actual/workload/mp4_gwinit_001.bin` marker `MP43 DEADBEEF`.
 - `GWInit` is compiled from a deliberately small slice of decomp `gamework.c` (reachability-only).
+
+### MP4 HuPrcInit blocker inventory
+- `HuPrcInit` itself is not an SDK blocker: decomp implementation only resets process scheduler globals (`processcnt`, `processtop`) and does not call Nintendo SDK functions.
+  Evidence:
+  - `/Users/chrislamark/projects/recomp/gamecube_static_recomp/decomp_mario_party_4/src/game/main.c` (call order)
+  - `/Users/chrislamark/projects/recomp/gamecube_static_recomp/decomp_mario_party_4/src/game/process.c` (`HuPrcInit` body)
+- Practical chain implication: next forward-progress checkpoint remains `GWInit`/post-`GWInit` path, not additional SDK port work for `HuPrcInit`.
+  Evidence: `/Users/chrislamark/projects/gamecube/docs/sdk/mp4/HuPrcInit_blockers.md`
+
+### MP4 GWInit checkpoint: RVZ vs host probe
+- Real RVZ breakpoint on `GWInit` hits at symbol PC `0x800308B8`.
+  Evidence: `tests/oracles/mp4_rvz/probes/gwinit_pc_800308B8_hit1/`.
+- Host workload checkpoint `mp4_gwinit_001_scenario` runs and emits probe windows.
+  Evidence: `tests/oracles/mp4_rvz/probes/host_gwinit_mp4_gwinit_001/`.
+- Semantic probe comparison is aligned for core SDK state fields:
+  - `arenaLo`, `arenaHi`
+  - `__OSCurrHeap`
+  - `__OSArenaLo`
+  - `__OSArenaHi`
+  Evidence: `tests/oracles/mp4_rvz/probes/host_gwinit_mp4_gwinit_001/compare.txt`.
+
+### MP4 pfInit inventory
+- `pfInit`/`pfClsScr` path introduces no uncovered SDK blockers.
+- `printfunc.c` contains 40 unique SDK calls (mostly GX draw setup/vertex ops + `VIGetNextField`), and all are already covered in `MP4_chain_all.csv`.
+  Evidence:
+  - `docs/sdk/mp4/pfInit_blockers.md`
+  - `decomp_mario_party_4/src/game/printfunc.c`
+
+### MP4 HuSprInit checkpoint: RVZ vs host probe
+- Real RVZ breakpoint on `HuSprInit` hits at symbol PC `0x8000D348`.
+  Evidence: `tests/oracles/mp4_rvz/probes/husprinit_pc_8000D348_hit1/`.
+- Host workload checkpoint `mp4_husprinit_001_scenario` runs and emits probe windows.
+  Evidence: `tests/oracles/mp4_rvz/probes/host_husprinit_mp4_husprinit_001/`.
+- Semantic probe comparison aligned for core SDK state fields:
+  - `arenaLo`, `arenaHi`
+  - `__OSCurrHeap`
+  - `__OSArenaLo`
+  - `__OSArenaHi`
+  Evidence: `tests/oracles/mp4_rvz/probes/host_husprinit_mp4_husprinit_001/compare_husprinit.txt`.
+
+### MP4 Hu3DInit inventory
+- In the `Hu3DInit` + immediate `Hu3DPreProc`/`Hu3DExec` window, no new uncovered SDK blockers were found.
+- Calls in this window (`GXSetCopyClear`, `GXSetCurrentMtx`, `GXSetDrawDone`, `GXWaitDrawDone`, `GXSetFog`, `GXInvalidateVtxCache`) are already covered.
+  Evidence: `docs/sdk/mp4/Hu3DInit_blockers.md`.
+
+### MP4 HuPerfCreate inventory
+- `HuPerfCreate` has a single direct SDK dependency: `OSInitStopwatch`.
+- That dependency is already covered in the SDK suite set.
+  Evidence: `docs/sdk/mp4/HuPerfCreate_blockers.md`.
+
+### MP4 omMasterInit inventory
+- `omMasterInit` direct body has no direct SDK calls, but immediate transitive object-DLL path (`objdll.c`) introduces two uncovered SDK calls:
+  - `OSLink`
+  - `OSUnlink`
+- These are currently the first clear unresolved SDK blockers for forward progression after `WipeInit`.
+  Evidence: `docs/sdk/mp4/omMasterInit_blockers.md`.
   Evidence: `tests/workload/mp4/slices/gwinit_only.c` (mirrors decomp `decomp_mario_party_4/src/game/gamework.c` `GWInit` body and helpers).
 - Retail MP4 RVZ MEM1 oracle at `GWInit` PC `0x800308B8`:
   - file: `tests/oracles/mp4_rvz/mem1_at_pc_800308B8_gwinit.bin`
@@ -1132,3 +1188,152 @@ Notes:
   - `tests/sdk/gx/gx_init_tex_obj_lod/actual/gx_init_tex_obj_lod_mp4_pfdrawfonts_001.bin`
   - `tools/ram_compare.py` result: PASS (bit-identical).
 - Updated `docs/sdk/mp4/MP4_chain_all.csv` row `pfDrawFonts -> GXInitTexObjLOD` from `0/1` to `1/1` and marked covered (`y`).
+
+## 2026-02-11: HuPadInit blocker retail replay refresh
+- Revalidated blocker replays with current trace corpus:
+  - `OSDisableInterrupts/OSRestoreInterrupts`: harvested (unique=3 target) and replay PASS over existing hit set under `tests/traces/os_disable_interrupts/mp4_rvz_v1/`.
+  - `VISetPostRetraceCallback`: replay PASS on `tests/traces/vi_set_post_retrace_callback/mp4_rvz_v2/hit_000001_pc_800C0DD8_lr_80005A98`.
+  - `SISetSamplingRate`: replay PASS for 3 unique cases from `tests/traces/si_set_sampling_rate/mp4_rvz_si_ctrl/`.
+  - `PADControlMotor`: replay PASS on `tests/traces/pad_control_motor/mp4_rvz_v1/hit_000002_pc_800C4F34_lr_80005B00`.
+- Tooling note:
+  - `harvest_and_replay_vi_set_post_retrace_callback.sh` and `harvest_and_replay_pad_control_motor.sh` can hang after collecting hits (no terminal completion message).
+  - Workaround used in this session: stop harvest process after hit files appear, then run replay script directly for collected hit dirs.
+
+## 2026-02-11: Harvest teardown hang fixed (trace_pc_entry_exit)
+- Root cause: `tools/trace_pc_entry_exit.py` could block during Dolphin teardown due a second `wait()` without timeout after kill path.
+- Fix:
+  - Added bounded teardown in `tools/trace_pc_entry_exit.py`:
+    - `wait(timeout=5)` after terminate
+    - fallback `kill()` + `wait(timeout=5)`
+    - final non-blocking SIGKILL fallback (best-effort), no indefinite wait.
+- Verification:
+  - `GC_MAX_UNIQUE=1 GC_MAX_HITS=10 GC_TIMEOUT=25 tools/harvest_and_replay_vi_set_post_retrace_callback.sh <rvz>`: completes and replays PASS.
+  - `GC_MAX_UNIQUE=1 GC_MAX_HITS=10 GC_TIMEOUT=25 tools/harvest_and_replay_pad_control_motor.sh <rvz>`: completes and replays PASS.
+
+## 2026-02-11: PADRead one-button retail harvest/replay
+- Added script: `tools/harvest_and_replay_pad_read.sh`
+  - Entry PC: `0x800C4B88` (`PADRead`)
+  - Dump window: `status:@r3:0x30`
+  - Output trace dir: `tests/traces/pad_read/mp4_rvz_v3/`
+- Validation run:
+  - `GC_MAX_UNIQUE=1 GC_MAX_HITS=10 GC_TIMEOUT=25 tools/harvest_and_replay_pad_read.sh <rvz>`
+  - Harvest completed with 1 unique case.
+  - Replay PASS: `hit_000001_pc_800C4B88_lr_8005A7F0` (`ret=0x80000000`).
+
+## 2026-02-11: Post-HuDataInit blocker trace (decomp callflow)
+- Traced `HuDataDirRead -> HuDataReadNumHeapShortForce -> HuDvdDataReadWait` in MP4 decomp:
+  - `DVDConvertPathToEntrynum`
+  - `DVDFastOpen`
+  - `DVDReadAsync`
+  - `DVDGetCommandBlockStatus`
+  - `DCInvalidateRange`
+  - `DVDClose`
+  - `OSRoundUp32B` / `OSRoundDown32B`
+- Conclusion:
+  - Immediate post-`HuDataInit` SDK blockers in this path are already covered in current MP4 chain suites.
+  - Next higher-risk blockers move to frame-loop and streaming paths (e.g. THP path using `DVDReadPrio` / `DVDReadAsyncPrio`).
+
+## 2026-02-11: OSLink retail trace harvest (omMaster blocker path)
+- Captured first real-game `OSLink` entry/exit case from MP4 RVZ:
+  - Entry PC: `0x800B7D24`
+  - Output dir: `tests/traces/os_link/mp4_rvz_v1/`
+  - Hit dir: `tests/traces/os_link/mp4_rvz_v1/hit_000001_pc_800B7D24_lr_8003222C/`
+- Captured windows:
+  - `module_info` (`@r3`, 0x100 bytes)
+  - `bss` (`@r4`, 0x80 bytes)
+  - `os_module_list` (`0x800030C8`, 0x20 bytes)
+  - `os_string_table` (`0x800030D0`, 0x10 bytes)
+- Added one-button harvest scripts:
+  - `tools/harvest_and_replay_os_link.sh`
+  - `tools/harvest_and_replay_os_unlink.sh`
+- Added first replay harness:
+  - `tools/replay_trace_case_os_link.sh`
+  - scenario: `tests/sdk/os/os_link/host/os_link_rvz_trace_replay_001_scenario.c`
+- Validation:
+  - `GC_ALLOW_DIRTY=1 tools/replay_trace_case_os_link.sh tests/traces/os_link/mp4_rvz_v1/hit_000001_pc_800B7D24_lr_8003222C`
+  - pass marker: `0xDEADBEEF`
+  - core semantics aligned for this case (return/head/tail/link nullability flags).
+- `OSUnlink` harvest status:
+  - Entry PC `0x800B8180` produced `0` hits in boot-window runs (60s and 240s).
+  - Current conclusion: `OSUnlink` path is not reached in early boot; needs explicit later-game trigger path for RVZ harvesting.
+  - Additional evidence: overlay-kill checkpoint also not reached in boot-window:
+    - `tools/dump_expected_rvz_probe_at_pc.sh ... 0x8002F014 ... 180 1`
+    - result: breakpoint `omOvlKill` not hit before timeout.
+  - Trigger-path memo saved at:
+    - `docs/sdk/mp4/OSUnlink_trigger_path.md`
+
+## 2026-02-11: DVDReadPrio MP4 suite added and passing
+- Added suite:
+  - DOL: `tests/sdk/dvd/dvd_read_prio/dol/mp4/dvd_read_prio_mp4_init_mem_001/`
+  - Host: `tests/sdk/dvd/dvd_read_prio/host/dvd_read_prio_mp4_init_mem_001_scenario.c`
+- Deterministic fixture:
+  - path `/meminfo.bin`, read window `(len=0x20, off=0x10)`, priority `2`.
+- Validation:
+  - expected: `tests/sdk/dvd/dvd_read_prio/expected/dvd_read_prio_mp4_init_mem_001.bin`
+  - actual: `tests/sdk/dvd/dvd_read_prio/actual/dvd_read_prio_mp4_init_mem_001.bin`
+  - compare: `PASS` (bit-identical).
+
+## 2026-02-11: PBT backlog execution batch (new suites)
+- Added and validated new property suites (all 200k iterations, seed `0xC0DEC0DE`):
+  - `tests/pbt/os/os_arena/os_arena_pbt.c`
+  - `tests/pbt/os/os_interrupts/os_interrupts_pbt.c`
+  - `tests/pbt/os/os_module_queue/os_module_queue_pbt.c`
+  - `tests/pbt/si/si_sampling_rate/si_sampling_rate_pbt.c`
+  - `tests/pbt/si/si_get_response/si_get_response_pbt.c`
+  - `tests/pbt/pad/pad_control_motor/pad_control_motor_pbt.c`
+  - `tests/pbt/pad/pad_reset_clamp/pad_reset_clamp_pbt.c`
+  - `tests/pbt/vi/vi_post_retrace_callback/vi_post_retrace_callback_pbt.c`
+  - `tests/pbt/dvd/dvd_read_prio/dvd_read_prio_pbt.c`
+  - `tests/pbt/dvd/dvd_read_async_prio/dvd_read_async_prio_pbt.c`
+  - `tests/pbt/dvd/dvd_convert_path/dvd_convert_path_pbt.c`
+- Runner extended:
+  - `tools/run_pbt.sh` suites added:
+    - `os_arena`
+    - `os_interrupts`
+    - `os_module_queue`
+    - `si_sampling_rate`
+    - `si_get_response`
+    - `pad_control_motor`
+    - `pad_reset_clamp`
+    - `vi_post_retrace_callback`
+    - `dvd_read_prio`
+    - `dvd_read_async_prio`
+    - `dvd_convert_path`
+- New backlog index file:
+  - `docs/codex/PBT_BACKLOG.md`
+- One failed first attempt (useful fact):
+  - Initial `si_get_response` PBT used a host stack pointer as output and failed.
+  - Correct behavior requires MEM1 output address (function writes through emulated RAM), after fix the suite passes.
+  - Initial `dvd_convert_path` fuzz run failed due to duplicate generated paths mapping to first-match index.
+  - Fix: enforce uniqueness in generated path table before checking index mapping.
+
+## 2026-02-11: GX PBT batch unblocked and closed
+- Added missing runner wiring in `tools/run_pbt.sh` for:
+  - `gx_texcopy_relation`
+  - `gx_vtxdesc_packing`
+  - `gx_alpha_tev_packing`
+- Build fix:
+  - Link `src/sdk_port/gc_mem.c` with all GX PBT suites (`GX.c` references `gc_mem_ptr`).
+- Validation (all PASS, 200k iterations, seed `0xC0DEC0DE`):
+  - `tools/run_pbt.sh gx_texcopy_relation 200000 0xC0DEC0DE`
+  - `tools/run_pbt.sh gx_vtxdesc_packing 200000 0xC0DEC0DE`
+  - `tools/run_pbt.sh gx_alpha_tev_packing 200000 0xC0DEC0DE`
+- Result:
+  - BD tasks closed:
+    - `gamecube-8b2x`
+    - `gamecube-hw36`
+    - `gamecube-wqzd`
+
+## 2026-02-11: OSUnlink overlay-chain probing + movie pipeline
+- Added chain probe script:
+  - `tools/probe_os_unlink_overlay_chain.sh`
+  - probes in one command: `omOvlGotoEx` (`0x8002EEC0`) -> `omOvlKill` (`0x8002F014`) -> `omDLLNumEnd` (`0x80031FA0`) -> `OSUnlink` (`0x800B8180`)
+- Evidence run (45s per probe):
+  - output: `tests/traces/os_unlink/probes/20260211_160246/`
+  - result: no hit for all 4 PCs in boot-window run.
+- Added movie-capable harvest plumbing:
+  - `tools/ram_dump.py` now supports `--movie <.dtm>` (passes `-m` to Dolphin)
+  - `tools/trace_pc_entry_exit.py` now supports `--movie <.dtm>`
+  - new one-button script: `tools/harvest_and_replay_os_unlink_movie.sh`
+- Practical conclusion:
+  - We now have deterministic input automation wiring; remaining blocker is a valid MP4 `.dtm` that reaches overlay unload.

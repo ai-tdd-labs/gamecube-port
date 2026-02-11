@@ -18,6 +18,7 @@ import json
 import os
 from pathlib import Path
 import time
+import signal
 
 # Reuse the Dolphin GDB client + headless launcher used by tools/ram_dump.py.
 from ram_dump import DolphinGDB, start_dolphin  # type: ignore
@@ -166,6 +167,7 @@ def main() -> None:
     ap.add_argument("--max-unique", type=int, default=25, help="Stop after collecting N unique input snapshots")
     ap.add_argument("--max-hits", type=int, default=2000, help="Hard cap on total breakpoint hits processed")
     ap.add_argument("--delay", type=float, default=8.0, help="Seconds to wait after starting Dolphin")
+    ap.add_argument("--movie", default=None, help="Optional Dolphin DTM movie file (passed to Dolphin -m)")
     ap.add_argument("--timeout", type=float, default=60.0, help="Overall time limit in seconds")
     ap.add_argument("--gdb-host", default="127.0.0.1", help="Dolphin GDB host")
     ap.add_argument("--gdb-port", type=int, default=9090, help="Dolphin GDB port")
@@ -190,7 +192,7 @@ def main() -> None:
     if args.enable_mmu:
         config_overrides.append("Core.MMU=True")
 
-    dolphin_proc = start_dolphin(args.rvz, config_overrides=config_overrides)
+    dolphin_proc = start_dolphin(args.rvz, config_overrides=config_overrides, movie_path=args.movie)
     if dolphin_proc is None:
         raise SystemExit(1)
     time.sleep(args.delay)
@@ -393,8 +395,18 @@ def main() -> None:
             try:
                 dolphin_proc.wait(timeout=5)
             except Exception:
-                dolphin_proc.kill()
-                dolphin_proc.wait()
+                try:
+                    dolphin_proc.kill()
+                except Exception:
+                    pass
+                try:
+                    dolphin_proc.wait(timeout=5)
+                except Exception:
+                    # Last-resort: don't hang trace harvesting on process teardown.
+                    try:
+                        os.kill(dolphin_proc.pid, signal.SIGKILL)
+                    except Exception:
+                        pass
 
     print(f"Collected unique={unique} (hits={hits}) into {out_dir}")
 

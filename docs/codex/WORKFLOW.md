@@ -248,6 +248,17 @@ python3 tools/trace_pc_entry_exit.py \
   --out-dir tests/traces/os_disable_interrupts/mp4_rvz
 ```
 
+Example with deterministic input movie (`.dtm`):
+```
+python3 tools/trace_pc_entry_exit.py \
+  --rvz <MP4_RVZ_PATH> \
+  --movie <OVERLAY_TRIGGER.dtm> \
+  --entry-pc 0x800B8180 \
+  --enable-mmu \
+  --max-unique 10 \
+  --out-dir tests/traces/os_unlink/mp4_rvz_movie_v1
+```
+
 After harvesting a trace case directory (`hit_.../`), prefer turning it into a deterministic
 host replay using a small scenario + replay wrapper script, so it becomes a one-command check:
 
@@ -268,6 +279,12 @@ This executes all four blocker traces in order:
 - `VISetPostRetraceCallback`
 - `SISetSamplingRate`
 - `PADControlMotor`
+
+For PADRead retail replay harvesting, use:
+
+```bash
+tools/harvest_and_replay_pad_read.sh [optional_rvz_path]
+```
 
 ### Host runner dump override (for trace replays)
 

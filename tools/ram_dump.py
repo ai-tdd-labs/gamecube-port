@@ -402,7 +402,7 @@ def parse_int(s):
 DOLPHIN_BIN = "/Applications/Dolphin.app/Contents/MacOS/Dolphin"
 
 
-def start_dolphin(exec_path, dolphin_bin=DOLPHIN_BIN, user_dir=None, config_overrides=None):
+def start_dolphin(exec_path, dolphin_bin=DOLPHIN_BIN, user_dir=None, config_overrides=None, movie_path=None):
     """Start Dolphin in headless mode with GDB stub enabled."""
     if not os.path.isfile(dolphin_bin):
         print(f"Dolphin not found at {dolphin_bin}")
@@ -417,6 +417,8 @@ def start_dolphin(exec_path, dolphin_bin=DOLPHIN_BIN, user_dir=None, config_over
     cmd = [dolphin_bin, "-b", "-d"]
     if user_dir:
         cmd += ["-u", user_dir]
+    if movie_path:
+        cmd += ["-m", movie_path]
     if config_overrides:
         for ov in config_overrides:
             cmd += ["-C", ov]
@@ -466,6 +468,8 @@ Examples:
                         help='Convenience: attempt to enable MMU via Dolphin -C overrides (best-effort).')
     parser.add_argument('--delay', type=float, default=2.0,
                         help='Seconds to wait after starting Dolphin (default: 2)')
+    parser.add_argument('--movie', default=None,
+                        help='Optional Dolphin DTM movie file (passed as -m).')
     parser.add_argument('--host', default='127.0.0.1',
                         help='Dolphin GDB host (default: 127.0.0.1)')
     parser.add_argument('--port', type=int, default=9090,
@@ -529,6 +533,7 @@ Examples:
             args.dolphin,
             user_dir=args.dolphin_userdir,
             config_overrides=config_overrides,
+            movie_path=args.movie,
         )
         if dolphin_proc is None:
             sys.exit(1)

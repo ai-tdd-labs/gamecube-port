@@ -7,6 +7,31 @@
 // Minimal host-safe OS header surface for MP4 workload compilation.
 
 typedef int OSHeapHandle;
+typedef u32 OSModuleID;
+
+typedef struct OSModuleInfo OSModuleInfo;
+typedef struct OSModuleQueue OSModuleQueue;
+typedef struct OSModuleLink OSModuleLink;
+
+struct OSModuleQueue {
+    OSModuleInfo *head;
+    OSModuleInfo *tail;
+};
+
+struct OSModuleLink {
+    OSModuleInfo *next;
+    OSModuleInfo *prev;
+};
+
+struct OSModuleInfo {
+    OSModuleID id;
+    OSModuleLink link;
+    u32 numSections;
+    u32 sectionInfoOffset;
+    u32 nameOffset;
+    u32 nameSize;
+    u32 version;
+};
 
 void OSInit(void);
 void *OSGetArenaLo(void);
@@ -19,6 +44,9 @@ void OSSetCurrentHeap(u32 heap);
 void *OSAlloc(u32 size);
 void OSReport(const char *fmt, ...);
 void OSPanic(const char *file, int line, const char *fmt, ...);
+void OSSetStringTable(const void *stringTable);
+BOOL OSLink(OSModuleInfo *newModule, void *bss);
+BOOL OSUnlink(OSModuleInfo *oldModule);
 
 u32 OSGetConsoleType(void);
 u32 OSGetPhysicalMemSize(void);
