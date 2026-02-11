@@ -4,8 +4,8 @@ Last updated: 2026-02-11
 
 ## Summary
 
-The game calls **~295 unique SDK functions** across 12 modules.
-The port currently implements **~296 functions** (including internal helpers).
+The game calls **~305 unique SDK functions** across 13 modules.
+The port currently implements **~205 functions** (plus internal helpers).
 
 | Module | Game needs | Ported | Coverage | Notes |
 |--------|-----------|--------|----------|-------|
@@ -17,10 +17,11 @@ The port currently implements **~296 functions** (including internal helpers).
 | **SI** | 1 | 1 | **100%** | SISetSamplingRate |
 | **MTX** | 33 | 33 | **100%** | All C_MTX* implemented; MTX*/PSMTX* are macros/aliases |
 | **CARD** | 23 | 4 | **17%** | Only FAT internals; need full mount/open/read/write/close chain |
-| **ARQ** | 2 | 1 | **50%** | ARQPostRequest done; need ARQInit |
+| **AR** | 10 | 0 | **0%** | ARAM memory manager — not started |
+| **ARQ** | 2 | 2 | **100%** | ARQInit + ARQPostRequest (+ internal helpers) |
 | **AI** | 7 | 0 | **0%** | Audio interface — not started |
 | **THP** | 27 | 0 | **0%** | Video player — not started |
-| **TOTAL** | **~295** | **~204** | **~69%** | |
+| **TOTAL** | **~305** | **~205** | **~67%** | |
 
 ---
 
@@ -119,11 +120,29 @@ CARDSetCommentAddress, CARDSetIconAddress, CARDSetIconAnim, CARDSetIconFormat, C
 Note: CARD needs EXI subsystem for actual hardware I/O. For port, we'll simulate
 with host filesystem (similar to Dolphin emulator approach).
 
-### ARQ (1/2 = 50%)
+### AR (0/10 = 0%) — NOT STARTED
 
-**Ported:** ARQPostRequest (async ARAM queue)
+**Missing (10 functions used by game via `armem.c`, `kerent.c`, `msmsys.c`):**
+- `ARInit` — initialize ARAM stack allocator + interrupt handler (hardware: `__DSPRegs`, `__ARChecksize`)
+- `ARCheckInit` — return `__AR_init_flag` (trivial)
+- `ARAlloc` — stack-push allocation from ARAM address space
+- `ARFree` — stack-pop deallocation
+- `ARGetSize` — return `__AR_Size`
+- `ARSetSize` — empty stub in decomp
+- `ARGetBaseAddress` — return `0x4000` constant
+- `ARGetDMAStatus` — read `__DSPRegs[5]` (hardware)
+- `ARRegisterDMACallback` — set/get callback pointer
+- `ARStartDMA` — program DMA registers for ARAM↔MRAM transfer (hardware)
 
-**Missing:** `ARQInit` — simple init function
+Note: ARAlloc/ARFree are pure stack-pointer math (PBT-suitable).
+ARInit/ARStartDMA/ARGetDMAStatus are hardware-coupled (need stubs for port).
+For port, ARAM can be simulated as a host malloc'd buffer with ARStartDMA doing memcpy.
+
+### ARQ (2/2 = 100%)
+
+**Ported:** `port_ARQInit`, `port_ARQPostRequest` (+ internal helpers: PopTaskQueueHi, ServiceQueueLo, InterruptServiceRoutine)
+
+All game-needed ARQ functions are implemented. PBT suite passes (2000 seeds).
 
 ### AI (0/7 = 0%) — NOT STARTED
 
@@ -177,19 +196,19 @@ Locked Cache + paired-single (needs host JPEG decoder).
 
 ### Tier 1 — Required for basic init + main loop
 1. OS stubs: OSGetTick, OSTicksToMilliseconds (macro), OSGetSoundMode, OSResetSystem
-2. GX indirect texturing (7 functions) — used heavily in MP4 board rendering
-3. GX TEV konstant colors (4 functions) — used in multi-texture effects
-4. GX TEV swap modes (2 functions) — used in alpha/color channel routing
-5. Missing GX vertex formats (6 functions) — GXColor4u8, normals, etc.
+2. AR subsystem (10 functions) — ARAM init + allocator used in `armem.c` early boot
+3. GX indirect texturing (7 functions) — used heavily in MP4 board rendering
+4. GX TEV konstant colors (4 functions) — used in multi-texture effects
+5. GX TEV swap modes (2 functions) — used in alpha/color channel routing
+6. Missing GX vertex formats (6 functions) — GXColor4u8, normals, etc.
 
 ### Tier 2 — Required for full game
-6. CARD subsystem (19 functions) — save/load game data
-7. AI subsystem (7 functions) — audio playback
-8. THP subsystem (27 functions) — cutscene video playback
-9. Remaining GX functions (GXProject, GXGetProjectionv, etc.)
+7. CARD subsystem (19 functions) — save/load game data
+8. AI subsystem (7 functions) — audio playback
+9. THP subsystem (27 functions) — cutscene video playback
+10. Remaining GX functions (GXProject, GXGetProjectionv, etc.)
 
 ### Tier 3 — Nice to have
-10. ARQInit (trivial)
 11. PSMTXMultVecArray/Reorder (batch ops)
 12. DVDCancel, PADButtonDown, VISetPreRetraceCallback (minor)
 13. OSLink/OSUnlink (ELF module loading — may not be needed for port)
