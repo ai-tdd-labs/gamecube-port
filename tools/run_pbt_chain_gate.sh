@@ -14,7 +14,8 @@ tools/run_arq_property_test.sh --num-runs=50
 tools/run_card_fat_property_test.sh --num-runs=50
 
 echo "[gate] mutation checks"
-tools/mutations/mtx_identity_zero_diag.sh
+tools/run_mutation_check.sh tools/mutations/mtx_identity_wrong_diagonal.patch -- \
+  tools/run_pbt.sh mtx_core 3000 0xC0DEC0DE
 tools/mutations/dvd_fast_open_force_fail.sh
 tools/mutations/arq_drop_hi_callback.sh
 tools/mutations/card_alloc_no_freeblock_decrement.sh
