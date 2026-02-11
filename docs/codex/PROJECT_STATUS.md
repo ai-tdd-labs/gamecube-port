@@ -22,7 +22,7 @@ big-endian to a host-side C implementation with `gc_mem` big-endian emulation.
 | **Decomp functions available** | ~854 |
 | **Port functions implemented** | ~296 |
 | **Overall completion** | ~35% |
-| **PBT suites passing** | 7 (OSAlloc, MTX, ARQ, CARD-FAT, DVDFS, OSThread, OSThread+Mutex) |
+| **PBT suites passing** | 9 (OSAlloc, MTX+Quat, ARQ, CARD-FAT, DVDFS, OSThread+Mutex+Message, OSStopwatch) |
 
 ### Per-Module Breakdown
 
@@ -30,9 +30,10 @@ big-endian to a host-side C implementation with `gc_mem` big-endian emulation.
 |--------|--------|--------|---|------------|-------|
 | **OSAlloc** | 12 | 16+ | ~100% | 2000/2000 PASS | Extra DL helpers; `-m32` struct match |
 | **OSArena** | 6 | 6 | 100% | — | Fully complete |
-| **OSThread** | 17 | 19 | ~100% | 469k/469k PASS | Scheduler + mutex + priority inheritance + JoinThread |
+| **OSThread** | 17 | 19 | ~100% | 518k/518k PASS | Scheduler + mutex + priority inheritance + JoinThread + Message |
 | **OSMutex** | 11 | 7 | ~64% | (covered by OSThread L4-L6) | Init/Lock/Unlock/TryLock/InitCond/SignalCond; WaitCond/CheckDeadLock not yet |
-| **OSStopwatch** | 6 | 5 | 83% | — | |
+| **OSMessage** | 4 | 4 | 100% | (covered by OSThread L7-L9) | Init/Send/Receive/Jam; circular buffer FIFO+LIFO |
+| **OSStopwatch** | 6 | 6 | 100% | 622k/622k PASS | All 6 functions ported + PBT |
 | **OSCache** | 23 | 3 | 13% | — | Minimal (DCInvalidateRange etc.) |
 | **OSError** | 5 | 2 | 40% | — | |
 | **OSInterrupt** | 12 | 3 | 25% | — | Disable/Restore/Enable stubs |
@@ -42,8 +43,7 @@ big-endian to a host-side C implementation with `gc_mem` big-endian emulation.
 | **OSMemory** | 7 | 0 | 0% | — | |
 | **OSLink** | 9 | 0 | 0% | — | |
 | **OSAlarm** | 5 | 0 | 0% | — | |
-| **OSMessage** | 4 | 0 | 0% | — | |
-| **MTX** | 76 | 43 | 56% | PASS | mtx(23), vec(12), quat(5), mtx44(3) |
+| **MTX** | 76 | 46 | 61% | PASS | mtx(23), vec(12), quat(8), mtx44(3) |
 | **GX** | 261 | 123 | 47% | Integration | Largest module; smoke-test coverage |
 | **VI** | 19 | 15 | 79% | — | |
 | **SI** | 23 | 13 | 57% | — | |
@@ -59,11 +59,11 @@ big-endian to a host-side C implementation with `gc_mem` big-endian emulation.
 
 ### Completion Tiers
 
-1. **Complete (90%+):** OSAlloc, OSArena, OSThread+Mutex
-2. **Well underway (50-80%):** MTX, VI, SI, PAD, OSStopwatch
+1. **Complete (90%+):** OSAlloc, OSArena, OSThread+Mutex, OSMessage, OSStopwatch
+2. **Well underway (50-80%):** MTX+Quat, VI, SI, PAD
 3. **Partial (20-50%):** GX, DVD, OSInterrupt, OSError
 4. **Minimal (<20%):** CARD, AR/ARQ, OSCache, OSRtc, OS core
-5. **Not started (0%):** EXI, DSP, AI, PPCArch, DB, OSContext, OSMemory, OSLink, OSAlarm, OSMessage
+5. **Not started (0%):** EXI, DSP, AI, PPCArch, DB, OSContext, OSMemory, OSLink, OSAlarm
 
 ---
 
@@ -75,13 +75,14 @@ compared against the `sdk_port` implementation using `gc_mem` big-endian emulati
 | Suite | Location | Build Script | Seeds | Checks | Status |
 |-------|----------|-------------|-------|--------|--------|
 | **OSAlloc** | `tests/sdk/os/os_alloc/property/` | `tools/run_property_test.sh` | 2000 | ~60k | PASS |
-| **OSThread+Mutex** | `tests/sdk/os/osthread/property/` | `tools/run_osthread_property_test.sh` | 2000 | ~469k | PASS |
-| **MTX** | `tests/sdk/mtx/property/` | `tools/run_mtx_property_test.sh` | — | — | PASS |
+| **OSThread+Mutex+Message** | `tests/sdk/os/osthread/property/` | `tools/run_osthread_property_test.sh` | 2000 | ~518k | PASS |
+| **MTX+Quat** | `tests/sdk/mtx/property/` | `tools/run_mtx_property_test.sh` | 2000 | 100k | PASS |
+| **OSStopwatch** | `tests/sdk/os/stopwatch/property/` | `tools/run_stopwatch_property_test.sh` | 2000 | ~622k | PASS |
 | **ARQ** | `tests/sdk/ar/property/` | `tools/run_arq_property_test.sh` | — | — | PASS |
 | **CARD-FAT** | `tests/sdk/card/property/` | `tools/run_card_fat_property_test.sh` | — | — | PASS |
 | **DVDFS** | `tests/sdk/dvd/dvdfs/property/` | `tools/run_dvdfs_property_test.sh` | — | — | PASS |
 
-### OSThread+Mutex Test Levels
+### OSThread+Mutex+Message Test Levels
 
 | Level | Name | What it tests |
 |-------|------|---------------|
@@ -92,6 +93,9 @@ compared against the `sdk_port` implementation using `gc_mem` big-endian emulati
 | L4 | Mutex basic | Lock/Unlock/TryLock random mix |
 | L5 | Priority inheritance | Contended lock promotes owner, restored on unlock |
 | L6 | JoinThread | Exit → MORIBUND → Join collects val |
+| L7 | Message basic | Non-blocking Send/Receive across multiple queues |
+| L8 | Message jam | LIFO Jam + FIFO Send wraparound on small queues |
+| L9 | Message + threads | Message ops with thread switching, yield, resume |
 
 ### Additional PBT Suites (core)
 
@@ -144,23 +148,17 @@ compared against the `sdk_port` implementation using `gc_mem` big-endian emulati
 6. **GX:** 47% done but largest module (261 functions); integration-tested
 7. **DVD:** 30% done; async read chain partially covered
 
-### Next PBT Chains (priority order)
+### Recently Completed PBT Chains
 
-1. **OSMessage** (4 functions) — best next candidate
-   - `OSInitMessageQueue`, `OSSendMessage`, `OSReceiveMessage`, `OSJamMessage`
-   - Circular buffer with blocking/non-blocking, FIFO (Send) + LIFO (Jam)
-   - Builds directly on OSThread (sleep/wakeup queues)
-   - Pure logic, no hardware; rich PBT properties (capacity, wraparound, ordering)
-   - Decomp: `external/mp4-decomp/src/dolphin/os/OSMessage.c` (~120 lines)
+1. **OSMessage** (4 functions) — DONE, integrated into OSThread suite as L7-L9
+2. **Quaternion math** (3 new functions) — DONE, integrated into MTX suite
+3. **OSStopwatch** (6 functions) — DONE, standalone PBT suite
 
-2. **Quaternion math** (8 functions) — extends MTX suite
-   - `QUATAdd`, `QUATMultiply`, `QUATNormalize`, `QUATInverse`, `QUATSlerp`, etc.
-   - Pure math, C versions in decomp; fits existing MTX PBT framework
-   - Decomp: `external/mp4-decomp/src/dolphin/mtx/quat.c`
+### Next PBT Candidates
 
-3. **OSStopwatch** (6 functions) — already 83% ported, needs PBT
-   - Pure accumulator logic (min/max/total/hits), mock OSGetTime
-   - Decomp: `external/mp4-decomp/src/dolphin/os/OSStopwatch.c` (~62 lines)
+- **WaitCond/CheckDeadLock** — remaining OSMutex functions
+- **VI/SI/PAD** — hardware interface modules (need mock layer)
+- **CARD** full chain — mount/read/write/format
 
 ### PBT coverage expansion (ongoing)
 

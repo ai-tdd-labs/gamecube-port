@@ -17,6 +17,9 @@
  *   L4: Mutex basic (lock/unlock/trylock)
  *   L5: Priority inheritance (contended lock promotes owner)
  *   L6: JoinThread (collect exit val from moribund thread)
+ *   L7: Message queue basic (send/receive non-blocking)
+ *   L8: Message queue jam (LIFO) + wraparound
+ *   L9: Message queue with threads (blocking sequences)
  */
 #include <stdint.h>
 #include <stdio.h>
@@ -76,12 +79,14 @@ static int32_t gc_load_s32(uint32_t addr)
 }
 
 /* ── Thread / mutex tracking ── */
-#define MAX_TEST_THREADS 16
-#define MAX_TEST_WAITQ   8
-#define MAX_TEST_MUTEXES 8
+#define MAX_TEST_THREADS  16
+#define MAX_TEST_WAITQ     8
+#define MAX_TEST_MUTEXES   8
+#define MAX_TEST_MSGQUEUES 4
 static int g_thread_created[MAX_TEST_THREADS];
 static int g_num_created;
 static int g_mutex_inited[MAX_TEST_MUTEXES];
+static int g_msgq_inited[MAX_TEST_MSGQUEUES];
 
 /* ── CLI options ── */
 static int opt_verbose  = 0;
@@ -108,6 +113,12 @@ static uint32_t oracle_mutex_to_gc(oracle_OSMutex *m)
     return GC_BASE + PORT_MUTEXQ_OFFSET + (uint32_t)m->id * PORT_MUTEX_SIZE;
 }
 
+static uint32_t oracle_msgq_to_gc(oracle_OSMessageQueue *mq)
+{
+    if (!mq) return 0;
+    return GC_BASE + PORT_MSGQ_OFFSET + (uint32_t)mq->id * PORT_MSGQ_SIZE;
+}
+
 /* ── Helpers ── */
 
 static void init_gc_mem(void)
@@ -126,6 +137,7 @@ static void init_both(void)
     g_thread_created[0] = 1; /* default thread */
     g_num_created = 1;
     memset(g_mutex_inited, 0, sizeof(g_mutex_inited));
+    memset(g_msgq_inited, 0, sizeof(g_msgq_inited));
 
     /* Init all mutexes and conds in both oracle and port */
     for (i = 0; i < MAX_TEST_MUTEXES; i++) {
@@ -135,6 +147,10 @@ static void init_both(void)
     for (i = 0; i < ORACLE_MAX_CONDS; i++) {
         oracle_OSInitCond(&oracle_CondPool[i]);
         port_OSInitCond(&g_ps, PORT_COND_ADDR(&g_ps, i));
+    }
+    /* Init message queue pool IDs */
+    for (i = 0; i < ORACLE_MAX_MSGQUEUES; i++) {
+        oracle_MsgQPool[i].id = i;
     }
 }
 
@@ -1012,6 +1028,363 @@ static int test_join_thread(uint32_t seed)
     return fail;
 }
 
+/* ── Message queue state comparison helper ── */
+
+static int compare_msgq(const char *op, uint32_t seed, int qi)
+{
+    oracle_OSMessageQueue *omq = &oracle_MsgQPool[qi];
+    uint32_t pmq = PORT_MSGQ_ADDR(&g_ps, qi);
+    int mismatches = 0;
+    int j;
+
+    /* Compare queueSend head/tail */
+    uint32_t o_sh = oracle_thread_to_gc(omq->queueSend.head);
+    uint32_t p_sh = gc_load_u32(pmq + PORT_MSGQ_SEND_HEAD);
+    uint32_t o_st = oracle_thread_to_gc(omq->queueSend.tail);
+    uint32_t p_st = gc_load_u32(pmq + PORT_MSGQ_SEND_TAIL);
+    if (o_sh != p_sh || o_st != p_st) {
+        if (mismatches < 3)
+            fprintf(stderr, "  MISMATCH %s seed=%u msgq[%d] qSend: "
+                    "h o=0x%X p=0x%X, t o=0x%X p=0x%X\n",
+                    op, seed, qi, o_sh, p_sh, o_st, p_st);
+        mismatches++;
+    }
+
+    /* Compare queueReceive head/tail */
+    uint32_t o_rh = oracle_thread_to_gc(omq->queueReceive.head);
+    uint32_t p_rh = gc_load_u32(pmq + PORT_MSGQ_RECV_HEAD);
+    uint32_t o_rt = oracle_thread_to_gc(omq->queueReceive.tail);
+    uint32_t p_rt = gc_load_u32(pmq + PORT_MSGQ_RECV_TAIL);
+    if (o_rh != p_rh || o_rt != p_rt) {
+        if (mismatches < 3)
+            fprintf(stderr, "  MISMATCH %s seed=%u msgq[%d] qRecv: "
+                    "h o=0x%X p=0x%X, t o=0x%X p=0x%X\n",
+                    op, seed, qi, o_rh, p_rh, o_rt, p_rt);
+        mismatches++;
+    }
+
+    /* Compare msgCount, firstIndex, usedCount */
+    int32_t o_cnt = omq->msgCount;
+    int32_t p_cnt = gc_load_s32(pmq + PORT_MSGQ_COUNT);
+    int32_t o_fi  = omq->firstIndex;
+    int32_t p_fi  = gc_load_s32(pmq + PORT_MSGQ_FIRST);
+    int32_t o_uc  = omq->usedCount;
+    int32_t p_uc  = gc_load_s32(pmq + PORT_MSGQ_USED);
+
+    if (o_cnt != p_cnt || o_fi != p_fi || o_uc != p_uc) {
+        if (mismatches < 3)
+            fprintf(stderr, "  MISMATCH %s seed=%u msgq[%d]: "
+                    "cnt o=%d p=%d, first o=%d p=%d, used o=%d p=%d\n",
+                    op, seed, qi, o_cnt, p_cnt, o_fi, p_fi, o_uc, p_uc);
+        mismatches++;
+    }
+
+    /* Compare message array contents (only used slots matter but compare all) */
+    for (j = 0; j < o_cnt && j < PORT_MAX_MSGS_PER_Q; j++) {
+        uint32_t o_msg = omq->msgArray[j];
+        uint32_t p_msg = gc_load_u32(pmq + PORT_MSGQ_MSGS + j * 4);
+        if (o_msg != p_msg) {
+            if (mismatches < 3)
+                fprintf(stderr, "  MISMATCH %s seed=%u msgq[%d] msg[%d]: "
+                        "o=0x%X p=0x%X\n", op, seed, qi, j, o_msg, p_msg);
+            mismatches++;
+        }
+    }
+
+    return mismatches;
+}
+
+static int check_msgq(const char *op, uint32_t seed, int n_queues)
+{
+    int total_mm = 0;
+    int i;
+    /* First check thread/global state */
+    total_mm += compare_state(op, seed);
+    /* Then check message queue state */
+    for (i = 0; i < n_queues; i++) {
+        total_mm += compare_msgq(op, seed, i);
+    }
+    /* Count as single check */
+    if (total_mm > 0) {
+        /* compare_state already counted, don't double-count */
+        return 1;
+    }
+    return 0;
+}
+
+/* ── L7: Message queue basic (send/receive non-blocking) ── */
+
+static int test_msg_basic(uint32_t seed)
+{
+    int fail = 0;
+    int n_queues, qi, op, n_ops;
+
+    init_both();
+
+    n_queues = (int)rand_range(1, MAX_TEST_MSGQUEUES);
+
+    /* Init message queues with random capacities */
+    for (qi = 0; qi < n_queues; qi++) {
+        int32_t cap = (int32_t)rand_range(2, ORACLE_MAX_MSGS_PER_Q);
+        oracle_OSInitMessageQueue(&oracle_MsgQPool[qi], cap);
+        port_OSInitMessageQueue(&g_ps, PORT_MSGQ_ADDR(&g_ps, qi), cap);
+        g_msgq_inited[qi] = 1;
+    }
+
+    /* Random send/receive operations (all non-blocking) */
+    n_ops = (int)rand_range(30, 100);
+    for (op = 0; op < n_ops && fail == 0; op++) {
+        qi = (int)(xorshift32() % (uint32_t)n_queues);
+        uint32_t r = xorshift32() % 100;
+
+        if (r < 50) {
+            /* Send */
+            uint32_t msg = xorshift32();
+            int rc_o = oracle_OSSendMessage(&oracle_MsgQPool[qi], msg,
+                                            ORACLE_OS_MESSAGE_NOBLOCK);
+            int rc_p = port_OSSendMessage(&g_ps, PORT_MSGQ_ADDR(&g_ps, qi),
+                                          msg, 0);
+            if (rc_o != rc_p) {
+                fprintf(stderr, "  FAIL L7-Send seed=%u q=%d: rc o=%d p=%d\n",
+                        seed, qi, rc_o, rc_p);
+                g_total_fail++; g_total_checks++;
+                return 1;
+            }
+            fail += check_msgq("L7-Send", seed, n_queues);
+        } else {
+            /* Receive */
+            uint32_t omsg = 0, pmsg = 0;
+            int rc_o = oracle_OSReceiveMessage(&oracle_MsgQPool[qi], &omsg,
+                                               ORACLE_OS_MESSAGE_NOBLOCK);
+            int rc_p = port_OSReceiveMessage(&g_ps, PORT_MSGQ_ADDR(&g_ps, qi),
+                                             &pmsg, 0);
+            if (rc_o != rc_p) {
+                fprintf(stderr, "  FAIL L7-Recv seed=%u q=%d: rc o=%d p=%d\n",
+                        seed, qi, rc_o, rc_p);
+                g_total_fail++; g_total_checks++;
+                return 1;
+            }
+            if (rc_o == 1 && omsg != pmsg) {
+                fprintf(stderr, "  FAIL L7-Recv seed=%u q=%d: msg o=0x%X p=0x%X\n",
+                        seed, qi, omsg, pmsg);
+                g_total_fail++; g_total_checks++;
+                return 1;
+            }
+            fail += check_msgq("L7-Recv", seed, n_queues);
+        }
+    }
+
+    if (opt_verbose && fail == 0) {
+        printf("  L7-MsgBasic: %d queues, %d ops OK\n", n_queues, n_ops);
+    }
+
+    return fail;
+}
+
+/* ── L8: Message queue jam (LIFO) + wraparound ── */
+
+static int test_msg_jam(uint32_t seed)
+{
+    int fail = 0;
+    int qi, op, n_ops;
+
+    init_both();
+
+    /* Single queue for focused jam testing */
+    int32_t cap = (int32_t)rand_range(3, 8);
+    oracle_OSInitMessageQueue(&oracle_MsgQPool[0], cap);
+    port_OSInitMessageQueue(&g_ps, PORT_MSGQ_ADDR(&g_ps, 0), cap);
+    g_msgq_inited[0] = 1;
+
+    qi = 0;
+
+    /* Random mix of send, jam, receive to exercise wraparound */
+    n_ops = (int)rand_range(40, 120);
+    for (op = 0; op < n_ops && fail == 0; op++) {
+        uint32_t r = xorshift32() % 100;
+
+        if (r < 30) {
+            /* Send (FIFO) */
+            uint32_t msg = xorshift32();
+            int rc_o = oracle_OSSendMessage(&oracle_MsgQPool[qi], msg,
+                                            ORACLE_OS_MESSAGE_NOBLOCK);
+            int rc_p = port_OSSendMessage(&g_ps, PORT_MSGQ_ADDR(&g_ps, qi),
+                                          msg, 0);
+            if (rc_o != rc_p) {
+                fprintf(stderr, "  FAIL L8-Send seed=%u: rc o=%d p=%d\n",
+                        seed, rc_o, rc_p);
+                g_total_fail++; g_total_checks++;
+                return 1;
+            }
+            fail += check_msgq("L8-Send", seed, 1);
+        } else if (r < 60) {
+            /* Jam (LIFO) */
+            uint32_t msg = xorshift32();
+            int rc_o = oracle_OSJamMessage(&oracle_MsgQPool[qi], msg,
+                                           ORACLE_OS_MESSAGE_NOBLOCK);
+            int rc_p = port_OSJamMessage(&g_ps, PORT_MSGQ_ADDR(&g_ps, qi),
+                                         msg, 0);
+            if (rc_o != rc_p) {
+                fprintf(stderr, "  FAIL L8-Jam seed=%u: rc o=%d p=%d\n",
+                        seed, rc_o, rc_p);
+                g_total_fail++; g_total_checks++;
+                return 1;
+            }
+            fail += check_msgq("L8-Jam", seed, 1);
+        } else {
+            /* Receive */
+            uint32_t omsg = 0, pmsg = 0;
+            int rc_o = oracle_OSReceiveMessage(&oracle_MsgQPool[qi], &omsg,
+                                               ORACLE_OS_MESSAGE_NOBLOCK);
+            int rc_p = port_OSReceiveMessage(&g_ps, PORT_MSGQ_ADDR(&g_ps, qi),
+                                             &pmsg, 0);
+            if (rc_o != rc_p) {
+                fprintf(stderr, "  FAIL L8-Recv seed=%u: rc o=%d p=%d\n",
+                        seed, rc_o, rc_p);
+                g_total_fail++; g_total_checks++;
+                return 1;
+            }
+            if (rc_o == 1 && omsg != pmsg) {
+                fprintf(stderr, "  FAIL L8-Recv seed=%u: msg o=0x%X p=0x%X\n",
+                        seed, omsg, pmsg);
+                g_total_fail++; g_total_checks++;
+                return 1;
+            }
+            fail += check_msgq("L8-Recv", seed, 1);
+        }
+    }
+
+    if (opt_verbose && fail == 0) {
+        printf("  L8-MsgJam: cap=%d, %d ops OK\n", cap, n_ops);
+    }
+
+    return fail;
+}
+
+/* ── L9: Message queue with threads (blocking sequences) ── */
+
+static int test_msg_threads(uint32_t seed)
+{
+    int fail = 0;
+    int n_threads, i, op, n_ops;
+
+    init_both();
+
+    /* Create and resume threads */
+    n_threads = (int)rand_range(3, 8);
+    if (n_threads > MAX_TEST_THREADS - 1) n_threads = MAX_TEST_THREADS - 1;
+
+    for (i = 1; i <= n_threads; i++) {
+        int32_t prio = (int32_t)rand_range(0, 31);
+        create_both(i, prio, 1); /* detached */
+    }
+    for (i = 1; i <= n_threads && fail == 0; i++) {
+        oracle_OSResumeThread(&oracle_ThreadPool[i]);
+        port_OSResumeThread(&g_ps, PORT_THREAD_ADDR(&g_ps, i));
+        fail += check("L9-InitResume", seed);
+    }
+    if (fail) return fail;
+
+    /* Init a message queue with small capacity to trigger blocking */
+    int32_t cap = (int32_t)rand_range(2, 6);
+    oracle_OSInitMessageQueue(&oracle_MsgQPool[0], cap);
+    port_OSInitMessageQueue(&g_ps, PORT_MSGQ_ADDR(&g_ps, 0), cap);
+    g_msgq_inited[0] = 1;
+
+    /* Mix of message ops + yield/resume to exercise thread switching */
+    n_ops = (int)rand_range(30, 80);
+    for (op = 0; op < n_ops && fail == 0; op++) {
+        uint32_t r = xorshift32() % 100;
+
+        if (!oracle_CurrentThread ||
+            oracle_CurrentThread->state != ORACLE_OS_THREAD_STATE_RUNNING)
+            continue;
+
+        if (r < 25) {
+            /* Non-blocking send */
+            uint32_t msg = xorshift32();
+            int rc_o = oracle_OSSendMessage(&oracle_MsgQPool[0], msg,
+                                            ORACLE_OS_MESSAGE_NOBLOCK);
+            int rc_p = port_OSSendMessage(&g_ps, PORT_MSGQ_ADDR(&g_ps, 0),
+                                          msg, 0);
+            if (rc_o != rc_p) {
+                fprintf(stderr, "  FAIL L9-Send seed=%u: rc o=%d p=%d\n",
+                        seed, rc_o, rc_p);
+                g_total_fail++; g_total_checks++;
+                return 1;
+            }
+            process_pending_both();
+            fail += check_msgq("L9-Send", seed, 1);
+        } else if (r < 50) {
+            /* Non-blocking receive */
+            uint32_t omsg = 0, pmsg = 0;
+            int rc_o = oracle_OSReceiveMessage(&oracle_MsgQPool[0], &omsg,
+                                               ORACLE_OS_MESSAGE_NOBLOCK);
+            int rc_p = port_OSReceiveMessage(&g_ps, PORT_MSGQ_ADDR(&g_ps, 0),
+                                             &pmsg, 0);
+            if (rc_o != rc_p) {
+                fprintf(stderr, "  FAIL L9-Recv seed=%u: rc o=%d p=%d\n",
+                        seed, rc_o, rc_p);
+                g_total_fail++; g_total_checks++;
+                return 1;
+            }
+            if (rc_o == 1 && omsg != pmsg) {
+                fprintf(stderr, "  FAIL L9-Recv seed=%u: msg o=0x%X p=0x%X\n",
+                        seed, omsg, pmsg);
+                g_total_fail++; g_total_checks++;
+                return 1;
+            }
+            process_pending_both();
+            fail += check_msgq("L9-Recv", seed, 1);
+        } else if (r < 65) {
+            /* Non-blocking jam */
+            uint32_t msg = xorshift32();
+            int rc_o = oracle_OSJamMessage(&oracle_MsgQPool[0], msg,
+                                           ORACLE_OS_MESSAGE_NOBLOCK);
+            int rc_p = port_OSJamMessage(&g_ps, PORT_MSGQ_ADDR(&g_ps, 0),
+                                         msg, 0);
+            if (rc_o != rc_p) {
+                fprintf(stderr, "  FAIL L9-Jam seed=%u: rc o=%d p=%d\n",
+                        seed, rc_o, rc_p);
+                g_total_fail++; g_total_checks++;
+                return 1;
+            }
+            process_pending_both();
+            fail += check_msgq("L9-Jam", seed, 1);
+        } else if (r < 80) {
+            /* Yield to mix up which thread is current */
+            oracle_OSYieldThread();
+            port_OSYieldThread(&g_ps);
+            process_pending_both();
+            fail += check("L9-Yield", seed);
+        } else {
+            /* Resume/suspend random thread */
+            int slot = (int)rand_range(1, (uint32_t)n_threads);
+            oracle_OSThread *ot = &oracle_ThreadPool[slot];
+            if (ot->state != 0) {
+                if (xorshift32() % 2 == 0) {
+                    oracle_OSResumeThread(ot);
+                    port_OSResumeThread(&g_ps,
+                        PORT_THREAD_ADDR(&g_ps, slot));
+                } else if (ot != oracle_CurrentThread) {
+                    oracle_OSSuspendThread(ot);
+                    port_OSSuspendThread(&g_ps,
+                        PORT_THREAD_ADDR(&g_ps, slot));
+                }
+                process_pending_both();
+                fail += check("L9-ThreadOp", seed);
+            }
+        }
+    }
+
+    if (opt_verbose && fail == 0) {
+        printf("  L9-MsgThreads: %d threads, cap=%d, %d ops OK\n",
+               n_threads, cap, n_ops);
+    }
+
+    return fail;
+}
+
 /* ── Run one seed ── */
 
 static int run_seed(uint32_t seed)
@@ -1068,6 +1441,28 @@ static int run_seed(uint32_t seed)
         g_rng = seed ^ 0xBAADF00Du;
         if (g_rng == 0) g_rng = 1;
         fail += test_join_thread(seed);
+    }
+
+    /* L7: Message queue basic */
+    if (!opt_op || strstr("MSG", opt_op) || strstr("L7", opt_op) ||
+        strstr("MESSAGE", opt_op)) {
+        g_rng = seed ^ 0x1337C0DEu;
+        if (g_rng == 0) g_rng = 1;
+        fail += test_msg_basic(seed);
+    }
+
+    /* L8: Message queue jam */
+    if (!opt_op || strstr("JAM", opt_op) || strstr("L8", opt_op)) {
+        g_rng = seed ^ 0xF00DCAFEu;
+        if (g_rng == 0) g_rng = 1;
+        fail += test_msg_jam(seed);
+    }
+
+    /* L9: Message queue with threads */
+    if (!opt_op || strstr("L9", opt_op) || strstr("MSGTHREAD", opt_op)) {
+        g_rng = seed ^ 0xACE0BA5Eu;
+        if (g_rng == 0) g_rng = 1;
+        fail += test_msg_threads(seed);
     }
 
     return fail;

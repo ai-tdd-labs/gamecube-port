@@ -70,6 +70,57 @@ void C_QUATMtx(Quaternion *r, const Mtx m)
     }
 }
 
+/*
+ * C_QUATMultiply — C equivalent of PSQUATMultiply (decomp: PS asm only).
+ * Standard quaternion multiplication: ab = a * b
+ */
+void C_QUATMultiply(const Quaternion *a, const Quaternion *b, Quaternion *ab)
+{
+    Quaternion tmp;
+    tmp.x = a->w*b->x + a->x*b->w + a->y*b->z - a->z*b->y;
+    tmp.y = a->w*b->y - a->x*b->z + a->y*b->w + a->z*b->x;
+    tmp.z = a->w*b->z + a->x*b->y - a->y*b->x + a->z*b->w;
+    tmp.w = a->w*b->w - a->x*b->x - a->y*b->y - a->z*b->z;
+    *ab = tmp;
+}
+
+/*
+ * C_QUATNormalize — C equivalent of PSQUATNormalize (decomp: PS asm only).
+ * Normalize quaternion to unit length. Returns zero if magnitude < epsilon.
+ */
+void C_QUATNormalize(const Quaternion *src, Quaternion *unit)
+{
+    f32 dot = src->x*src->x + src->y*src->y + src->z*src->z + src->w*src->w;
+    if (dot < 0.00001f) {
+        unit->x = unit->y = unit->z = unit->w = 0.0f;
+        return;
+    }
+    f32 inv = 1.0f / sqrtf(dot);
+    unit->x = src->x * inv;
+    unit->y = src->y * inv;
+    unit->z = src->z * inv;
+    unit->w = src->w * inv;
+}
+
+/*
+ * C_QUATInverse — C equivalent of PSQUATInverse (decomp: PS asm only).
+ * Quaternion inverse: conjugate(q) / |q|^2
+ */
+void C_QUATInverse(const Quaternion *src, Quaternion *inv)
+{
+    f32 dot = src->x*src->x + src->y*src->y + src->z*src->z + src->w*src->w;
+    f32 invDot;
+    if (dot <= 0.0f) {
+        invDot = 1.0f;
+    } else {
+        invDot = 1.0f / dot;
+    }
+    inv->x = -src->x * invDot;
+    inv->y = -src->y * invDot;
+    inv->z = -src->z * invDot;
+    inv->w =  src->w * invDot;
+}
+
 void C_QUATSlerp(const Quaternion *p, const Quaternion *q, Quaternion *r, f32 t)
 {
     f32 ratioA, ratioB;

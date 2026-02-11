@@ -79,6 +79,9 @@ extern void C_VECReflect(const Vec *src, const Vec *normal, Vec *dst);
 
 /* QUAT */
 extern void C_QUATAdd(const Quaternion *p, const Quaternion *q, Quaternion *r);
+extern void C_QUATMultiply(const Quaternion *a, const Quaternion *b, Quaternion *ab);
+extern void C_QUATNormalize(const Quaternion *src, Quaternion *unit);
+extern void C_QUATInverse(const Quaternion *src, Quaternion *inv);
 extern void C_QUATRotAxisRad(Quaternion *q, const Vec *axis, f32 rad);
 extern void C_QUATMtx(Quaternion *r, const Mtx m);
 extern void C_QUATSlerp(const Quaternion *p, const Quaternion *q, Quaternion *r, f32 t);
@@ -354,6 +357,34 @@ static void test_quat_api(unsigned int seed)
     oracle_C_QUATAdd(&oq1, &oq2, &oqr);
     C_QUATAdd(&pq1, &pq2, &pqr);
     CHECK_QUAT("QUATAdd", oqr, pqr);
+
+    /* QUATMultiply */
+    rng_quat(&oq1, &pq1);
+    rng_quat(&oq2, &pq2);
+    oracle_C_QUATMultiply(&oq1, &oq2, &oqr);
+    C_QUATMultiply(&pq1, &pq2, &pqr);
+    CHECK_QUAT("QUATMultiply", oqr, pqr);
+
+    /* QUATNormalize */
+    rng_quat(&oq1, &pq1);
+    oracle_C_QUATNormalize(&oq1, &oqr);
+    C_QUATNormalize(&pq1, &pqr);
+    CHECK_QUAT("QUATNormalize", oqr, pqr);
+
+    /* QUATNormalize (near-zero) */
+    {
+        oracle_Quaternion ozq = {0.0f, 0.0f, 0.0f, 0.0f};
+        Quaternion pzq = {0.0f, 0.0f, 0.0f, 0.0f};
+        oracle_C_QUATNormalize(&ozq, &oqr);
+        C_QUATNormalize(&pzq, &pqr);
+        CHECK_QUAT("QUATNormalize_zero", oqr, pqr);
+    }
+
+    /* QUATInverse */
+    rng_quat(&oq1, &pq1);
+    oracle_C_QUATInverse(&oq1, &oqr);
+    C_QUATInverse(&pq1, &pqr);
+    CHECK_QUAT("QUATInverse", oqr, pqr);
 
     /* QUATRotAxisRad */
     oracle_Vec oaxis; Vec paxis;
