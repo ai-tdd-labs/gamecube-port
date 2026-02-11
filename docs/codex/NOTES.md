@@ -1125,3 +1125,10 @@ Notes:
   - ARQ adapted suite: `150/150 PASS`
   - CARD FAT adapted suite: `1569/1569 PASS`
 - Scope note: this is phase 1 (leaf strict check) and does not yet cover strict dual-run for ARQ/OSAlloc/DVDFS/MTX.
+
+## 2026-02-11: MP4 chain coverage sync (GXInitTexObjLOD)
+- Verified suite parity for MP4 callsite test:
+  - `tests/sdk/gx/gx_init_tex_obj_lod/expected/gx_init_tex_obj_lod_mp4_pfdrawfonts_001.bin`
+  - `tests/sdk/gx/gx_init_tex_obj_lod/actual/gx_init_tex_obj_lod_mp4_pfdrawfonts_001.bin`
+  - `tools/ram_compare.py` result: PASS (bit-identical).
+- Updated `docs/sdk/mp4/MP4_chain_all.csv` row `pfDrawFonts -> GXInitTexObjLOD` from `0/1` to `1/1` and marked covered (`y`).
