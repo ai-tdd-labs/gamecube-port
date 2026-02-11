@@ -1352,3 +1352,12 @@ Notes:
   - `bash tools/run_card_fat_property_test.sh --num-runs=200 --seed=0xC0DEC0DE` (CARD FAT)
 - Practical note from verification:
   - ARQ/CARD property binaries report `Seeds: 1` when a fixed `--seed` is supplied (deterministic single-seed mode), while gate-mode without fixed seed iterates multiple seeds.
+## 2026-02-11: Claude PBT leaf-audit (bottom-up completeness check)
+
+- Audited merged Claude PBT suites for "leaf-first then upward levels" structure (OSAlloc-style baseline).
+- Result:
+  - Not uniform 100% leaf-complete across all suites.
+  - Strong layered suites exist (OSAlloc, OSThread, ARQ, CARD FAT, MTX family).
+  - Some suites remain scenario-centric vs explicit full leaf ladder (notably DVDFS).
+- Evidence report:
+  - `docs/codex/PBT_LEAF_AUDIT_CLAUDE_2026-02-11.md`
