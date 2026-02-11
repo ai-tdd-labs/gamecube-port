@@ -15,6 +15,7 @@ build_dir="$repo_root/tests/build/arq_property"
 test_src="$repo_root/tests/sdk/ar/property"
 port_src="$repo_root/src/sdk_port/ar"
 gc_mem_src="$repo_root/src/sdk_port"
+oracle_header="$test_src/arq_oracle.h"
 
 mkdir -p "$build_dir"
 
@@ -54,6 +55,13 @@ if [[ -z "$CC" ]]; then
     exit 2
 fi
 
+oracle_tier="$(rg '^#define ORACLE_TIER ' "$oracle_header" 2>/dev/null | sed -E 's/^#define ORACLE_TIER \"([^\"]+)\"/\1/' || true)"
+if [[ -z "$oracle_tier" ]]; then
+    oracle_tier="UNKNOWN"
+fi
+
+echo "[arq-property] oracle=$oracle_header"
+echo "[arq-property] tier=$oracle_tier"
 echo "[arq-property-build] CC=$CC"
 "$CC" "${opt_flags[@]}" -ffunction-sections -fdata-sections \
   -D_XOPEN_SOURCE=700 -D_CRT_SECURE_NO_WARNINGS \

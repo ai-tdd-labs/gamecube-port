@@ -48,12 +48,17 @@ static int DVDRead(DVDFileInfo *fi, void *addr, int len, int off) {
 int main(void) {
     DVDFileInfo fi;
     int ok = DVDOpen("/meminfo.bin", &fi);
-    int r = DVDRead(&fi, (void*)0x81230000u, 0x20, 0x10);
+    int len = 0x20;
+    int off = 0x10;
+    int r = DVDRead(&fi, (void*)0x81230000u, len, off);
 
     *(volatile u32*)0x80300000 = 0xDEADBEEFu;
     *(volatile u32*)0x80300004 = (u32)ok;
     *(volatile u32*)0x80300008 = (u32)r;
     *(volatile u32*)0x8030000C = fi.length;
     *(volatile u32*)0x80300010 = *(volatile u32*)0x81230000u;
+    // Extra observable state so mutation tests can kill len/off swap bugs.
+    *(volatile u32*)0x80300014 = (u32)len;
+    *(volatile u32*)0x80300018 = (u32)off;
     while (1) {}
 }

@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1127,7 +1127,7 @@
+ }
+ 
+ void GXSetCopyClamp(u32 clamp) {
+-    gc_gx_copy_clamp = clamp;
++    gc_gx_copy_clamp = 0; // MUTANT
+ }
+ 
+ void GXSetDispCopyFrame2Field(u32 mode) {

@@ -1,0 +1,11 @@
+diff --git a/src/sdk_port/dvd/DVD.c b/src/sdk_port/dvd/DVD.c
+--- a/src/sdk_port/dvd/DVD.c
++++ b/src/sdk_port/dvd/DVD.c
+@@ -99,6 +99,6 @@
+     file->cb.state = 0;
+     file->entrynum = entrynum;
+     file->startAddr = (u32)entrynum; // stable token; not a real disc address
+-    file->length = g_dvd_test_files[entrynum].len;
++    file->length = g_dvd_test_files[entrynum].len + 1u; // MUTANT: off-by-one in reported file length
+     return 1;
+ }

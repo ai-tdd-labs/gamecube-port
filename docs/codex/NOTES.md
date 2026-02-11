@@ -9,6 +9,42 @@ Rules:
 
 ## Confirmed Behaviors
 
+### PBT strict dualcheck (MTX)
+- Added strict decomp-derived leaf oracle for MTX core math:
+  - `strict_C_MTXIdentity`
+  - `strict_C_MTXOrtho`
+  Evidence: `tests/pbt/mtx/mtx_strict_oracle.h`.
+- MTX property test now compares sdk_port output against both invariant formulas and strict decomp leaf oracle output on each iteration.
+  Evidence: `tests/pbt/mtx/mtx_core_pbt.c`.
+- One-button dualcheck now includes MTX strict run in addition to CARD checksum strict run.
+  Evidence: `tools/run_oracle_dualcheck.sh`.
+
+### PBT strict dualcheck (OS round leafs used in OSAlloc flows)
+- Added strict decomp-derived leaf oracle for:
+  - `OSRoundUp32B`
+  - `OSRoundDown32B`
+  Evidence: `tests/pbt/os/os_round_32b/os_round_32b_strict_oracle.h`.
+- OS round property test now checks sdk_port output against strict oracle output every iteration.
+  Evidence: `tests/pbt/os/os_round_32b/os_round_32b_pbt.c`.
+- One-button dualcheck now includes the strict OS round suite.
+  Evidence: `tools/run_oracle_dualcheck.sh`.
+
+### PBT strict dualcheck (DVDFS read-window leaf arithmetic)
+- Added strict leaf oracle for deterministic DVD read-window semantics:
+  - invalid offset/len -> fail
+  - clamp to file end when `off + len` exceeds file length
+  - wrapper return mapping (`ok`, `sync_ret`, `prio_ret`)
+  Evidence: `tests/pbt/dvd/dvd_core_strict_oracle.h`.
+- `dvd_core_pbt` now derives expected results from the strict leaf oracle instead of ad-hoc inline formulas.
+  Evidence: `tests/pbt/dvd/dvd_core_pbt.c`.
+
+### PBT strict dualcheck (ARQ callback normalization leaf)
+- Added strict leaf oracle for ARQ callback normalization from decomp semantics:
+  callback field is always normalized to non-null (`__ARQCallbackHack` fallback).
+  Evidence: `tests/sdk/ar/property/arq_strict_leaf_oracle.h`.
+- ARQ property suite now randomizes `has_callback` input and enforces strict normalization parity in addition to existing adapted-oracle parity checks.
+  Evidence: `tests/sdk/ar/property/arq_property_test.c`.
+
 ### Dolphin GDB Stub (macOS build on this machine)
 - Stop packets include PC/NIP in reg `0x40` (usable for PC-polling checkpoints).
   Evidence: `tools/ram_dump.py` `parse_stop_pc()`; observed stop example `T0540:800ba2f0;01:8019d798;` from real MP4 RVZ.
@@ -890,6 +926,86 @@ Notes:
     - `GC_SDK_OFF_PAD_RECALIBRATE_BITS`
     - `GC_SDK_OFF_PAD_RESET_CB_PTR`
 
+## 2026-02-10: Retail RVZ trace replay (MP4 PADInit)
+
+### PADInit
+- Retail entry PC: `0x800C4978` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Trace dir (local-only, gitignored): `tests/traces/pad_init/mp4_rvz_v1/` (2 unique cases)
+- Replay harness (committed):
+  - Scenario: `tests/sdk/pad/pad_init/host/pad_init_rvz_trace_replay_001_scenario.c`
+  - Replay: `tools/replay_trace_case_pad_init.sh <trace_case_dir>`
+- Result: replay PASS for both captured cases (bit-exact vs retail `out_sdk_state.bin` + return value).
+
+## 2026-02-10: Retail RVZ trace replay (MP4 PADSetSpec)
+
+### PADSetSpec
+- Retail entry PC: `0x800C4FD8` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Trace dir (local-only, gitignored): `tests/traces/pad_set_spec/mp4_rvz_v3/` (1 unique case)
+- Replay harness (committed):
+  - Scenario: `tests/sdk/pad/pad_set_spec/host/pad_set_spec_rvz_trace_replay_001_scenario.c`
+  - Replay: `tools/replay_trace_case_pad_set_spec.sh <trace_case_dir>`
+- Confirmed retail side effects (from trace dumps + decomp `external/mp4-decomp/src/dolphin/pad/Pad.c`):
+  - `__PADSpec` @ `0x801D450C` is cleared to 0.
+  - `Spec` @ `0x801D3924` is set to the input `spec`.
+  - `MakeStatus` @ `0x801D3928` points to `SPEC2_MakeStatus` (`0x800C5320`) for `PAD_SPEC_5` (MP4 boot case).
+- Result: replay PASS for the captured case (bit-exact vs retail global dumps).
+
+
+## 2026-02-10: Retail RVZ trace replay (MP4 OSDisableInterrupts)
+
+### OSDisableInterrupts
+- Retail entry PC: `0x800B723C` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Trace dir (local-only, gitignored): `tests/traces/os_disable_interrupts/mp4_rvz_v1/` (10 unique cases)
+- Replay harness (committed):
+  - Scenario: `tests/sdk/os/os_disable_interrupts/host/os_disable_interrupts_rvz_trace_replay_001_scenario.c`
+  - Replay: `tools/replay_trace_case_os_disable_interrupts.sh <trace_case_dir>`
+  - 1-button: `tools/harvest_and_replay_os_disable_interrupts.sh`
+- Observed in these MP4 boot traces: return value = 0 (interrupts already disabled at entry in all collected cases).
+- Result: replay PASS for all 10 unique cases (bit-exact).
+
+
+## 2026-02-10: Retail RVZ trace replay (MP4 VISetPostRetraceCallback)
+
+### VISetPostRetraceCallback
+- Retail entry PC: `0x800C0DD8` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Retail global: `PostCB` @ `0x801D443C` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Trace dir (local-only, gitignored): `tests/traces/vi_set_post_retrace_callback/mp4_rvz_v2/` (1 unique case)
+- Replay harness (committed):
+  - Scenario: `tests/sdk/vi/vi_set_post_retrace_callback/host/vi_set_post_retrace_callback_rvz_trace_replay_001_scenario.c`
+  - Replay: `tools/replay_trace_case_vi_set_post_retrace_callback.sh <trace_case_dir>`
+  - 1-button: `tools/harvest_and_replay_vi_set_post_retrace_callback.sh`
+- Observed MP4 boot case: old callback `0x00000000`, new callback `0x80005CB4` (PadReadVSync).
+- Result: replay PASS for the captured case (bit-exact).
+
+
+## 2026-02-10: Retail RVZ trace replay (MP4 SISetSamplingRate)
+
+### SISetSamplingRate
+- Retail entry PC: `0x800DA3C8` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Trace dir (local-only, gitignored): `tests/traces/si_set_sampling_rate/mp4_rvz_si_ctrl/` (10 unique cases)
+- Replay harness (committed):
+  - Scenario: `tests/sdk/si/si_set_sampling_rate/host/si_set_sampling_rate_rvz_trace_replay_001_scenario.c`
+  - Replay: `tools/replay_trace_case_si_set_sampling_rate.sh <trace_case_dir>`
+  - 1-button: `tools/harvest_and_replay_si_set_sampling_rate.sh` (replay-only; uses existing trace corpus)
+- Result: replay PASS for all 10 unique cases (bit-exact).
+
+
+## 2026-02-10: Retail RVZ trace replay (MP4 PADControlMotor)
+
+### PADControlMotor
+- Retail entry PC: `0x800C4F34` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Trace dir (local-only, gitignored): `tests/traces/pad_control_motor/mp4_rvz_v1/` (2 unique cases)
+- Replay harness (committed):
+  - Scenario: `tests/sdk/pad/pad_control_motor/host/pad_control_motor_rvz_trace_replay_001_scenario.c`
+  - Replay: `tools/replay_trace_case_pad_control_motor.sh <trace_case_dir>`
+  - 1-button: `tools/harvest_and_replay_pad_control_motor.sh`
+- Observed cases: chan=0 cmd=2
+- Result: replay PASS for both captured cases (bit-exact).
+
+
+
+
+
 ## 2026-02-10: Retail RVZ trace replay (MP4 SITransfer)
 
 ### SITransfer
@@ -904,3 +1020,115 @@ Notes:
   - When an immediate transfer succeeds, `Packet[chan]` and `Alarm[chan]` remain unchanged.
   - When an immediate transfer fails, it queues `Packet[chan]` fields and sets `packet->fire = XferTime[chan] + delay`.
   - When `now < fire`, it also arms `Alarm[chan]` (handler pointer + fire time).
+
+## 2026-02-10: Retail RVZ trace replay (MP4 SIGetResponse)
+
+### SIGetResponse
+- Retail entry PC: `0x800D9B74` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
+- Decomp reference: `external/mp4-decomp/src/dolphin/si/SIBios.c` (`SIGetResponseRaw` + `SIGetResponse`)
+- Trace dir (local-only, gitignored): `tests/traces/si_get_response/mp4_rvz_v1/`
+- Replay harness (committed):
+  - Scenario: `tests/sdk/si/si_get_response/host/si_get_response_rvz_trace_replay_001_scenario.c`
+  - Replay: `tools/replay_trace_case_si_get_response.sh <trace_case_dir>`
+- Result: 10 replay cases PASS (bit-exact).
+
+Observed trace format note:
+- `tools/trace_pc_entry_exit.py` writes `out_regs.json` with the post-call register file under `"args"` (not `"rets"`).
+  - For this function, the return value is `out_regs.json: args.r3`.
+
+Confirmed behaviors (as observed in traces + decomp):
+- `SIGetResponse()` always calls `SIGetResponseRaw(chan)` under interrupts-disabled critical section.
+- When the return is `TRUE`, it copies two `u32` words into `data` and clears `InputBufferValid[chan]` back to `FALSE`.
+- In the observed MP4 init case `hit_000001_*`, the caller's `data` buffer changes from `00000000 801A6F98` to `00808080 80800000`.
+
+Implementation note (sdk_port model):
+- Host trace replay cannot read SI MMIO (`__SIRegs`). For deterministic replay we seed:
+  - per-channel status (`SI_ERROR_RDST` bit)
+  - per-channel response words
+- Seed entrypoints: `gc_si_set_status_seed()` + `gc_si_set_resp_words_seed()` in `src/sdk_port/si/SI.c`.
+
+## 2026-02-10: MP4 decomp scan: unique Nintendo SDK functions used by MP4 (game sources)
+
+Goal: estimate how much of the Nintendo SDK surface MP4 needs by scanning the MP4 decomp *game* sources
+for SDK API usage, excluding SDK sources themselves.
+
+Method (reproducible):
+1) Build a set of SDK API names from the MP4 decomp Dolphin headers:
+   - Source: `/Users/chrislamark/projects/recomp/gamecube_static_recomp/decomp_mario_party_4/include/dolphin/**/*.h`
+   - Extract prototypes matching SDK prefixes:
+     `OS,GX,VI,PAD,DVD,SI,EXI,AI,AX,AR,ARQ,CARD,MTX,PS,DB,DSP,THP,DEMO`
+2) Scan MP4 decomp `src/**/*.c` excluding `src/dolphin/**` for callsites to names in that API set.
+
+Result (current snapshot):
+- SDK API names extracted from headers: 694
+- Unique SDK functions referenced by MP4 game sources (excluding `src/dolphin`): 273
+- Per-subsystem unique usage (from the scan):
+  - GX: 121
+  - OS: 48
+  - PS: 28
+  - CARD: 17
+  - VI: 12
+  - DVD: 10
+  - AR: 10
+  - AI: 8
+  - PAD: 7
+  - THP: 6
+  - ARQ: 2
+  - DEMO: 2
+  - DB: 1
+  - SI: 1
+
+Notes:
+- This is distinct from `docs/sdk/mp4/MP4_sdk_calls_inventory.csv` which inventories SDK-like callsites
+  in `src/game_workload/mp4/vendor/src/game/*.c` only.
+## 2026-02-11: PBT chain expansion (MTX + DVD core + ARQ + CARD-FAT)
+
+- Added suite selector to `tools/run_pbt.sh`: `os_round_32b`, `mtx_core`, `dvd_core`.
+- Added `tests/pbt/mtx/mtx_core_pbt.c`:
+  - validates `C_MTXIdentity` / `PSMTXIdentity` invariants
+  - validates `C_MTXOrtho` formula invariants over randomized ranges
+  - PASS at 50,000 iterations (`tools/run_pbt.sh mtx_core 50000 0xC0DEC0DE`)
+- Added `tests/pbt/dvd/dvd_core_pbt.c`:
+  - randomized checks for `DVDFastOpen`, `DVDOpen`, `DVDConvertPathToEntrynum`
+  - randomized checks for `DVDRead`, `DVDReadAsync`, `DVDReadPrio`, `DVDReadAsyncPrio`, `DVDClose`
+  - callback and command-block state checks
+  - PASS at 20,000 iterations (`tools/run_pbt.sh dvd_core 20000 0xC0DEC0DE`)
+- Imported ARQ + CARD-FAT property suites from integration branch and validated on macOS:
+  - `tools/run_arq_property_test.sh --num-runs=50 -v` PASS
+  - `tools/run_card_fat_property_test.sh --num-runs=50 -v` PASS
+- Updated chain matrix baseline with current ARQ/CARD-FAT status:
+  - `docs/sdk/PBT_CHAIN_MATRIX.md`
+
+## 2026-02-11: One-button HuPadInit blocker harvest/replay loop
+- Added `tools/harvest_and_replay_hupadinit_blockers.sh` to run all four MP4 HuPadInit blockers in one command:
+  - `OSDisableInterrupts` / `OSRestoreInterrupts`
+  - `VISetPostRetraceCallback`
+  - `SISetSamplingRate`
+  - `PADControlMotor`
+- Verified end-to-end with short caps (`GC_MAX_UNIQUE=1 GC_MAX_HITS=20 GC_TIMEOUT=60`) on this machine.
+- Replay outcomes from the run:
+  - `OSDisableInterrupts`: replay PASS on harvested hits.
+  - `VISetPostRetraceCallback`: replay PASS (`old=0x0 new=0x80005CB4` case).
+  - `SISetSamplingRate`: replay PASS for sampled unique case.
+  - `PADControlMotor`: replay PASS for harvested hits (`chan=0 cmd=2` examples).
+- This loop is the current fastest way to expand retail-trace fixtures for HuPadInit blockers while keeping deterministic host replay validation in the same run.
+
+## 2026-02-11: Dual-run oracle parity check (phase 1)
+- Added `tools/run_oracle_dualcheck.sh`.
+- Implemented strict-vs-adapted dual check for CARD leaf function `__CARDCheckSum`:
+  - strict oracle body: `tests/sdk/card/property/card_checksum_strict_oracle.h` (copied from MP4 decomp)
+  - adapted oracle body: `tests/sdk/card/property/card_fat_oracle.h`
+  - candidate: `src/sdk_port/card/card_fat.c` via existing property harness
+- Validation run:
+  - `tools/run_oracle_dualcheck.sh 200`
+  - strict checksum dual-check: `200/200 PASS`
+  - ARQ adapted suite: `150/150 PASS`
+  - CARD FAT adapted suite: `1569/1569 PASS`
+- Scope note: this is phase 1 (leaf strict check) and does not yet cover strict dual-run for ARQ/OSAlloc/DVDFS/MTX.
+
+## 2026-02-11: MP4 chain coverage sync (GXInitTexObjLOD)
+- Verified suite parity for MP4 callsite test:
+  - `tests/sdk/gx/gx_init_tex_obj_lod/expected/gx_init_tex_obj_lod_mp4_pfdrawfonts_001.bin`
+  - `tests/sdk/gx/gx_init_tex_obj_lod/actual/gx_init_tex_obj_lod_mp4_pfdrawfonts_001.bin`
+  - `tools/ram_compare.py` result: PASS (bit-identical).
+- Updated `docs/sdk/mp4/MP4_chain_all.csv` row `pfDrawFonts -> GXInitTexObjLOD` from `0/1` to `1/1` and marked covered (`y`).

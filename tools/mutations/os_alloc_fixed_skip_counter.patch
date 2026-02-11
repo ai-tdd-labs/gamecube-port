@@ -1,0 +1,10 @@
+diff --git a/src/sdk_port/os/OSAlloc.c b/src/sdk_port/os/OSAlloc.c
+--- a/src/sdk_port/os/OSAlloc.c
++++ b/src/sdk_port/os/OSAlloc.c
+@@ -249,5 +249,5 @@
+ void *OSAllocFixed(uint32_t size) {
+-    gc_os_alloc_fixed_calls++;
++    // MUTANT: skip incrementing the call counter
+     gc_os_alloc_fixed_last_size = size;
+     return OSAlloc(size);
+ }

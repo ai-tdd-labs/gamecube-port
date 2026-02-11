@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1896,7 +1896,7 @@
+         return;
+     }
+ 
+-    gx_write_xf_reg(colIdx + 10, reg);
++    gx_write_xf_reg(colIdx + 11, reg); // MUTANT
+     gc_gx_bp_sent_not = 1;
+     gc_gx_amb_color[colIdx] = reg;
+ }

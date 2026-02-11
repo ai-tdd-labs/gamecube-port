@@ -1,0 +1,16 @@
+diff --git a/src/sdk_port/vi/VI.c b/src/sdk_port/vi/VI.c
+--- a/src/sdk_port/vi/VI.c
++++ b/src/sdk_port/vi/VI.c
+@@ -112,11 +112,5 @@
+     rc++;
+     gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_RETRACE_COUNT, &gc_vi_retrace_count, rc);
+
+-    if (gc_vi_post_cb_fn) {
+-        gc_vi_post_cb_fn(rc);
+-        u32 calls = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_POST_CB_CALLS, gc_vi_post_cb_calls);
+-        calls++;
+-        gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_POST_CB_CALLS, &gc_vi_post_cb_calls, calls);
+-        gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_POST_CB_LAST_ARG, &gc_vi_post_cb_last_arg, rc);
+-    }
++    // MUTANT: skip post-retrace callback invocation entirely
+ }

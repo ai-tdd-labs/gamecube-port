@@ -5,6 +5,46 @@ evidence-based. Mark items DONE with a commit hash.
 
 ## Now (priority order)
 
+Oracle exactness hardening (new):
+- [ ] Add tier tag to each oracle (`STRICT_DECOMP`, `DECOMP_ADAPTED`, `MODEL_OR_SYNTHETIC`) and print in test output.
+  Evidence target: `tests/sdk/*/property/*_oracle.h`, `tools/run_*property*.sh`
+- [ ] Build delta ledgers for current adapted oracles:
+  - `ARQ`: interrupt + callback + DMA mocking deltas
+  - `CARD FAT`: update-fat erase/write callback deltas
+  - `OSAlloc`: struct/layout/assert host deltas
+  - `DVDFS`: physical-mem mapping + path-rule deltas
+  - `MTX`: asm removed / C fallback deltas
+  Evidence target: `docs/sdk/*/ORACLE_DELTA.md`
+- [ ] Add strict-vs-adapted dual-run checks where feasible (same fixtures, compare outputs).
+  Evidence target: `tools/run_oracle_dualcheck.sh`
+  Progress:
+  - [x] Phase 1: strict dual-check added for CARD `__CARDCheckSum` (leaf) via `tools/run_oracle_dualcheck.sh`.
+  - [ ] Phase 2: expand strict dual-checks to ARQ/OSAlloc/DVDFS/MTX where extraction is feasible.
+    - [x] MTX strict leaf oracle (`C_MTXIdentity`, `C_MTXOrtho`) wired into `tests/pbt/mtx/mtx_core_pbt.c`.
+    - [x] ARQ strict leaf extraction (callback normalization, decomp hack semantics) wired into `tests/sdk/ar/property/arq_property_test.c`.
+    - [x] OSAlloc strict leaf extraction (`OSRoundUp32B`, `OSRoundDown32B`) wired into `tests/pbt/os/os_round_32b/os_round_32b_pbt.c`.
+    - [x] DVDFS strict leaf extraction (`dvd_core` read-window semantics) wired into `tests/pbt/dvd/dvd_core_pbt.c`.
+- [ ] Add retail-trace replay fixtures for hardware-sensitive behaviors (interrupt/callback ordering).
+  Evidence target: `tests/oracles/mp4_rvz/*`, replay scripts in `tools/`
+- [ ] Merge/reconcile `codex/integration-all` into `main` after gate passes.
+  Evidence target: merge commit + green gate run
+
+PBT chain program (whole-chain quality gate):
+- [x] Define subsystem-level DoD and gating policy for OSAlloc/DVDFS/ARQ/CARD-FAT/MTX.
+  Evidence: `docs/codex/PBT_CHAIN_PROGRAM.md`
+
+PBT matrix baseline:
+- [x] Add cross-subsystem matrix baseline (OSAlloc/DVDFS/ARQ/CARD-FAT/MTX).
+  Evidence: `docs/sdk/PBT_CHAIN_MATRIX.md`
+- [x] Add MTX core PBT suite and pass 50k iterations.
+  Evidence: `tests/pbt/mtx/mtx_core_pbt.c`, `tools/run_pbt.sh mtx_core 50000 0xC0DEC0DE`
+- [x] Add DVD core PBT suite and pass 20k iterations.
+  Evidence: `tests/pbt/dvd/dvd_core_pbt.c`, `tools/run_pbt.sh dvd_core 20000 0xC0DEC0DE`
+- [x] Import ARQ and CARD-FAT property suites on this branch and validate on macOS.
+  Evidence: `tools/run_arq_property_test.sh --num-runs=50 -v`, `tools/run_card_fat_property_test.sh --num-runs=50 -v`
+- [x] Add PBT oracle linkage map and one-button chain gate script.
+  Evidence: `docs/codex/PBT_ORACLE_LINKAGE.md`, `tools/run_pbt_chain_gate.sh`
+
 0. Real-game breakpoint dump tooling (secondary oracle)
    - [x] Large MEM1 dumps work reliably with conservative chunking (`--chunk 0x1000`) and reconnect/retry logic in `tools/ram_dump.py`.
      Evidence: `tools/dump_expected_mem1.sh`, `tests/sdk/smoke/mp4_pad_init_chain_001/expected/mp4_pad_init_chain_001_mem1.bin`

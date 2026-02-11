@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1163,7 +1163,7 @@
+ }
+ 
+ void GXPokeAlphaRead(u32 mode) {
+-    gc_gx_poke_alpha_read_mode = mode;
++    gc_gx_poke_alpha_read_mode = 0; // MUTANT
+ }
+ 
+ void GXPokeDstAlpha(u8 enable, u8 alpha) {

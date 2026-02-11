@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/os/OSInit.c b/src/sdk_port/os/OSInit.c
+--- a/src/sdk_port/os/OSInit.c
++++ b/src/sdk_port/os/OSInit.c
+@@ -33,6 +33,7 @@
+
+     // Defaults match our deterministic DOL oracle for OSInit.
+-    const uint32_t def_lo = 0x80002000u;
++    // MUTANT: swap default lo and hi values
++    const uint32_t def_lo = 0x81700000u;
+     const uint32_t def_hi = 0x81700000u;
+
+     OSSetArenaLo((void *)(uintptr_t)(boot_arena_lo ? boot_arena_lo : def_lo));

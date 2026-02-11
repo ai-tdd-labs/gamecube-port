@@ -1,0 +1,14 @@
+diff --git a/src/sdk_port/card/card_fat.c b/src/sdk_port/card/card_fat.c
+index c73cfdf..56a9a04 100644
+--- a/src/sdk_port/card/card_fat.c
++++ b/src/sdk_port/card/card_fat.c
+@@ -107,7 +107,7 @@ int32_t port_CARDAllocBlock(port_CARDControl *card, uint32_t cBlock)
+         return PORT_CARD_RESULT_INSSPACE;
+     }
+ 
+-    fat_set(card, PORT_CARD_FAT_FREEBLOCKS, (uint16_t)(freeBlocks - cBlock));
++    fat_set(card, PORT_CARD_FAT_FREEBLOCKS, freeBlocks);
+     startBlock = 0xFFFF;
+     iBlock = fat_get(card, PORT_CARD_FAT_LASTSLOT);
+     count = 0;
+

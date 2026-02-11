@@ -1,0 +1,11 @@
+diff --git a/src/sdk_port/vi/VI.c b/src/sdk_port/vi/VI.c
+--- a/src/sdk_port/vi/VI.c
++++ b/src/sdk_port/vi/VI.c
+@@ -97,6 +97,6 @@
+
+ void VIFlush(void) {
+     u32 v = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_FLUSH_CALLS, gc_vi_flush_calls);
+-    v++;
++    // v++; // MUTANT: skip incrementing flush call counter
+     gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_FLUSH_CALLS, &gc_vi_flush_calls, v);
+ }

@@ -26,6 +26,8 @@ int DVDGetCommandBlockStatus(DVDCommandBlock *block);
 int DVDFastOpen(s32 entrynum, DVDFileInfo *file);
 s32 DVDReadAsync(DVDFileInfo *file, void *addr, s32 len, s32 offset, DVDCallback cb);
 
+extern u32 gc_dvd_async_busy_seen;
+
 const char *gc_scenario_label(void) { return "DVDReadAsync/mp4_hu_data_dvd_dir_direct_read"; }
 const char *gc_scenario_out_path(void) { return "../actual/dvd_read_async_mp4_hu_data_dvd_dir_direct_read_001.bin"; }
 
@@ -51,15 +53,18 @@ void gc_scenario_run(GcRam *ram) {
   if (!dest) die("gc_ram_ptr dest failed");
   memset(dest, 0xAA, 0x40);
 
+  gc_dvd_async_busy_seen = 0;
   s32 r = DVDReadAsync(&fi, dest, 0x20, 0x10, NULL);
   int st = DVDGetCommandBlockStatus(&fi.cb);
 
-  uint8_t *p = gc_ram_ptr(ram, 0x80300000u, 0x18);
+  uint8_t *p = gc_ram_ptr(ram, 0x80300000u, 0x40);
   if (!p) die("gc_ram_ptr out failed");
+  memset(p, 0, 0x40);
   wr32be(p + 0x00, 0xDEADBEEFu);
   wr32be(p + 0x04, (u32)ok);
   wr32be(p + 0x08, (u32)r);
   wr32be(p + 0x0C, (u32)st);
   wr32be(p + 0x10, rd32be(dest + 0x00));
   wr32be(p + 0x14, rd32be(dest + 0x10));
+  wr32be(p + 0x18, gc_dvd_async_busy_seen);
 }

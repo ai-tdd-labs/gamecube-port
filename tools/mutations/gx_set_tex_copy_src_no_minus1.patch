@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1198,7 +1198,7 @@
+     gc_gx_cp_tex_src = set_field(gc_gx_cp_tex_src, 8, 24, 0x49u);
+ 
+     gc_gx_cp_tex_size = 0;
+-    gc_gx_cp_tex_size = set_field(gc_gx_cp_tex_size, 10, 0, (u32)(wd - 1u));
++    gc_gx_cp_tex_size = set_field(gc_gx_cp_tex_size, 10, 0, (u32)(wd)); // MUTANT
+     gc_gx_cp_tex_size = set_field(gc_gx_cp_tex_size, 10, 10, (u32)(ht - 1u));
+     gc_gx_cp_tex_size = set_field(gc_gx_cp_tex_size, 8, 24, 0x4Au);
+ }

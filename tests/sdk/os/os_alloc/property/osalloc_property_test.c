@@ -1,25 +1,16 @@
 /*
- * osalloc_property_test.c — Property-based test for OSAlloc (oracle vs port).
+ * osalloc_property_test.c — Property-style parity test for OSAlloc (oracle vs port).
  *
- * Single binary compiled with -m32.  Contains BOTH:
- *   - Oracle: exact copy of decomp OSAlloc.c (native 32-bit pointers)
- *   - Port:   sdk_port OSAlloc.c (emulated big-endian via gc_mem)
+ * Portable (no -m32):
+ * - Oracle uses 32-bit offset pointers in an arena buffer.
+ * - Port uses sdk_port OSAlloc + emulated big-endian RAM (gc_mem).
  *
- * Driven by a seed-based PRNG; compares results after every operation.
+ * This is a deterministic "1-button loop" test suite:
+ * - leaf-level DL operations (L0) to lock list/coalescing semantics
+ * - API-level operations (L1) for allocator behaviors beyond a single seed
+ * - integration mix (L2) for regression catching
  *
- * Test levels (bottom-up):
- *   Level 0 — DL leaf functions (DLAddFront, DLExtract, DLInsert, DLLookup)
- *   Level 1 — Individual API functions (OSAllocFromHeap, OSFreeToHeap, etc.)
- *   Level 2 — Full integration (random mix of all operations)
- *
- * Usage:
- *   osalloc_property_test [--seed=N] [--op=NAME] [--num-runs=N] [-v]
- *
- * Default: --num-runs=500 --op=full
- *
- * Oracle source: external/mp4-decomp/src/dolphin/os/OSAlloc.c
- * Why -m32:      struct sizes match GC exactly (Cell=16, HeapDesc=12),
- *                HeapDescs live in the arena, no hacks needed.
+ * This is semantic parity (offsets / free counts), not a Dolphin RAM-dump oracle.
  */
 
 #include <stdint.h>
@@ -27,23 +18,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Compile-time check: -m32 required */
-_Static_assert(sizeof(void *) == 4, "Must compile with -m32");
-_Static_assert(sizeof(long) == 4,   "Must compile with -m32");
+#include "osalloc_oracle_offsets.h"
 
-/* ── Oracle (decomp, native 32-bit pointers, HeapDescs in arena) ── */
-#include "osalloc_oracle.h"
-
-/* Compile-time check: struct sizes match GC */
-_Static_assert(sizeof(struct oracle_Cell) == 16,     "oracle_Cell must be 16 bytes");
-_Static_assert(sizeof(struct oracle_HeapDesc) == 12,  "oracle_HeapDesc must be 12 bytes");
-
-/* ── Port (sdk_port, emulated memory) ── */
 #include "harness/gc_host_ram.h"
 #include "gc_mem.h"
 #include "sdk_state.h"
 
-/* Port API */
+/* Port API (sdk_port) */
 extern void *OSInitAlloc(void *arenaStart, void *arenaEnd, int maxHeaps);
 extern int   OSCreateHeap(void *start, void *end);
 extern int   OSSetCurrentHeap(int heap);
@@ -54,13 +35,26 @@ extern void  OSDestroyHeap(int heap);
 extern void  OSAddToHeap(int heap, void *start, void *end);
 extern volatile int32_t __OSCurrHeap;
 
-/* Port DL helpers (non-static in sdk_port/os/OSAlloc.c) */
+/* Port DL helpers (exported for leaf tests) */
 extern uint32_t port_DLAddFront(uint32_t list, uint32_t cell);
 extern uint32_t port_DLExtract(uint32_t list, uint32_t cell);
 extern uint32_t port_DLInsert(uint32_t list, uint32_t cell);
 extern uint32_t port_DLLookup(uint32_t list, uint32_t cell);
 
-/* ── PRNG ── */
+/* ── Config ── */
+
+#define GC_BASE       0x80000000u
+#define PORT_ARENA_LO 0x80002000u
+#define PORT_ARENA_HI (PORT_ARENA_LO + 0x00100000u)
+
+#define ORACLE_BUF_SIZE (1u << 20) /* 1 MiB */
+#define MAX_ALLOCS      256
+
+static uint8_t oracle_buf[ORACLE_BUF_SIZE] __attribute__((aligned(64)));
+static GcRam g_ram;
+
+/* ── PRNG (deterministic, cheap) ── */
+
 static uint32_t xorshift32(uint32_t *state) {
     uint32_t x = *state;
     x ^= x << 13;
@@ -70,42 +64,11 @@ static uint32_t xorshift32(uint32_t *state) {
     return x;
 }
 
-/* ── Configuration ── */
-#define GC_BASE       0x80000000u
-#define PORT_ARENA_LO 0x80002000u
-#define MAX_ALLOCS    128
-#define MAX_OPS       80
-#define MAX_HEAPS     8
-
-/* Oracle arena: 1 MiB aligned static buffer. */
-#define ORACLE_BUF_SIZE (1 << 20)
-static uint8_t oracle_buf[ORACLE_BUF_SIZE] __attribute__((aligned(64)));
-
-/* ── Allocation tracking ── */
-typedef struct {
-    void    *oracle_ptr;   /* native pointer from oracle */
-    void    *port_ptr;     /* GC-address-as-pointer from port */
-    int      heap;
-} AllocEntry;
-
-static AllocEntry g_allocs[MAX_ALLOCS];
-static int g_num_allocs;
-
-/* Per-heap base addresses for offset comparison */
-static uint8_t *g_oracle_heap_base[MAX_HEAPS];
-static uint32_t g_port_heap_base[MAX_HEAPS];
-
-/* ── Global state ── */
-static GcRam g_ram;
-static int g_verbose;
-
-static void fail_msg(uint32_t seed, int op_idx, const char *op_name,
-                     const char *detail) {
-    fprintf(stderr, "[FAIL] seed=0x%08X op=%d/%s %s\n",
-            seed, op_idx, op_name, detail);
+static void die(const char *msg) {
+    fprintf(stderr, "fatal: %s\n", msg);
+    exit(2);
 }
 
-/* ── Reset both implementations ── */
 static void reset_all(void) {
     /* Oracle */
     oracle_reset(oracle_buf, ORACLE_BUF_SIZE);
@@ -113,235 +76,206 @@ static void reset_all(void) {
     /* Port */
     gc_ram_free(&g_ram);
     if (gc_ram_init(&g_ram, GC_BASE, 0x02000000u) != 0) {
-        fprintf(stderr, "fatal: gc_ram_init\n");
-        exit(2);
+        die("gc_ram_init failed");
     }
     gc_mem_set(g_ram.base, g_ram.size, g_ram.buf);
     gc_sdk_state_reset();
     __OSCurrHeap = -1;
-
-    /* Tracking */
-    g_num_allocs = 0;
-    memset(g_allocs, 0, sizeof(g_allocs));
-    memset(g_oracle_heap_base, 0, sizeof(g_oracle_heap_base));
-    memset(g_port_heap_base, 0, sizeof(g_port_heap_base));
 }
 
-/* ──────────────────────────────────────────────────────────────────────
- * Level 0: DL leaf function tests
- *
- * These test individual linked-list primitives in isolation.
- * Both oracle and port operate on the same logical structure but in
- * different memory:
- *   - Oracle: native 32-bit pointers into oracle_buf
- *   - Port:   emulated gc_mem at PORT_ARENA_LO
- * ────────────────────────────────────────────────────────────────────── */
-
-/* Helper: write an oracle cell at native pointer */
-static void oracle_cell_write(struct oracle_Cell *cell, uint32_t prev_idx,
-                               uint32_t next_idx, long size,
-                               struct oracle_Cell *base, int n_cells) {
-    cell->prev = (prev_idx < (uint32_t)n_cells) ? &base[prev_idx] : NULL;
-    cell->next = (next_idx < (uint32_t)n_cells) ? &base[next_idx] : NULL;
-    cell->size = size;
-    cell->hd = NULL;
+static void fail_case(uint32_t seed, int run_idx, int step_idx, const char *op, const char *msg) {
+    fprintf(stderr, "[FAIL] seed=0x%08X run=%d step=%d op=%s %s\n", seed, run_idx, step_idx, op, msg);
 }
 
-/* Helper: write a port cell at emulated address */
-static void port_cell_write(uint32_t addr, uint32_t prev_addr,
-                             uint32_t next_addr, uint32_t size) {
-    uint8_t *p = gc_mem_ptr(addr, 16);
+/* ── Big-endian helpers for port leaf tests ── */
+
+static inline uint32_t load_u32be(uint32_t addr) {
+    uint8_t *p = gc_mem_ptr(addr, 4);
+    if (!p) return 0;
+    return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | (uint32_t)p[3];
+}
+
+static inline void store_u32be(uint32_t addr, uint32_t v) {
+    uint8_t *p = gc_mem_ptr(addr, 4);
     if (!p) return;
-    /* prev */
-    p[0] = (uint8_t)(prev_addr >> 24); p[1] = (uint8_t)(prev_addr >> 16);
-    p[2] = (uint8_t)(prev_addr >> 8);  p[3] = (uint8_t)(prev_addr);
-    /* next */
-    p[4] = (uint8_t)(next_addr >> 24); p[5] = (uint8_t)(next_addr >> 16);
-    p[6] = (uint8_t)(next_addr >> 8);  p[7] = (uint8_t)(next_addr);
-    /* size */
-    p[8]  = (uint8_t)(size >> 24); p[9]  = (uint8_t)(size >> 16);
-    p[10] = (uint8_t)(size >> 8);  p[11] = (uint8_t)(size);
-    /* hd = 0 */
-    p[12] = 0; p[13] = 0; p[14] = 0; p[15] = 0;
+    p[0] = (uint8_t)(v >> 24);
+    p[1] = (uint8_t)(v >> 16);
+    p[2] = (uint8_t)(v >> 8);
+    p[3] = (uint8_t)(v >> 0);
 }
 
-/* Helper: read port cell fields */
-static uint32_t port_cell_prev(uint32_t addr) {
-    uint8_t *p = gc_mem_ptr(addr, 16);
-    if (!p) return 0;
-    return ((uint32_t)p[0]<<24)|((uint32_t)p[1]<<16)|((uint32_t)p[2]<<8)|(uint32_t)p[3];
+/* Port Cell layout (16 bytes): prev,next,size,hd (all u32 BE) */
+static void port_cell_write(uint32_t addr, uint32_t prev, uint32_t next, uint32_t size, uint32_t hd) {
+    store_u32be(addr + 0, prev);
+    store_u32be(addr + 4, next);
+    store_u32be(addr + 8, size);
+    store_u32be(addr + 12, hd);
 }
-static uint32_t port_cell_next(uint32_t addr) {
-    uint8_t *p = gc_mem_ptr(addr, 16);
-    if (!p) return 0;
-    return ((uint32_t)p[4]<<24)|((uint32_t)p[5]<<16)|((uint32_t)p[6]<<8)|(uint32_t)p[7];
-}
-static uint32_t port_cell_size(uint32_t addr) {
-    uint8_t *p = gc_mem_ptr(addr, 16);
-    if (!p) return 0;
-    return ((uint32_t)p[8]<<24)|((uint32_t)p[9]<<16)|((uint32_t)p[10]<<8)|(uint32_t)p[11];
-}
+static uint32_t port_cell_prev(uint32_t addr) { return load_u32be(addr + 0); }
+static uint32_t port_cell_next(uint32_t addr) { return load_u32be(addr + 4); }
+static uint32_t port_cell_size(uint32_t addr) { return load_u32be(addr + 8); }
 
-/* Compare two linked lists: oracle (native) vs port (emulated).
- * Both should have the same sequence of (offset, size) pairs. */
-static int compare_lists(const char *label, uint32_t seed, int op_idx,
-                          struct oracle_Cell *o_list, uint32_t p_list,
-                          uint8_t *o_base, uint32_t p_base) {
-    struct oracle_Cell *o = o_list;
+/* ── Common compare: oracle list (offsets) vs port list (GC addresses) ── */
+
+static int compare_lists(const char *op, uint32_t seed, int run_idx, int step_idx,
+                         o32 o_list, uint32_t p_list,
+                         o32 o_base, uint32_t p_base) {
+    o32 o_prev = 0;
+    uint32_t p_prev = 0;
+    o32 o = o_list;
     uint32_t p = p_list;
     int idx = 0;
 
-    while (o != NULL || p != 0) {
-        if ((o == NULL) != (p == 0)) {
-            char buf[256];
-            snprintf(buf, sizeof(buf),
-                     "%s list length mismatch at idx=%d (oracle=%s, port=%s)",
-                     label, idx, o ? "more" : "end", p ? "more" : "end");
-            fail_msg(seed, op_idx, label, buf);
+    while (o != 0 || p != 0) {
+        if ((o == 0) != (p == 0)) {
+            fail_case(seed, run_idx, step_idx, op, "list length mismatch");
             return 1;
         }
 
-        uint32_t o_off = (uint32_t)((uint8_t *)o - o_base);
-        uint32_t p_off = p - p_base;
-        if (o_off != p_off) {
-            char buf[256];
-            snprintf(buf, sizeof(buf),
-                     "%s offset mismatch at idx=%d: oracle=0x%X port=0x%X",
-                     label, idx, o_off, p_off);
-            fail_msg(seed, op_idx, label, buf);
+        struct oracle_Cell *oc = OCELL(o);
+        if (!oc) {
+            fail_case(seed, run_idx, step_idx, op, "oracle cell OOB");
             return 1;
         }
 
-        long o_size = o->size;
-        uint32_t p_size = port_cell_size(p);
-        if ((uint32_t)o_size != p_size) {
-            char buf[256];
-            snprintf(buf, sizeof(buf),
-                     "%s size mismatch at idx=%d off=0x%X: oracle=%ld port=%u",
-                     label, idx, o_off, o_size, p_size);
-            fail_msg(seed, op_idx, label, buf);
+        uint32_t o_rel = (uint32_t)(o - o_base);
+        uint32_t p_rel = (uint32_t)(p - p_base);
+        if (o_rel != p_rel) {
+            fail_case(seed, run_idx, step_idx, op, "node offset mismatch");
             return 1;
         }
 
-        o = o->next;
+        if ((uint32_t)oc->size != port_cell_size(p)) {
+            fail_case(seed, run_idx, step_idx, op, "node size mismatch");
+            return 1;
+        }
+
+        /* prev linkage must match */
+        if (oc->prev != o_prev) {
+            fail_case(seed, run_idx, step_idx, op, "oracle prev link mismatch");
+            return 1;
+        }
+        if (port_cell_prev(p) != p_prev) {
+            fail_case(seed, run_idx, step_idx, op, "port prev link mismatch");
+            return 1;
+        }
+
+        o_prev = o;
+        p_prev = p;
+        o = oc->next;
         p = port_cell_next(p);
         idx++;
+        if (idx > 4096) {
+            fail_case(seed, run_idx, step_idx, op, "loop detected");
+            return 1;
+        }
     }
     return 0;
 }
 
-/* Test DLAddFront: build a list by adding N cells to front. */
+/* ──────────────────────────────────────────────────────────────────────
+ * Level 0 — DL leaf operations (portable offsets oracle)
+ * ────────────────────────────────────────────────────────────────────── */
+
 static int test_DLAddFront(uint32_t seed) {
     uint32_t rng = seed ? seed : 1;
     reset_all();
 
-    int n_cells = 2 + (int)(xorshift32(&rng) % 10);
-    uint32_t cell_spacing = 0x40;
+    const int n_cells = 2 + (int)(xorshift32(&rng) % 10);
+    const uint32_t spacing = 0x40;
 
-    /* Base addresses for cells */
-    uint8_t *o_base = oracle_buf;
-    uint32_t p_base = PORT_ARENA_LO;
+    const o32 o_base = 0x2000;
+    const uint32_t p_base = PORT_ARENA_LO + 0x2000;
 
-    struct oracle_Cell *o_list = NULL;
+    o32 o_list = 0;
     uint32_t p_list = 0;
 
     for (int i = 0; i < n_cells; i++) {
-        /* Oracle: init cell at offset i*spacing */
-        struct oracle_Cell *o_cell = (struct oracle_Cell *)(o_base + i * cell_spacing);
-        long cell_size = (long)(cell_spacing + (xorshift32(&rng) % 0x100) * 0x20);
-        cell_size = (cell_size + 0x1F) & ~0x1FL;
-        if (cell_size < 0x40) cell_size = 0x40;
-        o_cell->size = cell_size;
-        o_cell->hd = NULL;
+        o32 o_cell = o_base + (o32)(i * spacing);
+        struct oracle_Cell *oc = OCELL(o_cell);
+        if (!oc) return 1;
+        uint32_t sz = 0x40u + ((xorshift32(&rng) % 8u) * 0x20u);
+        sz = (sz + 31u) & ~31u;
+        oc->prev = 0;
+        oc->next = 0;
+        oc->size = (int32_t)sz;
+        oc->hd = 0;
 
-        /* Port: init cell at equivalent offset */
-        uint32_t p_cell = p_base + (uint32_t)(i * cell_spacing);
-        port_cell_write(p_cell, 0, 0, (uint32_t)cell_size);
+        uint32_t p_cell = p_base + (uint32_t)(i * spacing);
+        port_cell_write(p_cell, 0, 0, sz, 0);
 
-        /* DLAddFront on both */
         o_list = oracle_DLAddFront(o_list, o_cell);
         p_list = port_DLAddFront(p_list, p_cell);
     }
 
-    return compare_lists("DLAddFront", seed, 0, o_list, p_list, o_base, p_base);
+    return compare_lists("DLAddFront", seed, 0, 0, o_list, p_list, o_base, p_base);
 }
 
-/* Test DLExtract: build a list, then extract random cells. */
 static int test_DLExtract(uint32_t seed) {
     uint32_t rng = seed ? seed : 1;
     reset_all();
 
-    int n_cells = 3 + (int)(xorshift32(&rng) % 8);
-    uint32_t cell_spacing = 0x40;
+    const int n_cells = 3 + (int)(xorshift32(&rng) % 8);
+    const uint32_t spacing = 0x40;
+    const o32 o_base = 0x2000;
+    const uint32_t p_base = PORT_ARENA_LO + 0x2000;
 
-    uint8_t *o_base = oracle_buf;
-    uint32_t p_base = PORT_ARENA_LO;
-
-    /* Build list using DLAddFront (already tested) */
-    struct oracle_Cell *o_list = NULL;
+    o32 o_list = 0;
     uint32_t p_list = 0;
 
     for (int i = 0; i < n_cells; i++) {
-        struct oracle_Cell *o_cell = (struct oracle_Cell *)(o_base + i * cell_spacing);
-        o_cell->size = 0x40;
-        o_cell->hd = NULL;
+        o32 o_cell = o_base + (o32)(i * spacing);
+        struct oracle_Cell *oc = OCELL(o_cell);
+        if (!oc) return 1;
+        oc->prev = 0;
+        oc->next = 0;
+        oc->size = 0x40;
+        oc->hd = 0;
 
-        uint32_t p_cell = p_base + (uint32_t)(i * cell_spacing);
-        port_cell_write(p_cell, 0, 0, 0x40);
+        uint32_t p_cell = p_base + (uint32_t)(i * spacing);
+        port_cell_write(p_cell, 0, 0, 0x40, 0);
 
         o_list = oracle_DLAddFront(o_list, o_cell);
         p_list = port_DLAddFront(p_list, p_cell);
     }
 
-    /* Extract cells in random order */
     int remaining = n_cells;
     int indices[16];
     for (int i = 0; i < n_cells; i++) indices[i] = i;
 
-    int n_extract = 1 + (int)(xorshift32(&rng) % (uint32_t)(n_cells - 1));
+    const int n_extract = 1 + (int)(xorshift32(&rng) % (uint32_t)(n_cells - 1));
     for (int e = 0; e < n_extract && remaining > 0; e++) {
         int pick = (int)(xorshift32(&rng) % (uint32_t)remaining);
         int cell_idx = indices[pick];
 
-        struct oracle_Cell *o_cell = (struct oracle_Cell *)(o_base + cell_idx * cell_spacing);
-        uint32_t p_cell = p_base + (uint32_t)(cell_idx * cell_spacing);
+        o32 o_cell = o_base + (o32)(cell_idx * spacing);
+        uint32_t p_cell = p_base + (uint32_t)(cell_idx * spacing);
 
         o_list = oracle_DLExtract(o_list, o_cell);
         p_list = port_DLExtract(p_list, p_cell);
 
-        /* Remove from indices */
         indices[pick] = indices[remaining - 1];
         remaining--;
 
-        /* Compare after each extraction */
-        if (compare_lists("DLExtract", seed, e, o_list, p_list, o_base, p_base) != 0) {
-            return 1;
-        }
+        if (compare_lists("DLExtract", seed, 0, e, o_list, p_list, o_base, p_base) != 0) return 1;
     }
     return 0;
 }
 
-/* Test DLInsert: insert cells in random address order, verify coalescing. */
 static int test_DLInsert(uint32_t seed) {
     uint32_t rng = seed ? seed : 1;
     reset_all();
 
-    /* Use larger spacing so cells can have meaningful sizes for coalescing */
-    int n_cells = 3 + (int)(xorshift32(&rng) % 6);
-    uint32_t cell_spacing = 0x60; /* must be >= MINOBJSIZE + alignment */
+    const int n_cells = 3 + (int)(xorshift32(&rng) % 6);
+    const uint32_t spacing = 0x60; /* >= MINOBJSIZE and allows adjacency */
+    const o32 o_base = 0x2000;
+    const uint32_t p_base = PORT_ARENA_LO + 0x2000;
 
-    uint8_t *o_base = oracle_buf;
-    uint32_t p_base = PORT_ARENA_LO;
-
-    struct oracle_Cell *o_list = NULL;
+    o32 o_list = 0;
     uint32_t p_list = 0;
 
-    /* Decide which cells should be adjacent (for coalescing testing).
-     * We'll insert cells in random order but with sizes that sometimes
-     * make them exactly adjacent. */
     int order[16];
     for (int i = 0; i < n_cells; i++) order[i] = i;
-    /* Shuffle insertion order */
     for (int i = n_cells - 1; i > 0; i--) {
         int j = (int)(xorshift32(&rng) % (uint32_t)(i + 1));
         int tmp = order[i]; order[i] = order[j]; order[j] = tmp;
@@ -349,682 +283,421 @@ static int test_DLInsert(uint32_t seed) {
 
     for (int ins = 0; ins < n_cells; ins++) {
         int idx = order[ins];
+        o32 o_cell = o_base + (o32)(idx * spacing);
+        uint32_t p_cell = p_base + (uint32_t)(idx * spacing);
 
-        /* Cell address */
-        uint32_t off = (uint32_t)idx * cell_spacing;
-        struct oracle_Cell *o_cell = (struct oracle_Cell *)(o_base + off);
-        uint32_t p_cell = p_base + off;
-
-        /* Size: either exactly cell_spacing (adjacent to next) or smaller */
-        long cell_size;
-        if (xorshift32(&rng) % 3 == 0) {
-            /* Make adjacent to next cell for coalescing */
-            cell_size = (long)cell_spacing;
+        uint32_t sz;
+        if ((xorshift32(&rng) % 3u) == 0u) {
+            sz = spacing; /* exact adjacency, should coalesce */
         } else {
-            cell_size = 0x40; /* minimum, won't coalesce */
+            sz = 0x40u;
         }
-        o_cell->size = cell_size;
-        o_cell->hd = NULL;
-        port_cell_write(p_cell, 0, 0, (uint32_t)cell_size);
+
+        struct oracle_Cell *oc = OCELL(o_cell);
+        if (!oc) return 1;
+        oc->prev = 0;
+        oc->next = 0;
+        oc->size = (int32_t)sz;
+        oc->hd = 0;
+        port_cell_write(p_cell, 0, 0, sz, 0);
 
         o_list = oracle_DLInsert(o_list, o_cell);
         p_list = port_DLInsert(p_list, p_cell);
 
-        if (compare_lists("DLInsert", seed, ins, o_list, p_list, o_base, p_base) != 0) {
-            return 1;
-        }
+        if (compare_lists("DLInsert", seed, 0, ins, o_list, p_list, o_base, p_base) != 0) return 1;
     }
+
     return 0;
 }
 
-/* Test DLLookup: build a list, then search for cells. */
 static int test_DLLookup(uint32_t seed) {
     uint32_t rng = seed ? seed : 1;
     reset_all();
 
-    int n_cells = 3 + (int)(xorshift32(&rng) % 8);
-    uint32_t cell_spacing = 0x40;
+    const int n_cells = 2 + (int)(xorshift32(&rng) % 10);
+    const uint32_t spacing = 0x40;
+    const o32 o_base = 0x2000;
+    const uint32_t p_base = PORT_ARENA_LO + 0x2000;
 
-    uint8_t *o_base = oracle_buf;
-    uint32_t p_base = PORT_ARENA_LO;
-
-    struct oracle_Cell *o_list = NULL;
+    o32 o_list = 0;
     uint32_t p_list = 0;
 
     for (int i = 0; i < n_cells; i++) {
-        struct oracle_Cell *o_cell = (struct oracle_Cell *)(o_base + i * cell_spacing);
-        o_cell->size = 0x40;
-        o_cell->hd = NULL;
+        o32 o_cell = o_base + (o32)(i * spacing);
+        struct oracle_Cell *oc = OCELL(o_cell);
+        if (!oc) return 1;
+        oc->prev = 0;
+        oc->next = 0;
+        oc->size = 0x40;
+        oc->hd = 0;
 
-        uint32_t p_cell = p_base + (uint32_t)(i * cell_spacing);
-        port_cell_write(p_cell, 0, 0, 0x40);
+        uint32_t p_cell = p_base + (uint32_t)(i * spacing);
+        port_cell_write(p_cell, 0, 0, 0x40, 0);
 
         o_list = oracle_DLAddFront(o_list, o_cell);
         p_list = port_DLAddFront(p_list, p_cell);
     }
 
-    /* Lookup each cell + some non-existent ones */
-    for (int i = 0; i < n_cells + 3; i++) {
-        int idx = (i < n_cells) ? i : n_cells + i; /* out of range for extras */
-        struct oracle_Cell *o_cell = (struct oracle_Cell *)(o_base + idx * cell_spacing);
-        uint32_t p_cell = p_base + (uint32_t)(idx * cell_spacing);
-
-        struct oracle_Cell *o_found = oracle_DLLookup(o_list, o_cell);
-        uint32_t p_found = port_DLLookup(p_list, p_cell);
-
-        int o_ok = (o_found != NULL);
-        int p_ok = (p_found != 0);
-        if (o_ok != p_ok) {
-            char buf[256];
-            snprintf(buf, sizeof(buf),
-                     "DLLookup idx=%d: oracle=%s port=%s",
-                     idx, o_ok ? "found" : "not found", p_ok ? "found" : "not found");
-            fail_msg(seed, i, "DLLookup", buf);
+    /* Query some present and one absent */
+    for (int q = 0; q < 6; q++) {
+        int pick = (int)(xorshift32(&rng) % (uint32_t)n_cells);
+        o32 o_cell = o_base + (o32)(pick * spacing);
+        uint32_t p_cell = p_base + (uint32_t)(pick * spacing);
+        if ((oracle_DLLookup(o_list, o_cell) != 0) != (port_DLLookup(p_list, p_cell) != 0)) {
+            fail_case(seed, 0, q, "DLLookup", "present mismatch");
             return 1;
         }
     }
+    if (oracle_DLLookup(o_list, o_base + (o32)(n_cells * spacing)) != 0) return 1;
+    if (port_DLLookup(p_list, p_base + (uint32_t)(n_cells * spacing)) != 0) return 1;
     return 0;
 }
 
 /* ──────────────────────────────────────────────────────────────────────
- * Level 1+2: API and full integration tests
+ * Level 1/2 — API/integration sequences
  * ────────────────────────────────────────────────────────────────────── */
 
-/* Setup: init arenas and create heaps in both oracle and port.
- * Returns number of heaps created, or -1 on mismatch. */
-static int setup_heaps(uint32_t *rng, uint32_t seed, int *actual_heaps) {
-    uint32_t arena_size = (xorshift32(rng) % (0x20000 - 0x2000)) + 0x2000;
-    arena_size &= ~0x1Fu;
-
-    int num_heaps = 1 + (int)(xorshift32(rng) % 3);
-    if (num_heaps > MAX_HEAPS) num_heaps = MAX_HEAPS;
-
-    uint8_t *oracle_lo = oracle_buf;
-    uint8_t *oracle_hi = oracle_buf + arena_size;
-    uint32_t port_lo = PORT_ARENA_LO;
-    uint32_t port_hi = PORT_ARENA_LO + arena_size;
-
-    void *oracle_new_lo = oracle_OSInitAlloc(oracle_lo, oracle_hi, num_heaps);
-    void *port_new_lo   = OSInitAlloc((void *)(uintptr_t)port_lo,
-                                      (void *)(uintptr_t)port_hi, num_heaps);
-
-    uint32_t oracle_off = (uint32_t)((uint8_t *)oracle_new_lo - oracle_lo);
-    uint32_t port_off   = (uint32_t)((uintptr_t)port_new_lo - port_lo);
-
-    if (oracle_off != port_off) {
-        char buf[256];
-        snprintf(buf, sizeof(buf),
-                 "OSInitAlloc offset mismatch: oracle=0x%X port=0x%X",
-                 oracle_off, port_off);
-        fail_msg(seed, 0, "OSInitAlloc", buf);
-        return -1;
-    }
-
-    uint32_t usable = arena_size - oracle_off;
-    uint32_t per_heap = (usable / (uint32_t)num_heaps) & ~0x1Fu;
-
-    if (per_heap < 0x80) {
-        *actual_heaps = 0;
-        return 0; /* skip */
-    }
-
-    *actual_heaps = 0;
-    for (int h = 0; h < num_heaps; h++) {
-        uint32_t h_off_lo = oracle_off + (uint32_t)h * per_heap;
-        uint32_t h_off_hi = (h == num_heaps - 1)
-                            ? arena_size
-                            : oracle_off + (uint32_t)(h + 1) * per_heap;
-
-        uint8_t *o_lo = oracle_lo + h_off_lo;
-        uint8_t *o_hi = oracle_lo + h_off_hi;
-        uint32_t p_lo = port_lo + h_off_lo;
-        uint32_t p_hi = port_lo + h_off_hi;
-
-        int oh = oracle_OSCreateHeap(o_lo, o_hi);
-        int ph = OSCreateHeap((void *)(uintptr_t)p_lo, (void *)(uintptr_t)p_hi);
-
-        if (oh != ph) {
-            char buf[256];
-            snprintf(buf, sizeof(buf),
-                     "OSCreateHeap[%d] mismatch: oracle=%d port=%d", h, oh, ph);
-            fail_msg(seed, 0, "OSCreateHeap", buf);
-            return -1;
-        }
-        if (oh >= 0 && oh < MAX_HEAPS) {
-            g_oracle_heap_base[oh] = o_lo;
-            g_port_heap_base[oh]   = p_lo;
-            (*actual_heaps)++;
-        }
-    }
-
-    if (*actual_heaps > 0) {
-        oracle_OSSetCurrentHeap(0);
-        OSSetCurrentHeap(0);
-    }
-
-    return 0;
-}
-
-/* Check heap integrity across all active heaps */
-static int check_all_heaps(uint32_t seed, int op_idx, int actual_heaps) {
-    for (int h = 0; h < actual_heaps; h++) {
-        long oc = oracle_OSCheckHeap(h);
-        long pc = OSCheckHeap(h);
-        if (oc != pc) {
-            char buf[256];
-            snprintf(buf, sizeof(buf),
-                     "OSCheckHeap(heap=%d): oracle=%ld port=%ld", h, oc, pc);
-            fail_msg(seed, op_idx, "OSCheckHeap", buf);
-            return 1;
-        }
-    }
-    return 0;
-}
-
-/* ── Test: OSAllocFromHeap focused ── */
-static int test_OSAllocFromHeap(uint32_t seed) {
-    uint32_t rng = seed ? seed : 1;
-    reset_all();
-
-    int actual_heaps;
-    if (setup_heaps(&rng, seed, &actual_heaps) < 0) return 1;
-    if (actual_heaps == 0) return -1;
-
-    if (check_all_heaps(seed, 0, actual_heaps) != 0) return 1;
-
-    /* Do a sequence of allocations */
-    int n_ops = 10 + (int)(xorshift32(&rng) % 40);
-    for (int i = 0; i < n_ops; i++) {
-        int heap = (int)(xorshift32(&rng) % (uint32_t)actual_heaps);
-        uint32_t alloc_size = 0x20 + (xorshift32(&rng) % (0x800 - 0x20));
-        alloc_size = (alloc_size + 0x1F) & ~0x1Fu;
-
-        void *optr = oracle_OSAllocFromHeap(heap, alloc_size);
-        void *pptr = OSAllocFromHeap(heap, alloc_size);
-
-        int ook = (optr != NULL);
-        int pok = (pptr != NULL);
-        if (ook != pok) {
-            char buf[256];
-            snprintf(buf, sizeof(buf),
-                     "Alloc(heap=%d,sz=0x%X) success: o=%d p=%d",
-                     heap, alloc_size, ook, pok);
-            fail_msg(seed, i, "OSAllocFromHeap", buf);
-            return 1;
-        }
-
-        if (ook) {
-            uint32_t o_off = (uint32_t)((uint8_t *)optr - g_oracle_heap_base[heap]);
-            uint32_t p_off = (uint32_t)((uintptr_t)pptr - g_port_heap_base[heap]);
-            if (o_off != p_off) {
-                char buf[256];
-                snprintf(buf, sizeof(buf),
-                         "Alloc(heap=%d,sz=0x%X) offset: o=0x%X p=0x%X",
-                         heap, alloc_size, o_off, p_off);
-                fail_msg(seed, i, "OSAllocFromHeap", buf);
-                return 1;
-            }
-
-            if (g_num_allocs < MAX_ALLOCS) {
-                g_allocs[g_num_allocs].oracle_ptr = optr;
-                g_allocs[g_num_allocs].port_ptr   = pptr;
-                g_allocs[g_num_allocs].heap       = heap;
-                g_num_allocs++;
-            }
-        }
-
-        if (check_all_heaps(seed, i, actual_heaps) != 0) return 1;
-    }
-    return 0;
-}
-
-/* ── Test: OSFreeToHeap focused ── */
-static int test_OSFreeToHeap(uint32_t seed) {
-    uint32_t rng = seed ? seed : 1;
-    reset_all();
-
-    int actual_heaps;
-    if (setup_heaps(&rng, seed, &actual_heaps) < 0) return 1;
-    if (actual_heaps == 0) return -1;
-
-    /* First allocate some blocks */
-    int n_alloc = 5 + (int)(xorshift32(&rng) % 20);
-    for (int i = 0; i < n_alloc && g_num_allocs < MAX_ALLOCS; i++) {
-        int heap = (int)(xorshift32(&rng) % (uint32_t)actual_heaps);
-        uint32_t alloc_size = 0x20 + (xorshift32(&rng) % (0x400 - 0x20));
-        alloc_size = (alloc_size + 0x1F) & ~0x1Fu;
-
-        void *optr = oracle_OSAllocFromHeap(heap, alloc_size);
-        void *pptr = OSAllocFromHeap(heap, alloc_size);
-
-        if (optr && pptr) {
-            g_allocs[g_num_allocs].oracle_ptr = optr;
-            g_allocs[g_num_allocs].port_ptr   = pptr;
-            g_allocs[g_num_allocs].heap       = heap;
-            g_num_allocs++;
-        }
-    }
-
-    if (check_all_heaps(seed, 0, actual_heaps) != 0) return 1;
-
-    /* Now free them in random order */
-    int n_free = g_num_allocs;
-    for (int i = 0; i < n_free && g_num_allocs > 0; i++) {
-        int idx = (int)(xorshift32(&rng) % (uint32_t)g_num_allocs);
-        AllocEntry *e = &g_allocs[idx];
-
-        oracle_OSFreeToHeap(e->heap, e->oracle_ptr);
-        OSFreeToHeap(e->heap, e->port_ptr);
-
-        g_allocs[idx] = g_allocs[g_num_allocs - 1];
-        g_num_allocs--;
-
-        if (check_all_heaps(seed, i, actual_heaps) != 0) return 1;
-    }
-    return 0;
-}
-
-/* ── Test: OSCheckHeap focused ── */
-static int test_OSCheckHeap(uint32_t seed) {
-    /* OSCheckHeap is already verified in every other test via check_all_heaps.
-     * This test does a focused sequence: alloc, check, free, check. */
-    uint32_t rng = seed ? seed : 1;
-    reset_all();
-
-    int actual_heaps;
-    if (setup_heaps(&rng, seed, &actual_heaps) < 0) return 1;
-    if (actual_heaps == 0) return -1;
-
-    for (int i = 0; i < 20; i++) {
-        int heap = (int)(xorshift32(&rng) % (uint32_t)actual_heaps);
-        uint32_t alloc_size = 0x20 + (xorshift32(&rng) % (0x200 - 0x20));
-        alloc_size = (alloc_size + 0x1F) & ~0x1Fu;
-
-        void *optr = oracle_OSAllocFromHeap(heap, alloc_size);
-        void *pptr = OSAllocFromHeap(heap, alloc_size);
-
-        if (check_all_heaps(seed, i, actual_heaps) != 0) return 1;
-
-        if (optr && pptr) {
-            oracle_OSFreeToHeap(heap, optr);
-            OSFreeToHeap(heap, pptr);
-
-            if (check_all_heaps(seed, i, actual_heaps) != 0) return 1;
-        }
-    }
-    return 0;
-}
-
-/* ── Test: OSDestroyHeap focused ── */
-static int test_OSDestroyHeap(uint32_t seed) {
-    uint32_t rng = seed ? seed : 1;
-    reset_all();
-
-    int actual_heaps;
-    if (setup_heaps(&rng, seed, &actual_heaps) < 0) return 1;
-    if (actual_heaps < 2) return -1; /* need at least 2 heaps */
-
-    /* Allocate on each heap */
-    for (int h = 0; h < actual_heaps && g_num_allocs < MAX_ALLOCS; h++) {
-        uint32_t alloc_size = 0x40;
-        void *optr = oracle_OSAllocFromHeap(h, alloc_size);
-        void *pptr = OSAllocFromHeap(h, alloc_size);
-        if (optr && pptr) {
-            g_allocs[g_num_allocs].oracle_ptr = optr;
-            g_allocs[g_num_allocs].port_ptr   = pptr;
-            g_allocs[g_num_allocs].heap       = h;
-            g_num_allocs++;
-        }
-    }
-
-    /* Destroy one heap */
-    int destroy_h = (int)(xorshift32(&rng) % (uint32_t)actual_heaps);
-    oracle_OSDestroyHeap(destroy_h);
-    OSDestroyHeap(destroy_h);
-
-    /* Check: destroyed heap should return -1, others should be fine */
-    long oc = oracle_OSCheckHeap(destroy_h);
-    long pc = OSCheckHeap(destroy_h);
-    if (oc != pc) {
-        char buf[256];
-        snprintf(buf, sizeof(buf),
-                 "Destroyed heap %d check: oracle=%ld port=%ld", destroy_h, oc, pc);
-        fail_msg(seed, 0, "OSDestroyHeap", buf);
-        return 1;
-    }
-
-    /* Other heaps should still be valid */
-    for (int h = 0; h < actual_heaps; h++) {
-        if (h == destroy_h) continue;
-        oc = oracle_OSCheckHeap(h);
-        pc = OSCheckHeap(h);
-        if (oc != pc) {
-            char buf[256];
-            snprintf(buf, sizeof(buf),
-                     "After destroy(%d), heap %d check: oracle=%ld port=%ld",
-                     destroy_h, h, oc, pc);
-            fail_msg(seed, 0, "OSDestroyHeap", buf);
-            return 1;
-        }
-    }
-    return 0;
-}
-
-/* ── Test: OSAddToHeap focused ── */
-static int test_OSAddToHeap(uint32_t seed) {
-    uint32_t rng = seed ? seed : 1;
-    reset_all();
-
-    /* We need a specific setup: init with 1 heap taking part of the arena,
-     * then add more memory to it. */
-    uint32_t arena_size = 0x10000;
-    arena_size &= ~0x1Fu;
-
-    int num_heaps = 2;
-    uint8_t *oracle_lo = oracle_buf;
-    uint8_t *oracle_hi = oracle_buf + arena_size;
-    uint32_t port_lo = PORT_ARENA_LO;
-    uint32_t port_hi = PORT_ARENA_LO + arena_size;
-
-    void *oracle_new_lo = oracle_OSInitAlloc(oracle_lo, oracle_hi, num_heaps);
-    void *port_new_lo   = OSInitAlloc((void *)(uintptr_t)port_lo,
-                                      (void *)(uintptr_t)port_hi, num_heaps);
-
-    uint32_t oracle_off = (uint32_t)((uint8_t *)oracle_new_lo - oracle_lo);
-    uint32_t port_off   = (uint32_t)((uintptr_t)port_new_lo - port_lo);
-    if (oracle_off != port_off) {
-        fail_msg(seed, 0, "OSAddToHeap", "OSInitAlloc offset mismatch");
-        return 1;
-    }
-
-    /* Create heap in first half */
-    uint32_t mid = oracle_off + ((arena_size - oracle_off) / 2);
-    mid &= ~0x1Fu;
-
-    uint8_t *o_h0_lo = oracle_lo + oracle_off;
-    uint8_t *o_h0_hi = oracle_lo + mid;
-    uint32_t p_h0_lo = port_lo + oracle_off;
-    uint32_t p_h0_hi = port_lo + mid;
-
-    int oh = oracle_OSCreateHeap(o_h0_lo, o_h0_hi);
-    int ph = OSCreateHeap((void *)(uintptr_t)p_h0_lo, (void *)(uintptr_t)p_h0_hi);
-    if (oh != ph || oh < 0) {
-        fail_msg(seed, 0, "OSAddToHeap", "OSCreateHeap mismatch");
-        return 1;
-    }
-
-    g_oracle_heap_base[oh] = o_h0_lo;
-    g_port_heap_base[oh]   = p_h0_lo;
-
-    /* Do some allocations */
-    for (int i = 0; i < 3 && g_num_allocs < MAX_ALLOCS; i++) {
-        uint32_t sz = 0x40 + (xorshift32(&rng) % 0x100);
-        sz = (sz + 0x1F) & ~0x1Fu;
-        void *optr = oracle_OSAllocFromHeap(oh, sz);
-        void *pptr = OSAllocFromHeap(oh, sz);
-        if (optr && pptr) {
-            g_allocs[g_num_allocs].oracle_ptr = optr;
-            g_allocs[g_num_allocs].port_ptr   = pptr;
-            g_allocs[g_num_allocs].heap       = oh;
-            g_num_allocs++;
-        }
-    }
-
-    /* Now add the second half of memory to this heap */
-    uint8_t *o_add_lo = oracle_lo + mid;
-    uint8_t *o_add_hi = oracle_lo + arena_size;
-    uint32_t p_add_lo = port_lo + mid;
-    uint32_t p_add_hi = port_lo + arena_size;
-
-    oracle_OSAddToHeap(oh, o_add_lo, o_add_hi);
-    OSAddToHeap(oh, (void *)(uintptr_t)p_add_lo, (void *)(uintptr_t)p_add_hi);
-
-    /* Check heap integrity */
-    long oc = oracle_OSCheckHeap(oh);
-    long pc = OSCheckHeap(oh);
-    if (oc != pc) {
-        char buf[256];
-        snprintf(buf, sizeof(buf),
-                 "After AddToHeap: oracle=%ld port=%ld", oc, pc);
-        fail_msg(seed, 0, "OSAddToHeap", buf);
-        return 1;
-    }
-
-    /* Allocate more (should now fit in the expanded heap) */
-    for (int i = 0; i < 5 && g_num_allocs < MAX_ALLOCS; i++) {
-        uint32_t sz = 0x40 + (xorshift32(&rng) % 0x200);
-        sz = (sz + 0x1F) & ~0x1Fu;
-        void *optr = oracle_OSAllocFromHeap(oh, sz);
-        void *pptr = OSAllocFromHeap(oh, sz);
-
-        int ook = (optr != NULL);
-        int pok = (pptr != NULL);
-        if (ook != pok) {
-            char buf[256];
-            snprintf(buf, sizeof(buf),
-                     "Post-add alloc sz=0x%X: o=%d p=%d", sz, ook, pok);
-            fail_msg(seed, i, "OSAddToHeap", buf);
-            return 1;
-        }
-        if (optr && pptr) {
-            uint32_t o_off2 = (uint32_t)((uint8_t *)optr - g_oracle_heap_base[oh]);
-            uint32_t p_off2 = (uint32_t)((uintptr_t)pptr - g_port_heap_base[oh]);
-            if (o_off2 != p_off2) {
-                char buf[256];
-                snprintf(buf, sizeof(buf),
-                         "Post-add alloc offset: o=0x%X p=0x%X", o_off2, p_off2);
-                fail_msg(seed, i, "OSAddToHeap", buf);
-                return 1;
-            }
-            g_allocs[g_num_allocs].oracle_ptr = optr;
-            g_allocs[g_num_allocs].port_ptr   = pptr;
-            g_allocs[g_num_allocs].heap       = oh;
-            g_num_allocs++;
-        }
-    }
-
-    oc = oracle_OSCheckHeap(oh);
-    pc = OSCheckHeap(oh);
-    if (oc != pc) {
-        char buf[256];
-        snprintf(buf, sizeof(buf),
-                 "Final check: oracle=%ld port=%ld", oc, pc);
-        fail_msg(seed, 0, "OSAddToHeap", buf);
-        return 1;
-    }
-    return 0;
-}
-
-/* ── Full integration test (Level 2) ── */
-static int test_full(uint32_t seed) {
-    uint32_t rng = seed ? seed : 1;
-    reset_all();
-
-    int actual_heaps;
-    if (setup_heaps(&rng, seed, &actual_heaps) < 0) return 1;
-    if (actual_heaps == 0) return -1;
-
-    if (check_all_heaps(seed, 0, actual_heaps) != 0) return 1;
-
-    int num_ops = 10 + (int)(xorshift32(&rng) % (MAX_OPS - 10));
-
-    for (int i = 0; i < num_ops; i++) {
-        uint32_t action_rng = xorshift32(&rng) % 100;
-        int heap = (int)(xorshift32(&rng) % (uint32_t)actual_heaps);
-
-        int do_alloc = 0, do_free = 0;
-        if (g_num_allocs == 0 || action_rng < 55) {
-            do_alloc = 1;
-        } else if (g_num_allocs >= MAX_ALLOCS || action_rng < 85) {
-            do_free = 1;
-        }
-
-        if (do_alloc) {
-            uint32_t alloc_size = 0x20 + (xorshift32(&rng) % (0x1000 - 0x20));
-            alloc_size = (alloc_size + 0x1F) & ~0x1Fu;
-
-            void *optr = oracle_OSAllocFromHeap(heap, alloc_size);
-            void *pptr = OSAllocFromHeap(heap, alloc_size);
-
-            int ook = (optr != NULL);
-            int pok = (pptr != NULL);
-
-            if (ook != pok) {
-                char buf[256];
-                snprintf(buf, sizeof(buf),
-                         "Alloc(heap=%d,sz=0x%X) success: o=%d p=%d",
-                         heap, alloc_size, ook, pok);
-                fail_msg(seed, i, "OSAllocFromHeap", buf);
-                return 1;
-            }
-
-            if (ook) {
-                uint32_t o_off = (uint32_t)((uint8_t *)optr - g_oracle_heap_base[heap]);
-                uint32_t p_off = (uint32_t)((uintptr_t)pptr - g_port_heap_base[heap]);
-
-                if (o_off != p_off) {
-                    char buf[256];
-                    snprintf(buf, sizeof(buf),
-                             "Alloc(heap=%d,sz=0x%X) offset: o=0x%X p=0x%X",
-                             heap, alloc_size, o_off, p_off);
-                    fail_msg(seed, i, "OSAllocFromHeap", buf);
-                    return 1;
-                }
-
-                if (g_num_allocs < MAX_ALLOCS) {
-                    g_allocs[g_num_allocs].oracle_ptr = optr;
-                    g_allocs[g_num_allocs].port_ptr   = pptr;
-                    g_allocs[g_num_allocs].heap       = heap;
-                    g_num_allocs++;
-                }
-            }
-        } else if (do_free && g_num_allocs > 0) {
-            int idx = (int)(xorshift32(&rng) % (uint32_t)g_num_allocs);
-            AllocEntry *e = &g_allocs[idx];
-
-            oracle_OSFreeToHeap(e->heap, e->oracle_ptr);
-            OSFreeToHeap(e->heap, e->port_ptr);
-
-            g_allocs[idx] = g_allocs[g_num_allocs - 1];
-            g_num_allocs--;
-        }
-
-        if (check_all_heaps(seed, i, actual_heaps) != 0) return 1;
-    }
-    return 0;
-}
-
-/* ── Dispatch table ── */
 typedef struct {
-    const char *name;
-    int (*func)(uint32_t seed);
-} TestEntry;
+    int heap;
+    o32 oracle_ptr; /* oracle offset pointer (header already applied) */
+    void *port_ptr; /* GC-address-as-pointer */
+} Alloc;
 
-static const TestEntry tests[] = {
-    /* Level 0: DL leaf functions */
-    { "DLAddFront",        test_DLAddFront },
-    { "DLExtract",         test_DLExtract },
-    { "DLInsert",          test_DLInsert },
-    { "DLLookup",          test_DLLookup },
-    /* Level 1: Individual API functions */
-    { "OSAllocFromHeap",   test_OSAllocFromHeap },
-    { "OSFreeToHeap",      test_OSFreeToHeap },
-    { "OSCheckHeap",       test_OSCheckHeap },
-    { "OSDestroyHeap",     test_OSDestroyHeap },
-    { "OSAddToHeap",       test_OSAddToHeap },
-    /* Level 2: Full integration */
-    { "full",              test_full },
-};
-#define NUM_TESTS (sizeof(tests) / sizeof(tests[0]))
+static Alloc g_allocs[MAX_ALLOCS];
+static int g_alloc_count;
 
-static const TestEntry *find_test(const char *name) {
-    for (int i = 0; i < (int)NUM_TESTS; i++) {
-        if (strcmp(tests[i].name, name) == 0) return &tests[i];
+static void alloc_reset(void) {
+    g_alloc_count = 0;
+    memset(g_allocs, 0, sizeof(g_allocs));
+}
+
+static void alloc_push(int heap, o32 o_ptr, void *p_ptr) {
+    if (g_alloc_count >= MAX_ALLOCS) return;
+    g_allocs[g_alloc_count].heap = heap;
+    g_allocs[g_alloc_count].oracle_ptr = o_ptr;
+    g_allocs[g_alloc_count].port_ptr = p_ptr;
+    g_alloc_count++;
+}
+
+static int alloc_pick_index(uint32_t *rng) {
+    if (g_alloc_count <= 0) return -1;
+    return (int)(xorshift32(rng) % (uint32_t)g_alloc_count);
+}
+
+static void alloc_remove_index(int idx) {
+    if (idx < 0 || idx >= g_alloc_count) return;
+    g_allocs[idx] = g_allocs[g_alloc_count - 1];
+    g_alloc_count--;
+}
+
+static int compare_alloc_result(o32 oracle_ptr, void *port_ptr, o32 oracle_heap_base, uint32_t port_heap_base) {
+    if ((oracle_ptr == 0) != (port_ptr == NULL)) return 1;
+    if (oracle_ptr == 0) return 0;
+    uint32_t o_rel = (uint32_t)(oracle_ptr - oracle_heap_base);
+    uint32_t p_rel = (uint32_t)((uint32_t)(uintptr_t)port_ptr - port_heap_base);
+    return o_rel != p_rel;
+}
+
+static int setup_one_heap(o32 o_heap_base, o32 o_heap_end, uint32_t p_heap_base, uint32_t p_heap_end,
+                          int32_t *out_o_heap, int *out_p_heap) {
+    reset_all();
+    alloc_reset();
+
+    if (oracle_OSInitAlloc(0x1000, (o32)(ORACLE_BUF_SIZE - 0x1000), 8) == 0) return 1;
+    int32_t o_heap = oracle_OSCreateHeap(o_heap_base, o_heap_end);
+    oracle_OSSetCurrentHeap(o_heap);
+
+    OSInitAlloc((void *)(uintptr_t)PORT_ARENA_LO, (void *)(uintptr_t)PORT_ARENA_HI, 8);
+    int p_heap = OSCreateHeap((void *)(uintptr_t)p_heap_base, (void *)(uintptr_t)p_heap_end);
+    OSSetCurrentHeap(p_heap);
+
+    *out_o_heap = o_heap;
+    *out_p_heap = p_heap;
+    return (o_heap < 0 || p_heap < 0) ? 1 : 0;
+}
+
+static int run_alloc_free_mix(uint32_t seed, int run_idx, int steps, int alloc_only) {
+    uint32_t rng = seed ? seed : 1;
+
+    const o32 o_heap_base = 0x4000;
+    const o32 o_heap_end  = (o32)(0x4000 + 0x80000);
+    const uint32_t p_heap_base = PORT_ARENA_LO + 0x4000;
+    const uint32_t p_heap_end  = p_heap_base + 0x80000;
+
+    int32_t o_heap;
+    int p_heap;
+    if (setup_one_heap(o_heap_base, o_heap_end, p_heap_base, p_heap_end, &o_heap, &p_heap) != 0) {
+        fail_case(seed, run_idx, 0, alloc_only ? "OSAllocFromHeap" : "full", "heap setup failed");
+        return 1;
     }
-    return NULL;
+
+    for (int step = 0; step < steps; step++) {
+        uint32_t r = xorshift32(&rng);
+        int do_free = (!alloc_only) && (g_alloc_count > 0) && ((r & 3u) == 0u);
+
+        if (!do_free) {
+            uint32_t size = 1 + (xorshift32(&rng) % 0x2000u);
+            if ((xorshift32(&rng) & 1u) == 0u) size &= ~31u;
+
+            o32 o_ptr = oracle_OSAllocFromHeap(o_heap, size);
+            void *p_ptr = OSAllocFromHeap(p_heap, size);
+
+            if (compare_alloc_result(o_ptr, p_ptr, o_heap_base, p_heap_base) != 0) {
+                fail_case(seed, run_idx, step, alloc_only ? "OSAllocFromHeap" : "full", "alloc return mismatch");
+                return 1;
+            }
+
+            if (o_ptr != 0) {
+                alloc_push(o_heap, o_ptr, p_ptr);
+            }
+        } else {
+            int idx = alloc_pick_index(&rng);
+            if (idx >= 0) {
+                Alloc a = g_allocs[idx];
+                oracle_OSFreeToHeap(a.heap, a.oracle_ptr);
+                OSFreeToHeap(p_heap, a.port_ptr);
+                alloc_remove_index(idx);
+            }
+        }
+
+        int32_t o_free = oracle_OSCheckHeap(o_heap);
+        long p_free = OSCheckHeap(p_heap);
+        if ((long)o_free != p_free) {
+            fail_case(seed, run_idx, step, alloc_only ? "OSAllocFromHeap" : "full", "OSCheckHeap free-bytes mismatch");
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int run_free_heavy_mix(uint32_t seed, int run_idx, int steps) {
+    uint32_t rng = seed ? seed : 1;
+
+    const o32 o_heap_base = 0x4000;
+    const o32 o_heap_end  = (o32)(0x4000 + 0x80000);
+    const uint32_t p_heap_base = PORT_ARENA_LO + 0x4000;
+    const uint32_t p_heap_end  = p_heap_base + 0x80000;
+
+    int32_t o_heap;
+    int p_heap;
+    if (setup_one_heap(o_heap_base, o_heap_end, p_heap_base, p_heap_end, &o_heap, &p_heap) != 0) {
+        fail_case(seed, run_idx, 0, "OSFreeToHeap", "heap setup failed");
+        return 1;
+    }
+
+    /* Pre-fill so frees exercise list/coalescing semantics. */
+    for (int i = 0; i < 64; i++) {
+        uint32_t size = 1 + (xorshift32(&rng) % 0x1800u);
+        if ((xorshift32(&rng) & 1u) == 0u) size &= ~31u;
+
+        o32 o_ptr = oracle_OSAllocFromHeap(o_heap, size);
+        void *p_ptr = OSAllocFromHeap(p_heap, size);
+        if (compare_alloc_result(o_ptr, p_ptr, o_heap_base, p_heap_base) != 0) {
+            fail_case(seed, run_idx, i, "OSFreeToHeap", "prefill alloc return mismatch");
+            return 1;
+        }
+        if (o_ptr == 0) break;
+        alloc_push(o_heap, o_ptr, p_ptr);
+    }
+
+    for (int step = 0; step < steps; step++) {
+        if (g_alloc_count <= 0) {
+            /* Refill one allocation so we can keep freeing. */
+            uint32_t size = 1 + (xorshift32(&rng) % 0x1000u);
+            size = (size + 31u) & ~31u;
+            o32 o_ptr = oracle_OSAllocFromHeap(o_heap, size);
+            void *p_ptr = OSAllocFromHeap(p_heap, size);
+            if (compare_alloc_result(o_ptr, p_ptr, o_heap_base, p_heap_base) != 0) {
+                fail_case(seed, run_idx, step, "OSFreeToHeap", "refill alloc return mismatch");
+                return 1;
+            }
+            if (o_ptr != 0) alloc_push(o_heap, o_ptr, p_ptr);
+        } else {
+            int idx = alloc_pick_index(&rng);
+            if (idx >= 0) {
+                Alloc a = g_allocs[idx];
+                oracle_OSFreeToHeap(a.heap, a.oracle_ptr);
+                OSFreeToHeap(p_heap, a.port_ptr);
+                alloc_remove_index(idx);
+            }
+        }
+
+        /* Keep heap moving: sometimes allocate again. */
+        if ((xorshift32(&rng) & 3u) == 0u && g_alloc_count < (MAX_ALLOCS - 1)) {
+            uint32_t size = 1 + (xorshift32(&rng) % 0x2000u);
+            if ((xorshift32(&rng) & 1u) == 0u) size &= ~31u;
+            o32 o_ptr = oracle_OSAllocFromHeap(o_heap, size);
+            void *p_ptr = OSAllocFromHeap(p_heap, size);
+            if (compare_alloc_result(o_ptr, p_ptr, o_heap_base, p_heap_base) != 0) {
+                fail_case(seed, run_idx, step, "OSFreeToHeap", "alloc return mismatch");
+                return 1;
+            }
+            if (o_ptr != 0) alloc_push(o_heap, o_ptr, p_ptr);
+        }
+
+        int32_t o_free = oracle_OSCheckHeap(o_heap);
+        long p_free = OSCheckHeap(p_heap);
+        if ((long)o_free != p_free) {
+            fail_case(seed, run_idx, step, "OSFreeToHeap", "OSCheckHeap free-bytes mismatch");
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int test_OSDestroyHeap(uint32_t seed) {
+    reset_all();
+
+    if (oracle_OSInitAlloc(0x1000, (o32)(ORACLE_BUF_SIZE - 0x1000), 8) == 0) return 1;
+    OSInitAlloc((void *)(uintptr_t)PORT_ARENA_LO, (void *)(uintptr_t)PORT_ARENA_HI, 8);
+
+    /* Two heaps */
+    const o32 o0_base = 0x4000, o0_end = 0x24000;
+    const o32 o1_base = 0x28000, o1_end = 0x48000;
+    int32_t o0 = oracle_OSCreateHeap(o0_base, o0_end);
+    int32_t o1 = oracle_OSCreateHeap(o1_base, o1_end);
+
+    const uint32_t p0_base = PORT_ARENA_LO + 0x4000, p0_end = PORT_ARENA_LO + 0x24000;
+    const uint32_t p1_base = PORT_ARENA_LO + 0x28000, p1_end = PORT_ARENA_LO + 0x48000;
+    int p0 = OSCreateHeap((void *)(uintptr_t)p0_base, (void *)(uintptr_t)p0_end);
+    int p1 = OSCreateHeap((void *)(uintptr_t)p1_base, (void *)(uintptr_t)p1_end);
+
+    if (o0 < 0 || o1 < 0 || p0 < 0 || p1 < 0) return 1;
+
+    (void)oracle_OSAllocFromHeap(o0, 0x100);
+    (void)OSAllocFromHeap(p0, 0x100);
+
+    oracle_OSDestroyHeap(o0);
+    OSDestroyHeap(p0);
+
+    if (oracle_OSCheckHeap(o0) != -1) return 1;
+    if (OSCheckHeap(p0) != -1) return 1;
+
+    /* Other heap still fine */
+    if (oracle_OSAllocFromHeap(o1, 0x80) == 0) return 1;
+    if (OSAllocFromHeap(p1, 0x80) == NULL) return 1;
+    if ((long)oracle_OSCheckHeap(o1) != OSCheckHeap(p1)) return 1;
+    return 0;
+}
+
+static int test_OSAddToHeap(uint32_t seed) {
+    (void)seed;
+    reset_all();
+
+    if (oracle_OSInitAlloc(0x1000, (o32)(ORACLE_BUF_SIZE - 0x1000), 8) == 0) return 1;
+    OSInitAlloc((void *)(uintptr_t)PORT_ARENA_LO, (void *)(uintptr_t)PORT_ARENA_HI, 8);
+
+    const o32 o_base = 0x4000;
+    const uint32_t p_base = PORT_ARENA_LO + 0x4000;
+
+    int32_t o_heap = oracle_OSCreateHeap(o_base, o_base + 0x4000);
+    int p_heap = OSCreateHeap((void *)(uintptr_t)p_base, (void *)(uintptr_t)(p_base + 0x4000));
+    if (o_heap < 0 || p_heap < 0) return 1;
+
+    (void)oracle_OSAllocFromHeap(o_heap, 0x100);
+    (void)OSAllocFromHeap(p_heap, 0x100);
+
+    int32_t o_before = oracle_OSCheckHeap(o_heap);
+    long p_before = OSCheckHeap(p_heap);
+    if ((long)o_before != p_before) return 1;
+
+    /* Add a disjoint region later in arena */
+    oracle_OSAddToHeap(o_heap, o_base + 0x8000, o_base + 0xC000);
+    OSAddToHeap(p_heap, (void *)(uintptr_t)(p_base + 0x8000), (void *)(uintptr_t)(p_base + 0xC000));
+
+    int32_t o_after = oracle_OSCheckHeap(o_heap);
+    long p_after = OSCheckHeap(p_heap);
+    if ((long)o_after != p_after) return 1;
+    if (o_after <= o_before) return 1;
+
+    /* Allocation should still be consistent */
+    o32 o_ptr = oracle_OSAllocFromHeap(o_heap, 0x800);
+    void *p_ptr = OSAllocFromHeap(p_heap, 0x800);
+    if (compare_alloc_result(o_ptr, p_ptr, o_base, p_base) != 0) return 1;
+    return 0;
 }
 
 /* ── CLI ── */
-static uint32_t parse_u32_arg(const char *s) {
-    return (uint32_t)strtoul(s, NULL, 0);
+
+static void usage(const char *argv0) {
+    fprintf(stderr,
+        "usage: %s [--op=NAME] [--seed=N] [--num-runs=N] [--steps=N] [-v]\n"
+        "default: --op=full --num-runs=200 --steps=200\n"
+        "\n"
+        "ops:\n"
+        "  DLAddFront  DLExtract  DLInsert  DLLookup\n"
+        "  OSAllocFromHeap  OSFreeToHeap  OSDestroyHeap  OSAddToHeap\n"
+        "  full\n",
+        argv0);
 }
 
 int main(int argc, char **argv) {
+    const char *op = "full";
     uint32_t seed = 0;
-    int have_seed = 0;
-    const char *op_filter = "full";
-    int num_runs = 500;
-    g_verbose = 0;
+    int num_runs = 200;
+    int steps = 200;
+    int verbose = 0;
 
     for (int i = 1; i < argc; i++) {
-        if (strncmp(argv[i], "--seed=", 7) == 0) {
-            seed = parse_u32_arg(argv[i] + 7);
-            have_seed = 1;
-        } else if (strncmp(argv[i], "--op=", 5) == 0) {
-            op_filter = argv[i] + 5;
+        if (strncmp(argv[i], "--op=", 5) == 0) {
+            op = argv[i] + 5;
+        } else if (strncmp(argv[i], "--seed=", 7) == 0) {
+            seed = (uint32_t)strtoul(argv[i] + 7, NULL, 0);
         } else if (strncmp(argv[i], "--num-runs=", 11) == 0) {
-            num_runs = (int)parse_u32_arg(argv[i] + 11);
-        } else if (strcmp(argv[i], "--verbose") == 0 || strcmp(argv[i], "-v") == 0) {
-            g_verbose = 1;
+            num_runs = (int)strtol(argv[i] + 11, NULL, 0);
+        } else if (strncmp(argv[i], "--steps=", 8) == 0) {
+            steps = (int)strtol(argv[i] + 8, NULL, 0);
+        } else if (strcmp(argv[i], "-v") == 0) {
+            verbose = 1;
+        } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+            usage(argv[0]);
+            return 0;
         } else {
-            fprintf(stderr, "Usage: %s [--seed=N] [--op=NAME] [--num-runs=N] [-v]\n",
-                    argv[0]);
-            fprintf(stderr, "  ops: ");
-            for (int j = 0; j < (int)NUM_TESTS; j++) {
-                fprintf(stderr, "%s%s", tests[j].name,
-                        j < (int)NUM_TESTS - 1 ? ", " : "\n");
-            }
-            return 1;
+            usage(argv[0]);
+            return 2;
         }
     }
 
-    const TestEntry *test = find_test(op_filter);
-    if (!test) {
-        fprintf(stderr, "Unknown op: %s\n", op_filter);
-        fprintf(stderr, "Available: ");
-        for (int j = 0; j < (int)NUM_TESTS; j++) {
-            fprintf(stderr, "%s%s", tests[j].name,
-                    j < (int)NUM_TESTS - 1 ? ", " : "\n");
-        }
-        return 1;
+    /* Determine run function */
+    int (*fn_one)(uint32_t) = NULL;
+    int run_with_steps = 0;
+    int alloc_only = 0;
+    int free_heavy = 0;
+
+    if (strcmp(op, "DLAddFront") == 0) fn_one = test_DLAddFront;
+    else if (strcmp(op, "DLExtract") == 0) fn_one = test_DLExtract;
+    else if (strcmp(op, "DLInsert") == 0) fn_one = test_DLInsert;
+    else if (strcmp(op, "DLLookup") == 0) fn_one = test_DLLookup;
+    else if (strcmp(op, "OSDestroyHeap") == 0) fn_one = test_OSDestroyHeap;
+    else if (strcmp(op, "OSAddToHeap") == 0) fn_one = test_OSAddToHeap;
+    else if (strcmp(op, "OSAllocFromHeap") == 0) { run_with_steps = 1; alloc_only = 1; }
+    else if (strcmp(op, "OSFreeToHeap") == 0) { run_with_steps = 1; free_heavy = 1; }
+    else if (strcmp(op, "full") == 0) { run_with_steps = 1; alloc_only = 0; }
+    else {
+        fprintf(stderr, "unknown --op=%s\n", op);
+        usage(argv[0]);
+        return 2;
     }
 
-    if (have_seed) {
-        g_verbose = 1;
-        printf("[property] OSAlloc %s: seed=0x%08X\n", test->name, seed);
-        int rc = test->func(seed);
-        gc_ram_free(&g_ram);
-        if (rc == 0) {
-            printf("[PASS] seed=0x%08X\n", seed);
-        } else if (rc > 0) {
-            printf("[FAIL] seed=0x%08X\n", seed);
-        } else {
-            printf("[SKIP] seed=0x%08X (arena too small)\n", seed);
-        }
-        return (rc > 0) ? 1 : 0;
+    if (seed != 0) {
+        int rc;
+        if (!run_with_steps) rc = fn_one(seed);
+        else if (free_heavy) rc = run_free_heavy_mix(seed, 0, steps);
+        else rc = run_alloc_free_mix(seed, 0, steps, alloc_only);
+        if (rc == 0 && verbose) fprintf(stderr, "[OK] seed=0x%08X\n", seed);
+        return rc;
     }
 
-    printf("[property] OSAlloc %s: %d seeds\n", test->name, num_runs);
-    int passed = 0, failed = 0, skipped = 0;
-
-    for (int i = 1; i <= num_runs; i++) {
-        int rc = test->func((uint32_t)i);
-        if (rc == 0) {
-            passed++;
-            if (g_verbose) printf("[PASS] seed=0x%08X\n", (uint32_t)i);
-        } else if (rc > 0) {
-            failed++;
-            printf("[FAIL] seed=0x%08X\n", (uint32_t)i);
-        } else {
-            skipped++;
-        }
+    for (int i = 0; i < num_runs; i++) {
+        uint32_t s = 0x9E3779B9u ^ (uint32_t)i * 0x85EBCA6Bu;
+        int rc;
+        if (!run_with_steps) rc = fn_one(s);
+        else if (free_heavy) rc = run_free_heavy_mix(s, i, steps);
+        else rc = run_alloc_free_mix(s, i, steps, alloc_only);
+        if (rc != 0) return rc;
+        if (verbose && ((i % 50) == 0)) fprintf(stderr, "[OK] %d/%d\n", i, num_runs);
     }
 
-    printf("=== %d/%d PASSED", passed, num_runs);
-    if (failed > 0)  printf(", %d FAILED", failed);
-    if (skipped > 0) printf(", %d SKIPPED", skipped);
-    printf(" ===\n");
-
-    gc_ram_free(&g_ram);
-    return (failed > 0) ? 1 : 0;
+    if (verbose) fprintf(stderr, "[OK] all runs\n");
+    return 0;
 }

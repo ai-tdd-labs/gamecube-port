@@ -1,25 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Property-based test runner for OSAlloc (v2 — 32-bit oracle, leaf-first).
+# Property-style parity test runner for OSAlloc (portable offsets oracle).
 #
-# Builds a single -m32 binary that contains BOTH the oracle (decomp, native
-# 32-bit pointers, HeapDescs in arena) and the sdk_port (emulated big-endian
-# via gc_mem).  Drives them with the same random seed and compares results.
-#
-# Requires -m32 support (32-bit libc).  With -m32:
-#   sizeof(void*)==4, sizeof(long)==4, sizeof(Cell)==16, sizeof(HeapDesc)==12
-#   — exactly matching the GC, no struct-size hacks needed.
+# Builds a single host binary that contains BOTH:
+# - Oracle: derived from decomp OSAlloc, but using 32-bit offset pointers
+# - Port:   sdk_port OSAlloc (emulated big-endian via gc_mem)
 #
 # Usage:
-#   tools/run_property_test.sh [--seed=N] [--op=NAME] [--num-runs=500] [-v]
+#   tools/run_property_test.sh [--op=NAME] [--seed=N] [--num-runs=N] [--steps=N] [-v]
 #
 # Examples:
-#   tools/run_property_test.sh                         # 500 random seeds (full)
+#   tools/run_property_test.sh                         # default runs
 #   tools/run_property_test.sh --seed=12345            # single seed
-#   tools/run_property_test.sh --op=DLInsert           # leaf DL test
-#   tools/run_property_test.sh --op=OSAllocFromHeap    # specific API op
-#   tools/run_property_test.sh --num-runs=2000 -v      # verbose + more seeds
+#   tools/run_property_test.sh --op=DLInsert -v        # focused suite
+#   tools/run_property_test.sh --num-runs=2000 -v      # verbose + more runs
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 build_dir="$repo_root/tests/build/property"
@@ -55,8 +50,8 @@ if [[ -z "$CC" ]]; then
   exit 2
 fi
 
-echo "[property-build] osalloc_property_test -m32 (CC=$CC)"
-"$CC" -m32 "${opt_flags[@]}" -ffunction-sections -fdata-sections \
+echo "[property-build] osalloc_property_test (CC=$CC)"
+"$CC" "${opt_flags[@]}" -ffunction-sections -fdata-sections \
   -D_XOPEN_SOURCE=700 -D_CRT_SECURE_NO_WARNINGS \
   -Wno-implicit-function-declaration \
   -I"$repo_root/tests" \

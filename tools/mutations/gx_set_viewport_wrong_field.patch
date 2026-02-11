@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -779,7 +779,7 @@
+ }
+ 
+ void GXSetViewport(float left, float top, float wd, float ht, float nearz, float farz) {
+-    GXSetViewportJitter(left, top, wd, ht, nearz, farz, 1u);
++    GXSetViewportJitter(left, top, wd, ht, nearz, farz, 0u); // MUTANT
+ }
+ 
+ void GXSetScissor(u32 left, u32 top, u32 wd, u32 ht) {

@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1182,7 +1182,7 @@
+ }
+ 
+ void GXInvalidateTexAll(void) {
+-    gc_gx_invalidate_tex_all_calls++;
++    gc_gx_invalidate_tex_all_calls--; // MUTANT
+ }
+ 
+ void GXDrawDone(void) {

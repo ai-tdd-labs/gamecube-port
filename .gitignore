@@ -4,6 +4,7 @@
 .trash/
 .claude/
 .codex/
+.worktrees/
 
 # Archive area (not part of canonical layout)
 docs/_legacy/
@@ -13,6 +14,9 @@ docs/_archive/
 docs/*
 !docs/codex/
 !docs/codex/**
+
+# Generated reports (derived artifacts; do not commit).
+docs/codex/mutations/
 
 # Optional vendored game workloads (local convenience only)
 src/game_workload/*/vendor/
@@ -111,3 +115,9 @@ tests/workload/mp4/tests/
 
 # Repo-local convenience symlinks (never publish)
 /local/
+
+# Local mutation tooling lives on a separate branch/worktree; keep stray files out of main.
+tools/run_mutation_report.sh
+
+# Local-only reference projects
+external/

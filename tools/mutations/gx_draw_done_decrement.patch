@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1186,7 +1186,7 @@
+ }
+ 
+ void GXDrawDone(void) {
+-    gc_gx_draw_done_calls++;
++    gc_gx_draw_done_calls--; // MUTANT
+ }
+ 
+ void GXSetTexCopySrc(u16 left, u16 top, u16 wd, u16 ht) {

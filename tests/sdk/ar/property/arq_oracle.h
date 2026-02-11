@@ -13,6 +13,9 @@
 #include <stdint.h>
 #include <string.h>
 
+/* Oracle strictness tier for reporting/gating. */
+#define ORACLE_TIER "DECOMP_ADAPTED"
+
 /* ── Constants (from arq.h / ar.h) ── */
 #define ORACLE_ARQ_TYPE_MRAM_TO_ARAM  0
 #define ORACLE_ARQ_TYPE_ARAM_TO_MRAM  1

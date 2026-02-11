@@ -1,0 +1,14 @@
+diff --git a/src/sdk_port/os/OSStopwatch.c b/src/sdk_port/os/OSStopwatch.c
+index 1234567..abcdefg 100644
+--- a/src/sdk_port/os/OSStopwatch.c
++++ b/src/sdk_port/os/OSStopwatch.c
+@@ -24,7 +24,8 @@
+ void OSInitStopwatch(OSStopwatch *sw, char *name) {
+     sw->name = name;
+     sw->total = 0;
+     sw->hits = 0;
+-    sw->min = 0x00000000FFFFFFFFull;
++    // MUTANT: wrong initial min (0 instead of UINT32_MAX)
++    sw->min = 0;
+     sw->max = 0;
+     sw->running = 0;

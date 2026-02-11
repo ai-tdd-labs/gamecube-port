@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2079,7 +2079,7 @@
+ }
+ 
+ void GXClearVCacheMetric(void) {
+-    gc_gx_vcache_sel = 0;
++    gc_gx_vcache_sel = 1; // MUTANT
+ }
+ 
+ void GXReadVCacheMetric(u32 *check, u32 *miss, u32 *stall) {

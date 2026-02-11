@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -651,7 +651,7 @@
+ } GXRenderModeObj;
+ 
+ void GXAdjustForOverscan(GXRenderModeObj *rmin, GXRenderModeObj *rmout, u16 hor, u16 ver) {
+-    u16 hor2 = (u16)(hor * 2u);
++    u16 hor2 = (u16)(hor * 3u); // MUTANT
+     u16 ver2 = (u16)(ver * 2u);
+     u32 verf;
+ 

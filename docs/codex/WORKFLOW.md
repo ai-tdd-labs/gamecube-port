@@ -51,6 +51,18 @@ Tip (per-game only):
 7) Notes
 - Write confirmed behaviors to docs/codex/NOTES.md (facts only, with evidence).
 
+## Property-Based Testing (Optional)
+
+Snapshot tests (DOL expected vs host actual, and retail RVZ trace replays) are the primary oracle.
+
+Property-based tests are a secondary safety net for functions with clear invariants and large input
+spaces (alignment helpers, clamp helpers).
+
+Reference: `docs/codex/PROPERTY_BASED_TESTING.md`
+
+Run:
+- `tools/run_pbt.sh` (optional args: iterations, seed)
+
 ## Test Locations
 
 - New tests go under tests/sdk/<subsystem>/<function>/
@@ -222,6 +234,10 @@ Use `tools/trace_pc_entry_exit.py` to:
 4) dump a small RAM window at entry and exit (default: `sdk_state`)
 5) dedupe by input snapshot hash and write an index (`trace.jsonl`)
 
+Trace format note:
+- `in_regs.json` and `out_regs.json` store register files under the `"args"` key.
+- For most functions, the return value is `out_regs.json: args.r3` (because at return PC, r3 holds the return).
+
 Example (MP4 retail, OSDisableInterrupts):
 ```
 python3 tools/trace_pc_entry_exit.py \
@@ -240,6 +256,18 @@ tools/replay_trace_case_pad_read.sh  tests/traces/pad_read/mp4_rvz/<hit_dir>
 tools/replay_trace_case_pad_clamp.sh tests/traces/pad_clamp/mp4_rvz/<hit_dir>
 tools/replay_trace_case_pad_reset.sh tests/traces/pad_reset/mp4_rvz_v2/<hit_dir>
 ```
+
+For MP4 HuPadInit blocker functions, use the one-button harvest/replay loop:
+
+```bash
+tools/harvest_and_replay_hupadinit_blockers.sh [optional_rvz_path]
+```
+
+This executes all four blocker traces in order:
+- `OSDisableInterrupts` / `OSRestoreInterrupts`
+- `VISetPostRetraceCallback`
+- `SISetSamplingRate`
+- `PADControlMotor`
 
 ### Host runner dump override (for trace replays)
 
@@ -340,3 +368,15 @@ python3 tools/ram_dump.py \
   --addr 0x80000000 --size 0x01800000 --chunk 0x1000 \
   --out /tmp/game_checkpoint_mem1.bin
 ```
+
+## MP4 SDK surface estimation (decomp scan)
+
+Purpose: track "how many unique Nintendo SDK functions does MP4 use?" from the decomp.
+
+Method:
+1) Extract SDK API names from MP4 decomp Dolphin headers (`include/dolphin/**/*.h`) by parsing C prototypes
+   for known SDK prefixes (OS/GX/VI/PAD/DVD/SI/EXI/AI/AX/AR/ARQ/CARD/MTX/PS/DB/DSP/THP/DEMO).
+2) Scan MP4 decomp `src/**/*.c` excluding `src/dolphin/**` for callsites to those API names.
+3) Record the resulting unique count + subsystem breakdown in `docs/codex/NOTES.md`.
+
+We treat this as an evolving measurement: as the scanned MP4 source set grows, the numbers may change.

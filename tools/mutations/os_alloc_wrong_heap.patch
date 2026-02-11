@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/os/OSAlloc.c b/src/sdk_port/os/OSAlloc.c
+--- a/src/sdk_port/os/OSAlloc.c
++++ b/src/sdk_port/os/OSAlloc.c
+@@ -237,6 +237,7 @@
+ void *OSAlloc(uint32_t size) {
+     // MP4 (and other games) calls OSAlloc(size) which allocates from the
+     // current heap.
+     int curr = (int)state_load_i32(GC_SDK_OFF_OS_CURR_HEAP, __OSCurrHeap);
+-    return OSAllocFromHeap(curr, size);
++    // MUTANT: allocate from heap 0 instead of current heap
++    return OSAllocFromHeap(0, size);
+ }

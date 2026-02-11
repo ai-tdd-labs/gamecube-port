@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1068,7 +1068,7 @@
+ 
+ void GXCopyDisp(void *dest, u8 clear) {
+     gc_sdk_state_store_u32_mirror(GC_SDK_OFF_GX_COPY_DISP_DEST, &gc_gx_copy_disp_dest, (u32)(uintptr_t)dest);
+-    gc_gx_copy_disp_clear = (u32)clear;
++    gc_gx_copy_disp_clear = 0; // MUTANT
+ }
+ 
+ void GXSetDispCopyGamma(u32 gamma) {

@@ -46,7 +46,7 @@ static void emit_snapshot(GcRam *ram) {
   if (!out) return;
 
   store_u32be(out + 0x00, 0x534D4F4Bu); // "SMOK"
-  store_u32be(out + 0x04, 0x00000001u); // version
+  store_u32be(out + 0x04, 0x00000002u); // version
 
   store_u32be(out + 0x08, gc_sdk_state_load_u32be(GC_SDK_OFF_OS_INTS_ENABLED));
   store_u32be(out + 0x0C, gc_sdk_state_load_u32be(GC_SDK_OFF_OS_DISABLE_CALLS));
@@ -57,14 +57,13 @@ static void emit_snapshot(GcRam *ram) {
   store_u32be(out + 0x1C, gc_sdk_state_load_u32be(GC_SDK_OFF_VI_WAIT_RETRACE_CALLS));
 
   store_u32be(out + 0x20, gc_sdk_state_load_u32be(GC_SDK_OFF_SI_SAMPLING_RATE));
-  store_u32be(out + 0x24, gc_sdk_state_load_u32be(GC_SDK_OFF_SI_SETXY_LINE));
-  store_u32be(out + 0x28, gc_sdk_state_load_u32be(GC_SDK_OFF_SI_SETXY_COUNT));
-  store_u32be(out + 0x2C, gc_sdk_state_load_u32be(GC_SDK_OFF_SI_SETXY_CALLS));
-
-  store_u32be(out + 0x30, gc_sdk_state_load_u32be(GC_SDK_OFF_PAD_MOTOR_CMD_BASE + 0u));
-  store_u32be(out + 0x34, gc_sdk_state_load_u32be(GC_SDK_OFF_PAD_MOTOR_CMD_BASE + 4u));
-  store_u32be(out + 0x38, gc_sdk_state_load_u32be(GC_SDK_OFF_PAD_MOTOR_CMD_BASE + 8u));
-  store_u32be(out + 0x3C, gc_sdk_state_load_u32be(GC_SDK_OFF_PAD_MOTOR_CMD_BASE + 12u));
+  store_u32be(out + 0x24, gc_sdk_state_load_u32be(GC_SDK_OFF_PAD_READ_CALLS));
+  store_u32be(out + 0x28, gc_sdk_state_load_u32be(GC_SDK_OFF_PAD_CLAMP_CALLS));
+  store_u32be(out + 0x2C, gc_sdk_state_load_u32be(GC_SDK_OFF_PAD_RESET_CALLS));
+  store_u32be(out + 0x30, gc_sdk_state_load_u32be(GC_SDK_OFF_PAD_RESET_MASK));
+  store_u32be(out + 0x34, gc_sdk_state_load_u32be(GC_SDK_OFF_PAD_RESETTING_BITS));
+  store_u32be(out + 0x38, gc_sdk_state_load_u32be(GC_SDK_OFF_PAD_RESETTING_CHAN));
+  store_u32be(out + 0x3C, gc_sdk_state_load_u32be(GC_SDK_OFF_PAD_MOTOR_CMD_BASE + 0u));
 }
 
 enum { PAD_MOTOR_STOP_HARD = 2 };

@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -488,7 +488,7 @@
+ void GXCallDisplayList(const void *list, u32 nbytes) {
+     // Mirror the FIFO command payload (list pointer + byte count).
+     gc_gx_call_dl_list = (u32)(uintptr_t)list;
+-    gc_gx_call_dl_nbytes = nbytes;
++    gc_gx_call_dl_nbytes = 0; // MUTANT
+ }
+ 
+ static inline void gx_write_xf_reg(u32 idx, u32 v) {

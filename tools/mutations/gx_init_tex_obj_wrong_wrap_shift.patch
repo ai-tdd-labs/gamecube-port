@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1261,7 +1261,7 @@
+         for (u32 i = 0; i < 8; i++) w[i] = 0;
+     }
+ 
+-    t->mode0 = set_field(t->mode0, 2, 0, wrap_s);
++    t->mode0 = set_field(t->mode0, 2, 2, wrap_s); // MUTANT
+     t->mode0 = set_field(t->mode0, 2, 2, wrap_t);
+     t->mode0 = set_field(t->mode0, 1, 4, 1u);
+ 

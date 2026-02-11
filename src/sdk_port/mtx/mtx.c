@@ -14,9 +14,15 @@
 
 void C_MTXIdentity(Mtx mtx)
 {
-    mtx[0][0] = 1.0f; mtx[0][1] = 0.0f; mtx[0][2] = 0.0f;
-    mtx[1][0] = 0.0f; mtx[1][1] = 1.0f; mtx[1][2] = 0.0f;
-    mtx[2][0] = 0.0f; mtx[2][1] = 0.0f; mtx[2][2] = 1.0f;
+    mtx[0][0] = 1.0f; mtx[0][1] = 0.0f; mtx[0][2] = 0.0f; mtx[0][3] = 0.0f;
+    mtx[1][0] = 0.0f; mtx[1][1] = 1.0f; mtx[1][2] = 0.0f; mtx[1][3] = 0.0f;
+    mtx[2][0] = 0.0f; mtx[2][1] = 0.0f; mtx[2][2] = 1.0f; mtx[2][3] = 0.0f;
+}
+
+/* Paired-single variant aliases to the same observable output. */
+void PSMTXIdentity(Mtx mtx)
+{
+    C_MTXIdentity(mtx);
 }
 
 void C_MTXCopy(const Mtx src, Mtx dst)

@@ -1,0 +1,10 @@
+diff --git a/src/sdk_port/os/OSError.c b/src/sdk_port/os/OSError.c
+--- a/src/sdk_port/os/OSError.c
++++ b/src/sdk_port/os/OSError.c
+@@ -9,4 +9,5 @@
+ int OSReport(const char *msg, ...) {
+     (void)msg;
+-    return 0;
++    // MUTANT: return 1 instead of 0
++    return 1;
+ }

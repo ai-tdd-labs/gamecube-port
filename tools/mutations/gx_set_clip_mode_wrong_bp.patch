@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -955,7 +955,7 @@
+ void GXSetClipMode(u32 mode) {
+     // GXTransform.c: write XF reg 5; bpSentNot = 1
+     gc_gx_clip_mode = mode;
+-    gc_gx_bp_sent_not = 1;
++    gc_gx_bp_sent_not = 0; // MUTANT
+ }
+ 
+ void GXSetNumChans(u8 nChans) {

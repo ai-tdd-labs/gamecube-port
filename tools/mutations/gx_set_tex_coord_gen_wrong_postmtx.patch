@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -922,7 +922,7 @@
+ void GXSetTexCoordGen(u8 dst_coord, u32 func, u32 src_param, u32 mtx) {
+     // Mirror inline wrapper in decomp_mario_party_4/include/dolphin/gx/GXGeometry.h.
+     // normalize = GX_FALSE, postmtx = GX_PTIDENTITY (125).
+-    GXSetTexCoordGen2(dst_coord, func, src_param, mtx, 0, 125u);
++    GXSetTexCoordGen2(dst_coord, func, src_param, mtx, 0, 124u); // MUTANT
+ }
+ 
+ void GXSetCoPlanar(u32 enable) {

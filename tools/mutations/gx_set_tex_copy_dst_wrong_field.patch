@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1483,7 +1483,7 @@
+     gc_gx_cp_tex_z = 0;
+ 
+     // gx->cpTex field 15 depends on fmt class; for GX_CTF_R8 it goes to "default" (2).
+-    gc_gx_cp_tex = set_field(gc_gx_cp_tex, 2, 15, 2u);
++    gc_gx_cp_tex = set_field(gc_gx_cp_tex, 2, 15, 1u); // MUTANT
+ 
+     // Z texture flag.
+     // _GX_TF_ZTF is 0x10 in SDK headers. We don't see MP4 use it here.

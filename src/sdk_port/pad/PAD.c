@@ -64,20 +64,42 @@ enum {
 
 static u32 gc_pad_make_status_kind;
 
+// Retail MP4 global locations (from external/mp4-decomp/config/GMPE01_00/symbols.txt).
+// We mirror a small subset so retail trace replays can assert real memory side effects.
+#define PAD_PADSPEC_SHADOW_ADDR 0x801D450Cu // __PADSpec (always cleared by PADSetSpec)
+#define PAD_SPEC_ADDR 0x801D3924u          // Spec (the actual current spec)
+#define PAD_MAKE_STATUS_ADDR 0x801D3928u   // MakeStatus function pointer
+#define PAD_SPEC0_MAKE_STATUS_PC 0x800C5038u
+#define PAD_SPEC1_MAKE_STATUS_PC 0x800C51ACu
+#define PAD_SPEC2_MAKE_STATUS_PC 0x800C5320u
+
+static inline void store_u32be(uint32_t addr, uint32_t v) {
+    uint8_t *p = gc_mem_ptr(addr, 4);
+    if (!p) return;
+    p[0] = (uint8_t)(v >> 24);
+    p[1] = (uint8_t)(v >> 16);
+    p[2] = (uint8_t)(v >> 8);
+    p[3] = (uint8_t)(v >> 0);
+}
+
 // Exposed in the SDK.
 // Decomp behavior: set a MakeStatus function pointer based on spec (we persist a
 // stable "kind" token for deterministic dumps) and store Spec.
 void PADSetSpec(u32 spec) {
     u32 kind = GC_PAD_MAKE_STATUS_SPEC2;
+    u32 make_status_pc = PAD_SPEC2_MAKE_STATUS_PC;
     switch (spec) {
         case 0: /* PAD_SPEC_0 */
             kind = GC_PAD_MAKE_STATUS_SPEC0;
+            make_status_pc = PAD_SPEC0_MAKE_STATUS_PC;
             break;
         case 1: /* PAD_SPEC_1 */
             kind = GC_PAD_MAKE_STATUS_SPEC1;
+            make_status_pc = PAD_SPEC1_MAKE_STATUS_PC;
             break;
         default: /* PAD_SPEC_2..5 */
             kind = GC_PAD_MAKE_STATUS_SPEC2;
+            make_status_pc = PAD_SPEC2_MAKE_STATUS_PC;
             break;
     }
 
@@ -85,6 +107,14 @@ void PADSetSpec(u32 spec) {
     gc_pad_make_status_kind = kind;
     gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_SPEC, spec);
     gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_MAKE_STATUS_KIND, kind);
+
+    // Retail-visible globals for trace replay (mirror Pad.c behavior):
+    // - __PADSpec is always cleared
+    // - Spec is set to the requested value
+    // - MakeStatus points to the selected SPECx_MakeStatus implementation
+    store_u32be(PAD_PADSPEC_SHADOW_ADDR, 0);
+    store_u32be(PAD_SPEC_ADDR, spec);
+    store_u32be(PAD_MAKE_STATUS_ADDR, make_status_pc);
 }
 
 u32 PADGetSpec(void) { return gc_pad_spec; }

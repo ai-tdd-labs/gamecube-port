@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1172,7 +1172,7 @@
+ }
+ 
+ void GXPokeZMode(u8 enable, u32 func, u8 update_enable) {
+-    gc_gx_poke_zmode_enable = (u32)enable;
++    gc_gx_poke_zmode_enable = (u32)update_enable; // MUTANT
+     gc_gx_poke_zmode_func = func;
+     gc_gx_poke_zmode_update_enable = (u32)update_enable;
+ }

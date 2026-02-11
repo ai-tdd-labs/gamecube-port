@@ -1,4 +1,6 @@
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -212,4 +214,124 @@ BOOL SITransfer(s32 chan, void *output, u32 outputBytes, void *input, u32 inputB
     }
 
     return 1;
+}
+
+// -----------------------------------------------------------------------------
+// SIGetResponse (retail trace-replay driven)
+//
+// Retail behavior (SIBios.c):
+// - SIGetResponseRaw(chan) reads SIGetStatus(chan) and, if SI_ERROR_RDST is set,
+//   pulls two u32 words from __SIRegs into InputBuffer[chan] and sets
+//   InputBufferValid[chan] = TRUE.
+// - SIGetResponse() always calls SIGetResponseRaw(), then:
+//     rc = InputBufferValid[chan];
+//     InputBufferValid[chan] = FALSE;
+//     if (rc) copy InputBuffer words to `data`.
+//
+// For host trace replay we cannot read MMIO (__SIRegs). Instead we seed:
+// - per-channel status word (used to model SIGetStatus(chan))
+// - per-channel response words (what __SIRegs would have returned)
+//
+// These seeds are stored in GC_SDK_STATE (sdk_state.h) and are derived by the
+// replay script from retail entry/exit snapshots.
+// -----------------------------------------------------------------------------
+
+enum {
+    // From dolphin/os/OSSerial.h in the SDK:
+    //   #define SI_ERROR_RDST 0x0020
+    SI_ERROR_RDST = 0x0020u,
+
+    // Retail MP4 SDK internal globals (GMPE01_00 symbols):
+    SI_INPUTBUF_VALID_BASE = 0x801A7148u, // BOOL[4]
+    SI_INPUTBUF_BASE = 0x801A7158u,       // u32[4][2]
+    SI_INPUTBUF_VCOUNT_BASE = 0x801A7178u // vu32[4]
+};
+
+// Host-side deterministic seeds for SIGetResponseRaw().
+// We mirror these into RAM-backed sdk_state for observability, but the source of
+// truth is these arrays to avoid depending on unrelated memory writes.
+static u32 gc_si_status_seed_arr[4];
+static u32 gc_si_resp_seed_arr[4][2];
+
+void gc_si_set_status_seed(u32 chan, u32 status) {
+    if (chan >= 4) return;
+    gc_si_status_seed_arr[chan] = status;
+    if (getenv("GC_TRACE_DEBUG")) {
+        fprintf(stderr, "[gc_si_set_status_seed] chan=%u status=0x%08X\n", (unsigned)chan, (unsigned)status);
+    }
+    gc_sdk_state_store_u32be(GC_SDK_OFF_SI_STATUS_BASE + chan * 4u, status);
+}
+
+void gc_si_set_resp_words_seed(u32 chan, u32 word0, u32 word1) {
+    if (chan >= 4) return;
+    gc_si_resp_seed_arr[chan][0] = word0;
+    gc_si_resp_seed_arr[chan][1] = word1;
+    if (getenv("GC_TRACE_DEBUG")) {
+        fprintf(stderr, "[gc_si_set_resp_words_seed] chan=%u w0=0x%08X w1=0x%08X\n", (unsigned)chan, (unsigned)word0, (unsigned)word1);
+    }
+    const u32 off = GC_SDK_OFF_SI_RESP_WORDS_BASE + chan * 8u;
+    gc_sdk_state_store_u32be(off + 0, word0);
+    gc_sdk_state_store_u32be(off + 4, word1);
+}
+
+static BOOL SIGetResponseRaw(s32 chan) {
+    if (chan < 0 || chan >= 4) return 0;
+
+    // Model SIGetStatus(chan) using a deterministic per-channel seed.
+    u32 sr_addr = GC_SDK_STATE_BASE + GC_SDK_OFF_SI_STATUS_BASE + (u32)chan * 4u;
+    u32 sr = gc_si_status_seed_arr[(u32)chan];
+    if (getenv("GC_TRACE_DEBUG")) {
+        fprintf(stderr, "[SIGetResponseRaw] base=0x%08X status_off=0x%X addr=0x%08X\n",
+                (unsigned)GC_SDK_STATE_BASE, (unsigned)GC_SDK_OFF_SI_STATUS_BASE, (unsigned)sr_addr);
+        fprintf(stderr, "[SIGetResponseRaw] chan=%d sr=0x%08X\n", (int)chan, sr);
+    }
+    if (sr & SI_ERROR_RDST) {
+        // Model __SIRegs words using deterministic seeds.
+        u32 w0 = gc_si_resp_seed_arr[(u32)chan][0];
+        u32 w1 = gc_si_resp_seed_arr[(u32)chan][1];
+
+        store_u32be(SI_INPUTBUF_BASE + (u32)chan * 8u + 0, w0);
+        store_u32be(SI_INPUTBUF_BASE + (u32)chan * 8u + 4, w1);
+        store_u32be(SI_INPUTBUF_VALID_BASE + (u32)chan * 4u, 1);
+        // Debug invariant: the write must be observable immediately.
+        // If this trips, our host RAM mapping is wrong.
+        u32 vchk = load_u32be(SI_INPUTBUF_VALID_BASE + (u32)chan * 4u);
+        if (getenv("GC_TRACE_DEBUG")) {
+            fprintf(stderr, "[SIGetResponseRaw] wrote valid=1, readback=0x%08X\n", vchk);
+        }
+        if (vchk != 1u) {
+            // No OSReport here: keep this deterministic and fail-fast in scenarios.
+            return 0;
+        }
+
+        // Note: InputBufferVcount is driven by the polling interrupt handler,
+        // not SIGetResponse(). Leave it untouched for now; if retail traces
+        // show changes, we'll expand the model.
+        (void)SI_INPUTBUF_VCOUNT_BASE;
+
+        return 1;
+    }
+    return 0;
+}
+
+BOOL SIGetResponse(s32 chan, void *data) {
+    if (chan < 0 || chan >= 4) return 0;
+
+    BOOL enabled = OSDisableInterrupts();
+
+    SIGetResponseRaw(chan);
+
+    u32 valid = load_u32be(SI_INPUTBUF_VALID_BASE + (u32)chan * 4u);
+    store_u32be(SI_INPUTBUF_VALID_BASE + (u32)chan * 4u, 0);
+
+    if (valid) {
+        u32 w0 = load_u32be(SI_INPUTBUF_BASE + (u32)chan * 8u + 0);
+        u32 w1 = load_u32be(SI_INPUTBUF_BASE + (u32)chan * 8u + 4);
+        u32 dst = (u32)(uintptr_t)data;
+        store_u32be(dst + 0, w0);
+        store_u32be(dst + 4, w1);
+    }
+
+    OSRestoreInterrupts(enabled);
+    return valid ? 1 : 0;
 }

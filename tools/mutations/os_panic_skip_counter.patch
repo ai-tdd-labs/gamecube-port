@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/os/OSError.c b/src/sdk_port/os/OSError.c
+--- a/src/sdk_port/os/OSError.c
++++ b/src/sdk_port/os/OSError.c
+@@ -14,6 +14,7 @@
+ void OSPanic(const char *file, int line, const char *msg, ...) {
+     (void)file;
+     (void)line;
+     (void)msg;
+-    gc_os_panic_calls++;
++    // MUTANT: skip incrementing panic counter
++    (void)0;
+ }

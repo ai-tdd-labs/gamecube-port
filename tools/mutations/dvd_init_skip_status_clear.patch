@@ -1,0 +1,11 @@
+diff --git a/src/sdk_port/dvd/DVD.c b/src/sdk_port/dvd/DVD.c
+--- a/src/sdk_port/dvd/DVD.c
++++ b/src/sdk_port/dvd/DVD.c
+@@ -19,6 +19,4 @@
+ void DVDInit(void) {
+     gc_sdk_state_store_u32_mirror(GC_SDK_OFF_DVD_INITIALIZED, &gc_dvd_initialized, 1u);
+-    // Deterministic default for "idle" boot: no executing command block.
+-    // MP4 polls this during HuDvdErrorWatch.
+-    gc_sdk_state_store_u32_mirror(GC_SDK_OFF_DVD_DRIVE_STATUS, &gc_dvd_drive_status, 0u);
++    // MUTANT: skip clearing drive status to 0 on init
+ }

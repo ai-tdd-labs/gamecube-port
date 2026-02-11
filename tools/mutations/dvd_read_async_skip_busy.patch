@@ -1,0 +1,15 @@
+diff --git a/src/sdk_port/dvd/DVD.c b/src/sdk_port/dvd/DVD.c
+--- a/src/sdk_port/dvd/DVD.c
++++ b/src/sdk_port/dvd/DVD.c
+@@ -145,10 +145,8 @@
+     if (!file || !addr) return 0;
+
+     // Mark "busy", do the copy immediately, then mark idle.
+-    file->cb.state = 1;
+-    gc_dvd_async_busy_seen = 1;
+     int n = DVDRead(file, addr, (int)len, (int)offset);
+-    file->cb.state = 0;
++    // MUTANT: skip setting command block state transitions (busy -> idle)
+
+     if (cb) {
+         cb((n < 0) ? (s32)-1 : (s32)n, file);

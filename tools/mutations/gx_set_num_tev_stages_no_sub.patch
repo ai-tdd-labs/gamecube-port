@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1959,7 +1959,7 @@
+ void GXSetNumTevStages(u8 nStages) {
+     // GXTev.c: genMode[10..13] = nStages-1; dirtyState |= 4
+     if (nStages == 0 || nStages > 16) return;
+-    gc_gx_gen_mode = set_field(gc_gx_gen_mode, 4, 10, (u32)(nStages - 1u));
++    gc_gx_gen_mode = set_field(gc_gx_gen_mode, 4, 10, (u32)(nStages)); // MUTANT
+     gc_gx_dirty_state |= 4u;
+ }
+ 

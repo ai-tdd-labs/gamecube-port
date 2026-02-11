@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -474,7 +474,7 @@
+     gc_gx_dl_base = (u32)(uintptr_t)list;
+     gc_gx_dl_size = size;
+     gc_gx_dl_count = 0;
+-    gc_gx_in_disp_list = 1;
++    gc_gx_in_disp_list = 0; // MUTANT
+ }
+ 
+ u32 GXEndDisplayList(void) {
