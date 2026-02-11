@@ -189,7 +189,9 @@ compared against the `sdk_port` implementation using `gc_mem` big-endian emulati
 | Candidate | Source | Type | Suitability | Notes |
 |-----------|--------|------|-------------|-------|
 | **GXProject** | GXTransform.c:7-35 | Pure math | **Strong** | 3D projection: modelview transform -> perspective/ortho -> viewport map. No globals, no hardware, no side effects. |
+| **GXCompressZ16 / GXDecompressZ16** | GXMisc.c:362-485 | Bit manipulation | **Strong** | Z-depth compress/decompress with 4 formats (LINEAR/NEAR/MID/FAR). Round-trip property. Only PPC dep is `__cntlzw` (trivial: `__builtin_clz`). |
 | **THPAudioDecode** | THPAudio.c:3-146 | Signal processing | **Moderate** | ADPCM decoder: predictor coefficients, scale, saturation, nibble extraction. Need to define THPAudioRecordHeader + generate random encoded frames. |
+| **GXGetYScaleFactor** | GXFrameBuf.c:257-290 | Iterative convergence | **Moderate** | Converges on Y scale factor via two loops + `__GXGetNumXfbLines` helper. Pure integer/float math. |
 | **GXSetFog (core math)** | GXPixel.c:7-56 | Float encoding | **Moderate** | Mantissa normalization loop (B_mant/B_expn), A/B/C computation from 4 floats. Extract math from register packing. |
 | **__GXCalculateVLim** | GXAttr.c:123-171 | Lookup table | **Moderate** | Vertex limit from VCD register fields. Pure given (vcdLo, vcdHi, vatA) as inputs. Needs GET_REG_FIELD macro. |
 | **GXInitFogAdjTable** | GXPixel.c:108-138 | Math + sqrtf | **Weak** | 10-entry table from width + projection matrix. Straightforward sqrtf loop. |
