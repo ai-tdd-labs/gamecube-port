@@ -17,6 +17,9 @@ Oracle exactness hardening (new):
   Evidence target: `docs/sdk/*/ORACLE_DELTA.md`
 - [ ] Add strict-vs-adapted dual-run checks where feasible (same fixtures, compare outputs).
   Evidence target: `tools/run_oracle_dualcheck.sh`
+  Progress:
+  - [x] Phase 1: strict dual-check added for CARD `__CARDCheckSum` (leaf) via `tools/run_oracle_dualcheck.sh`.
+  - [ ] Phase 2: expand strict dual-checks to ARQ/OSAlloc/DVDFS/MTX where extraction is feasible.
 - [ ] Add retail-trace replay fixtures for hardware-sensitive behaviors (interrupt/callback ordering).
   Evidence target: `tests/oracles/mp4_rvz/*`, replay scripts in `tools/`
 - [ ] Merge/reconcile `codex/integration-all` into `main` after gate passes.

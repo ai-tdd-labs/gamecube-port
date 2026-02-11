@@ -57,3 +57,4 @@ This file maps each PBT subsystem to its oracle source and replay command.
   - `tests/sdk/card/property/card_fat_property_test.c`
 - Commands:
   - `tools/run_card_fat_property_test.sh --num-runs=50 -v`
+  - `tools/run_oracle_dualcheck.sh 200` (includes strict `__CARDCheckSum` dual-check)

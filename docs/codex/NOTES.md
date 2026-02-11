@@ -1076,3 +1076,16 @@ Notes:
   - `SISetSamplingRate`: replay PASS for sampled unique case.
   - `PADControlMotor`: replay PASS for harvested hits (`chan=0 cmd=2` examples).
 - This loop is the current fastest way to expand retail-trace fixtures for HuPadInit blockers while keeping deterministic host replay validation in the same run.
+
+## 2026-02-11: Dual-run oracle parity check (phase 1)
+- Added `tools/run_oracle_dualcheck.sh`.
+- Implemented strict-vs-adapted dual check for CARD leaf function `__CARDCheckSum`:
+  - strict oracle body: `tests/sdk/card/property/card_checksum_strict_oracle.h` (copied from MP4 decomp)
+  - adapted oracle body: `tests/sdk/card/property/card_fat_oracle.h`
+  - candidate: `src/sdk_port/card/card_fat.c` via existing property harness
+- Validation run:
+  - `tools/run_oracle_dualcheck.sh 200`
+  - strict checksum dual-check: `200/200 PASS`
+  - ARQ adapted suite: `150/150 PASS`
+  - CARD FAT adapted suite: `1569/1569 PASS`
+- Scope note: this is phase 1 (leaf strict check) and does not yet cover strict dual-run for ARQ/OSAlloc/DVDFS/MTX.

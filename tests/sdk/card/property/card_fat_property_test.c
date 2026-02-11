@@ -22,6 +22,7 @@
 
 /* Oracle (native, self-contained) */
 #include "card_fat_oracle.h"
+#include "card_checksum_strict_oracle.h"
 
 /* Port (big-endian via gc_mem) */
 #include "card_fat.h"
@@ -171,6 +172,7 @@ static int test_checksum(uint32_t seed)
     int pass = 0, fail = 0;
     uint16_t native_buf[256];
     uint16_t ck_oracle, cki_oracle, ck_port, cki_port;
+    uint16_t ck_strict, cki_strict;
     int i, length;
 
     /* Fill with random u16 values */
@@ -184,6 +186,7 @@ static int test_checksum(uint32_t seed)
 
     /* Oracle: native u16 array */
     oracle_CARDCheckSum(native_buf, length, &ck_oracle, &cki_oracle);
+    strict_CARDCheckSum(native_buf, length, &ck_strict, &cki_strict);
 
     /* Port: copy to gc_mem in big-endian, then checksum */
     init_gc_mem();
@@ -193,7 +196,8 @@ static int test_checksum(uint32_t seed)
     port_CARDCheckSum(GC_FAT_BASE, length, &ck_port, &cki_port);
 
     g_total_checks++;
-    if (ck_oracle == ck_port && cki_oracle == cki_port) {
+    if (ck_oracle == ck_port && cki_oracle == cki_port &&
+        ck_strict == ck_oracle && cki_strict == cki_oracle) {
         pass++;
         g_total_pass++;
     } else {
@@ -201,15 +205,16 @@ static int test_checksum(uint32_t seed)
         g_total_fail++;
         fprintf(stderr,
             "  FAIL L0-CheckSum seed=%u len=%d: "
-            "oracle=(0x%04X,0x%04X) port=(0x%04X,0x%04X)\n",
+            "strict=(0x%04X,0x%04X) oracle=(0x%04X,0x%04X) port=(0x%04X,0x%04X)\n",
             seed, length,
+            (unsigned)ck_strict, (unsigned)cki_strict,
             (unsigned)ck_oracle, (unsigned)cki_oracle,
             (unsigned)ck_port, (unsigned)cki_port);
     }
 
     if (opt_verbose && pass > 0) {
-        printf("  L0-CheckSum: len=%d ck=0x%04X cki=0x%04X OK\n",
-               length, (unsigned)ck_oracle, (unsigned)cki_oracle);
+        printf("  L0-CheckSum: tier=%s len=%d ck=0x%04X cki=0x%04X OK\n",
+               ORACLE_STRICT_TIER, length, (unsigned)ck_oracle, (unsigned)cki_oracle);
     }
 
     return fail;
