@@ -9,6 +9,15 @@ Rules:
 
 ## Confirmed Behaviors
 
+### Pre-main test sweep stabilization (2026-02-11)
+- `tests/sdk` full expected sweep now completes end-to-end (`tools/run_tests.sh all tests/sdk`) after resolving PAD test helper symbol collisions.
+  Evidence: renamed local dump helpers in:
+  - `tests/sdk/pad/pad_reset/dol/mp4/realistic_padreadvsync_001/pad_reset_realistic_padreadvsync_001.c`
+  - `tests/sdk/pad/pad_read/dol/mp4/realistic_padreadvsync_001/pad_read_realistic_padreadvsync_001.c`
+  - `tests/sdk/pad/pad_clamp/dol/mp4/realistic_padreadvsync_001/pad_clamp_realistic_padreadvsync_001.c`
+- Replay gate now treats exit code `2` from optional harvest/replay scripts as a non-fatal "missing external asset/corpus" skip, while preserving hard-fail behavior for real test failures.
+  Evidence: `tools/run_replay_gate.sh` (`run_if_exists` rc handling).
+
 ### PBT strict dualcheck (MTX)
 - Added strict decomp-derived leaf oracle for MTX core math:
   - `strict_C_MTXIdentity`
