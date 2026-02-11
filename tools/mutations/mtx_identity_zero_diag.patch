@@ -1,11 +1,13 @@
 diff --git a/src/sdk_port/mtx/mtx.c b/src/sdk_port/mtx/mtx.c
-index 1db3114..163fe4d 100644
+index 1db3114..f4b0279 100644
 --- a/src/sdk_port/mtx/mtx.c
 +++ b/src/sdk_port/mtx/mtx.c
-@@ -17,7 +17,7 @@ void C_MTXIdentity(Mtx mtx) {
+@@ -16,7 +16,7 @@ void C_MTXIdentity(Mtx mtx) {
+     mtx[0][3] = 0.0f;
+ 
      mtx[1][0] = 0.0f;
 -    mtx[1][1] = 1.0f;
 +    mtx[1][1] = 0.0f;
      mtx[1][2] = 0.0f;
      mtx[1][3] = 0.0f;
-
+ 
