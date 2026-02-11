@@ -1464,3 +1464,12 @@ Notes:
   - `bash tools/run_gxyscale_property_test.sh --seed=0xC0DEC0DE --op=L5 -v`
   - `bash tools/run_thpaudio_property_test.sh --seed=0xC0DEC0DE --op=L0 -v`
   - `bash tools/run_thpaudio_property_test.sh --seed=0xC0DEC0DE --op=L4 -v`
+## 2026-02-11: Synced latest candidate-coverage doc push
+
+- Merged latest `origin/pbt/remaining-sdk-coverage` updates into `codex/macos-codex53-pbt-audit`.
+- `docs/codex/PROJECT_STATUS.md` now includes the "PBT coverage — complete" status block from that push.
+- Kept local OSAlloc-style `--op` upgrades in all new suites during conflict resolution.
+- Quick regression checks after merge (PASS):
+  - `bash tools/run_dvdqueue_property_test.sh --num-runs=5 --seed=0xC0DEC0DE --op=L0`
+  - `bash tools/run_gxproject_property_test.sh --num-runs=5 --seed=0xC0DEC0DE --op=L5`
+  - `bash tools/run_thpaudio_property_test.sh --num-runs=5 --seed=0xC0DEC0DE --op=L4`
