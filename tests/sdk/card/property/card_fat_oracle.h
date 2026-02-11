@@ -15,6 +15,9 @@
 #include <stdint.h>
 #include <string.h>
 
+/* Oracle strictness tier for reporting/gating. */
+#define ORACLE_TIER "DECOMP_ADAPTED"
+
 /* ── Types matching the decomp ── */
 typedef uint16_t oracle_u16;
 typedef uint32_t oracle_u32;

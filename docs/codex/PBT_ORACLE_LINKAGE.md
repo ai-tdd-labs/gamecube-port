@@ -35,6 +35,7 @@ This file maps each PBT subsystem to its oracle source and replay command.
 ## ARQ
 
 - Oracle type: embedded decomp oracle (`tests/sdk/ar/property/arq_oracle.h`) vs sdk_port.
+- Oracle tier: `DECOMP_ADAPTED`
 - Evidence:
   - `tests/sdk/ar/property/arq_property_test.c`
 - Commands:
@@ -43,6 +44,7 @@ This file maps each PBT subsystem to its oracle source and replay command.
 ## CARD-FAT
 
 - Oracle type: embedded decomp oracle (`tests/sdk/card/property/card_fat_oracle.h`) vs sdk_port.
+- Oracle tier: `DECOMP_ADAPTED`
 - Evidence:
   - `tests/sdk/card/property/card_fat_property_test.c`
 - Commands:

@@ -15,6 +15,7 @@ build_dir="$repo_root/tests/build/card_fat_property"
 test_src="$repo_root/tests/sdk/card/property"
 port_src="$repo_root/src/sdk_port/card"
 gc_mem_src="$repo_root/src/sdk_port"
+oracle_header="$test_src/card_fat_oracle.h"
 
 mkdir -p "$build_dir"
 
@@ -54,6 +55,13 @@ if [[ -z "$CC" ]]; then
     exit 2
 fi
 
+oracle_tier="$(rg '^#define ORACLE_TIER ' "$oracle_header" 2>/dev/null | sed -E 's/^#define ORACLE_TIER \"([^\"]+)\"/\1/' || true)"
+if [[ -z "$oracle_tier" ]]; then
+    oracle_tier="UNKNOWN"
+fi
+
+echo "[card-fat-property] oracle=$oracle_header"
+echo "[card-fat-property] tier=$oracle_tier"
 echo "[card-fat-property-build] CC=$CC"
 "$CC" "${opt_flags[@]}" -ffunction-sections -fdata-sections \
   -D_XOPEN_SOURCE=700 -D_CRT_SECURE_NO_WARNINGS \
