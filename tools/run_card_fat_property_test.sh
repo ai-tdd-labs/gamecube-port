@@ -29,11 +29,18 @@ for arg in "$@"; do
     esac
 done
 
+# --- Linker dead-strip flags (platform-dependent) ---
+ld_gc_flags=()
+case "$(uname -s)" in
+    Darwin) ld_gc_flags+=(-Wl,-dead_strip) ;;
+    *)      ld_gc_flags+=(-Wl,--gc-sections) ;;
+esac
+
 # --- Find compiler ---
 CC="${CC:-}"
 if [[ -z "$CC" ]]; then
-    for try in clang gcc cc; do
-        if command -v "$try" &>/dev/null; then CC="$try"; break; fi
+    for try in cc clang gcc; do
+        if command -v "$try" >/dev/null 2>&1; then CC="$try"; break; fi
     done
 fi
 if [[ -z "$CC" ]]; then
@@ -57,6 +64,7 @@ echo "[card-fat-property-build] CC=$CC"
   "$test_src/card_fat_property_test.c" \
   "$port_src/card_fat.c" \
   "$gc_mem_src/gc_mem.c" \
+  "${ld_gc_flags[@]}" \
   -o "$build_dir/card_fat_property_test"
 
 echo "[card-fat-property-build] OK -> $build_dir/card_fat_property_test"
