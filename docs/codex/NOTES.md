@@ -1817,3 +1817,17 @@ Notes:
 - Coverage interpretation stays aligned with `todo/SDK_PORT_COVERAGE.md`:
   - pure-computation gaps previously marked for MTX batch are now covered (PSMTX batch suite added)
   - remaining major gaps are hardware-coupled paths (AI/CARD APIs/THP runtime/parts of GX/DVD/VI) that require trace-replay or integration, not new PBT leaf suites.
+
+## 2026-02-12: Probe connection retry hardening
+
+- Updated `tools/ram_dump.py` startup connection behavior:
+  - Added `--connect-retries` (default 20)
+  - Added `--connect-retry-delay` (default 1.0s)
+  - Startup now retries with configurable delay after Dolphin launch.
+- Re-ran chain probe:
+  - `bash tools/probe_os_unlink_overlay_chain.sh "" 20`
+  - output: `tests/trace-harvest/os_unlink/probes/20260212_144829/`
+- Result:
+  - later probes now connect reliably enough to set breakpoints (`omOvlKill`, `omDLLNumEnd`, `OSUnlink` logs show connected + timeout-no-hit)
+  - `omOvlGotoEx` still has startup connection refusal in this run
+  - no overlay unload hits yet; DTM trigger input is still required for OSUnlink path.

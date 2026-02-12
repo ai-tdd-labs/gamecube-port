@@ -499,6 +499,10 @@ Examples:
                         help='Seconds to run between halt polls while waiting for --pc-breakpoint (default: 0.02).')
     parser.add_argument('--pc-hit-count', type=int, default=1,
                         help='Number of times to observe PC==addr before dumping (default: 1). Useful to stop on the Nth frame without real breakpoints.')
+    parser.add_argument('--connect-retries', type=int, default=20,
+                        help='Connection retries when Dolphin is started by this tool (default: 20).')
+    parser.add_argument('--connect-retry-delay', type=float, default=1.0,
+                        help='Delay in seconds between connection retries (default: 1.0).')
 
     # Some DOLs (especially smoke chains) do heavy work (e.g. clearing MEM1) and then
     # write a deterministic "ready marker" to RAM. Dumping before that marker is set
@@ -544,14 +548,15 @@ Examples:
 
     # Retry connection a few times if we just started Dolphin
     connected = False
-    retries = 5 if dolphin_proc else 1
+    retries = max(1, int(args.connect_retries)) if dolphin_proc else 1
+    retry_delay = max(0.05, float(args.connect_retry_delay))
     for i in range(retries):
         if gdb.connect():
             connected = True
             break
         if i < retries - 1:
-            print(f"Retrying in 1s... ({i+1}/{retries})")
-            time.sleep(1)
+            print(f"Retrying in {retry_delay:.2f}s... ({i+1}/{retries})")
+            time.sleep(retry_delay)
 
     if not connected:
         if dolphin_proc:

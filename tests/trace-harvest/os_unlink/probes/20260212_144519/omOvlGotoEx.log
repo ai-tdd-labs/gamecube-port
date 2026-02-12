@@ -1,0 +1,18 @@
+[rvz-probe] os_heap_arena_window addr=0x801D38A0 size=0x80 -> /Users/chrislamark/projects/gamecube/tests/trace-harvest/os_unlink/probes/20260212_144519/omOvlGotoEx.bin/os_heap_arena_window.bin
+RAM Dump: 0x801D38A0 - 0x801D3920 (128 bytes)
+Starting Dolphin: /Applications/Dolphin.app/Contents/MacOS/Dolphin -b -d -C Core.MMU=True -e /Users/chrislamark/projects/recomp/gamecube_static_recomp/game_files/Mario Party 4 (USA).rvz
+Waiting 6.0s for Dolphin to initialize...
+Failed to connect: [Errno 61] Connection refused
+Make sure Dolphin is running with GDB stub enabled.
+Retrying in 1s... (1/5)
+Failed to connect: [Errno 61] Connection refused
+Make sure Dolphin is running with GDB stub enabled.
+Retrying in 1s... (2/5)
+Failed to connect: [Errno 61] Connection refused
+Make sure Dolphin is running with GDB stub enabled.
+Retrying in 1s... (3/5)
+Failed to connect: [Errno 61] Connection refused
+Make sure Dolphin is running with GDB stub enabled.
+Retrying in 1s... (4/5)
+Failed to connect: [Errno 61] Connection refused
+Make sure Dolphin is running with GDB stub enabled.
