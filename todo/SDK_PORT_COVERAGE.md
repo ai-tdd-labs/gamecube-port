@@ -5,7 +5,7 @@ Last updated: 2026-02-12
 ## Summary
 
 The game calls **~305 unique SDK functions** across 13 modules.
-The port currently implements **~219 functions** (plus internal helpers).
+The port currently implements **~224 functions** (plus internal helpers).
 
 | Module | Game needs | Ported | Coverage | Notes |
 |--------|-----------|--------|----------|-------|
@@ -16,12 +16,12 @@ The port currently implements **~219 functions** (plus internal helpers).
 | **VI** | 13 | 12 | **92%** | Only VISetPreRetraceCallback missing |
 | **SI** | 1 | 1 | **100%** | SISetSamplingRate |
 | **MTX** | 33 | 33 | **100%** | All C_MTX* implemented; MTX*/PSMTX* are macros/aliases |
-| **CARD** | 23 | 9 | **39%** | FAT internals + CompareFileName, Access, IsPublic, GetFileNo, Seek |
+| **CARD** | 23 | 14 | **61%** | FAT internals + Dir ops + Unlock crypto (exnor, bitrev, CARDRand) |
 | **AR** | 10 | 6 | **60%** | ARInit, ARAlloc, ARFree, ARCheckInit, ARGetBaseAddress, ARGetSize |
 | **ARQ** | 2 | 2 | **100%** | ARQInit + ARQPostRequest (+ internal helpers) |
 | **AI** | 7 | 0 | **0%** | Audio interface — not started |
 | **THP** | 27 | 0 | **0%** | Video player — not started |
-| **TOTAL** | **~305** | **~219** | **~72%** | |
+| **TOTAL** | **~305** | **~224** | **~73%** | |
 
 ---
 
@@ -100,16 +100,17 @@ Plus QUAT (8): Add, Multiply, Normalize, Inverse, Slerp, RotAxisRad, Mtx.
 **Still need for game:** `PSMTXMultVecArray`, `PSMTXReorder`, `PSMTXROMultVecArray`
 (batch/reorder ops — PPC paired-single ASM, need C loop equivalents)
 
-### CARD (9/23 = 39%)
+### CARD (14/23 = 61%)
 
 **Ported:**
 - FAT internals: `__CARDCheckSum`, `__CARDUpdateFatBlock`, `__CARDAllocBlock`, `__CARDFreeBlock`
 - Directory ops: `__CARDCompareFileName`, `__CARDAccess`, `__CARDIsPublic`, `__CARDGetFileNo`
 - Seek: `__CARDSeek` (FAT chain traversal)
+- Unlock crypto: `exnor_1st`, `exnor`, `bitrev`, `CARDSrand`, `CARDRand`
 
-PBT suites: CARD-FAT (AllocBlock/FreeBlock/CheckSum) + CARD-Dir (CompareFileName/Access/IsPublic/GetFileNo/Seek) — 78k checks, all PASS.
+PBT suites: CARD-FAT (AllocBlock/FreeBlock/CheckSum) + CARD-Dir (CompareFileName/Access/IsPublic/GetFileNo/Seek) + CARD-Unlock (exnor_1st/exnor/bitrev/CARDRand) — 330k+ checks, all PASS.
 
-**Missing (14 API functions):**
+**Missing (9 API functions):**
 CARDInit, CARDMount, CARDUnmount, CARDOpen, CARDClose, CARDCreate, CARDDelete,
 CARDRead, CARDWrite, CARDFormat, CARDCheck, CARDFreeBlocks, CARDGetSectorSize,
 CARDProbeEx, CARDGetSerialNo, CARDGetStatus, CARDSetStatus, CARDSetBannerFormat,
@@ -166,7 +167,7 @@ Locked Cache + paired-single (needs host JPEG decoder).
 
 ---
 
-## PBT Coverage (19 suites — all pure-computation functions covered)
+## PBT Coverage (20 suites — all pure-computation functions covered)
 
 | Suite | Checks | Status | Links to sdk_port |
 |-------|--------|--------|-------------------|
@@ -187,6 +188,7 @@ Locked Cache + paired-single (needs host JPEG decoder).
 | ARQ | — | PASS | yes (arq.c) |
 | CARD-FAT | — | PASS | yes |
 | CARD-Dir | ~78k | PASS | yes (card_dir.c) |
+| CARD-Unlock | ~252k | PASS | yes (card_unlock.c) |
 | DVDFS | — | PASS | yes |
 
 **Total:** ~200M+ checks across all suites, all passing (2000 seeds each).
