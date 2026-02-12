@@ -380,3 +380,54 @@ void C_MTXMultVecSR(const Mtx m, const Vec *src, Vec *dst)
     tmp.z = m[2][0]*src->x + m[2][1]*src->y + m[2][2]*src->z;
     *dst = tmp;
 }
+
+/* ================================================================== */
+/*  PSMTXMultVecArray (PS* ASM in decomp; C loop over C_MTXMultVec)    */
+/* ================================================================== */
+
+typedef f32 ROMtx[3][4];
+
+void PSMTXMultVecArray(const Mtx m, const Vec *srcBase, Vec *dstBase, u32 count)
+{
+    u32 i;
+    for (i = 0; i < count; i++) {
+        C_MTXMultVec(m, &srcBase[i], &dstBase[i]);
+    }
+}
+
+/* ================================================================== */
+/*  PSMTXReorder (PS* ASM in decomp; transpose Mtx to column-major)    */
+/* ================================================================== */
+
+void PSMTXReorder(const Mtx src, ROMtx dest)
+{
+    /* Row-major Mtx → column-major ROMtx:
+     * dest layout: [m00 m10 m20 | m01 m11 m21 | m02 m12 m22 | m03 m13 m23] */
+    dest[0][0] = src[0][0]; dest[0][1] = src[1][0]; dest[0][2] = src[2][0];
+    dest[0][3] = src[0][1]; dest[1][0] = src[1][1]; dest[1][1] = src[2][1];
+    dest[1][2] = src[0][2]; dest[1][3] = src[1][2]; dest[2][0] = src[2][2];
+    dest[2][1] = src[0][3]; dest[2][2] = src[1][3]; dest[2][3] = src[2][3];
+}
+
+/* ================================================================== */
+/*  PSMTXROMultVecArray (PS* ASM; multiply reordered matrix * vecs)     */
+/* ================================================================== */
+
+void PSMTXROMultVecArray(const ROMtx m, const Vec *srcBase, Vec *dstBase, u32 count)
+{
+    /* ROMtx column-major:
+     * col0 = m[0][0..2], col1 = m[0][3]..m[1][1], col2 = m[1][2]..m[2][0],
+     * translate = m[2][1..3] */
+    const f32 r00 = m[0][0], r10 = m[0][1], r20 = m[0][2];
+    const f32 r01 = m[0][3], r11 = m[1][0], r21 = m[1][1];
+    const f32 r02 = m[1][2], r12 = m[1][3], r22 = m[2][0];
+    const f32 r03 = m[2][1], r13 = m[2][2], r23 = m[2][3];
+
+    u32 i;
+    for (i = 0; i < count; i++) {
+        f32 x = srcBase[i].x, y = srcBase[i].y, z = srcBase[i].z;
+        dstBase[i].x = r00*x + r01*y + r02*z + r03;
+        dstBase[i].y = r10*x + r11*y + r12*z + r13;
+        dstBase[i].z = r20*x + r21*y + r22*z + r23;
+    }
+}
