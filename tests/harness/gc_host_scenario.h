@@ -9,9 +9,9 @@
 // - writes marker/results into virtual RAM (typically at 0x80300000)
 // - returns a relative output path for the RAM dump
 //
-// The runner then dumps a fixed RAM region to that path.
+// The runner dumps RAM to that path. Dump size defaults to 0x40, but
+// tools/run_host_scenario.sh auto-sizes to expected fixture length when found.
 
 const char *gc_scenario_label(void);
 const char *gc_scenario_out_path(void);
 void gc_scenario_run(GcRam *ram);
-

@@ -2083,3 +2083,22 @@ Observed gap (FAIL in compare gate):
 - `os_time_generic_001.bin` expected size `384`, host actual size `64`.
 
 Root cause: `tools/run_host_scenario.sh` currently always dumps only `0x40` bytes (`0x80300000..0x80300040`), while these new suites write larger buffers.
+
+## 2026-02-12: Fix host runner truncation for remaining-trace-tests generic suites
+
+- Updated `tools/run_host_scenario.sh` to auto-size `GC_HOST_MAIN_DUMP_SIZE` from expected fixture length when available.
+  - Extracts scenario out path via `gc_scenario_out_path()`.
+  - Resolves expected fixture path using:
+    1) `actual -> expected` sibling mapping
+    2) fallback search under suite root (`*/expected/<basename>.bin`).
+- Updated harness docs comment in `tests/harness/gc_host_scenario.h` to reflect non-fixed dump sizing.
+
+Validation:
+- Re-ran all 16 host scenarios added in `f6c4196..b0555c4` via `tools/run_host_scenario.sh` (all build/run pass).
+- Re-checked previous size-mismatch suites with `tools/ram_compare.py`:
+  - `tests/sdk/ai/ai_generic/*` expected vs actual: PASS (128 bytes)
+  - `tests/sdk/os/os_stopwatch/*` expected vs actual: PASS (288 bytes)
+  - `tests/sdk/os/os_sysinfo/*` expected vs actual: PASS (96 bytes)
+  - `tests/sdk/os/os_time/*` expected vs actual: PASS (384 bytes)
+
+Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for these suites.
