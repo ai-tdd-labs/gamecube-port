@@ -2168,3 +2168,23 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Mutation gate:
   - `tools/run_mutation_check.sh tools/mutations/pad_control_motor_zero_cmd.patch -- tools/replay_trace_guided_pad_control_motor.sh --seed 0xC0DE1234 --count 128 --oracle synthetic`
   - Result: PASS (mutant fails suite as expected).
+
+## 2026-02-12: PADControlMotor unified DOL PBT suite (L0-L5)
+
+- Added a single Dolphin-oracle PBT suite with six levels:
+  - L0 isolated matrix (`chan -2..5` × `cmd {0,1,2,3,0xffffffff}`)
+  - L1 accumulation (two valid calls without reset)
+  - L2 overwrite (same channel called twice)
+  - L3 random-start state (seeded xorshift32, mixed valid/invalid channels)
+  - L4 harvest replay (`(chan=0, cmd=2)` sequence from harvested traces)
+  - L5 boundary/no-op invariants
+- New files:
+  - `tests/sdk/pad/pad_control_motor/dol/pbt/pad_control_motor_pbt_001/Makefile`
+  - `tests/sdk/pad/pad_control_motor/dol/pbt/pad_control_motor_pbt_001/pad_control_motor_pbt_001.c`
+  - `tests/sdk/pad/pad_control_motor/host/pad_control_motor_pbt_001_scenario.c`
+- Runner integration:
+  - `tools/replay_trace_guided_pad_control_motor.sh --oracle dolphin --dolphin-suite pbt_001`
+  - `--dolphin-suite max` now includes `pbt_001`.
+- Validation:
+  - `tools/replay_trace_guided_pad_control_motor.sh --oracle dolphin --dolphin-suite pbt_001` → PASS
+  - `tools/replay_trace_guided_pad_control_motor.sh --oracle dolphin --dolphin-suite max` → PASS

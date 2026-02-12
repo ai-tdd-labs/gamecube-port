@@ -8,7 +8,7 @@ set -euo pipefail
 # - dolphin oracle: expected dumped from DOL batch in Dolphin
 #
 # Usage:
-#   tools/replay_trace_guided_pad_control_motor.sh [--seed 0xC0DE1234] [--count 128] [--oracle synthetic|dolphin] [--dolphin-suite trace_guided_batch_001|trace_guided_batch_002|exhaustive_matrix_001|max]
+#   tools/replay_trace_guided_pad_control_motor.sh [--seed 0xC0DE1234] [--count 128] [--oracle synthetic|dolphin] [--dolphin-suite trace_guided_batch_001|trace_guided_batch_002|exhaustive_matrix_001|pbt_001|max]
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 seed="0xC0DE1234"
@@ -139,6 +139,14 @@ if [[ "$oracle" == "dolphin" ]]; then
         host_batch_scenario="$repo_root/tests/sdk/pad/pad_control_motor/host/pad_control_motor_exhaustive_matrix_001_scenario.c"
         dump_size=$(( (4 + 40*8) * 4 ))
         ;;
+      pbt_001)
+        dol_dir="$repo_root/tests/sdk/pad/pad_control_motor/dol/pbt/pad_control_motor_pbt_001"
+        dol_elf="$dol_dir/pad_control_motor_pbt_001.dol"
+        expected_bin="$expected_dir/pad_control_motor_pbt_001.bin"
+        actual_bin="$actual_dir/pad_control_motor_pbt_001.bin"
+        host_batch_scenario="$repo_root/tests/sdk/pad/pad_control_motor/host/pad_control_motor_pbt_001_scenario.c"
+        dump_size=$(( 0x80 ))
+        ;;
       *)
         echo "fatal: unsupported dolphin suite: $suite" >&2
         exit 2
@@ -156,6 +164,7 @@ if [[ "$oracle" == "dolphin" ]]; then
   if [[ "$dolphin_suite" == "max" ]]; then
     seed="0xC0DE1234"; count="64"; run_one_dolphin_suite trace_guided_batch_001
     run_one_dolphin_suite exhaustive_matrix_001
+    run_one_dolphin_suite pbt_001
     seed="0xC0DE1234"; count="2048"; run_one_dolphin_suite trace_guided_batch_002
     echo "PASS: PADControlMotor dolphin suite max"
     exit 0
