@@ -2127,3 +2127,19 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation run:
   - `tools/replay_trace_guided_pad_control_motor.sh --seed 0xC0DE1234 --count 64`
   - Result: `PASS: PADControlMotor trace-guided batch (64 cases, seed=0xC0DE1234)`
+
+## 2026-02-12: PADControlMotor DOL-side trace-guided batch + Dolphin oracle
+
+- Added shared deterministic generator for trace-guided PADControlMotor batches:
+  - `tests/trace-guided/pad_control_motor/pad_control_motor_trace_guided_gen.h`
+- Added DOL-side random batch suite (fixed seed/count for byte-identical oracle):
+  - `tests/sdk/pad/pad_control_motor/dol/generic/trace_guided_batch_001/pad_control_motor_trace_guided_batch_001.c`
+  - `tests/sdk/pad/pad_control_motor/dol/generic/trace_guided_batch_001/Makefile`
+- Added matching host batch scenario:
+  - `tests/sdk/pad/pad_control_motor/host/pad_control_motor_trace_guided_batch_001_scenario.c`
+- Extended runner:
+  - `tools/replay_trace_guided_pad_control_motor.sh --oracle synthetic|dolphin`
+  - `--oracle dolphin` currently fixed to `seed=0xC0DE1234`, `count=64`.
+- Validation:
+  - `tools/replay_trace_guided_pad_control_motor.sh --seed 0xC0DE1234 --count 64 --oracle synthetic` → PASS
+  - `tools/replay_trace_guided_pad_control_motor.sh --oracle dolphin --seed 0xC0DE1234 --count 64` → PASS
