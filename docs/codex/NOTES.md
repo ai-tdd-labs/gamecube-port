@@ -2143,3 +2143,6 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/replay_trace_guided_pad_control_motor.sh --seed 0xC0DE1234 --count 64 --oracle synthetic` → PASS
   - `tools/replay_trace_guided_pad_control_motor.sh --oracle dolphin --seed 0xC0DE1234 --count 64` → PASS
+- Mutation gate:
+  - `tools/run_mutation_check.sh tools/mutations/pad_control_motor_zero_cmd.patch -- tools/replay_trace_guided_pad_control_motor.sh --seed 0xC0DE1234 --count 64 --oracle synthetic`
+  - Result: PASS (mutant fails suite as expected; non-trivial assertion path confirmed).
