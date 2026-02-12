@@ -7,3 +7,9 @@ This suite validates that `src/sdk_port/pad/PAD.c` persists:
 - a stable `MakeStatus` selection token (via `GC_SDK_OFF_PAD_MAKE_STATUS_KIND`)
 
 Oracle: Dolphin expected.bin vs host actual.bin.
+
+Unified DOL PBT suite (L0-L5):
+
+```bash
+tools/run_pad_set_spec_pbt.sh
+```

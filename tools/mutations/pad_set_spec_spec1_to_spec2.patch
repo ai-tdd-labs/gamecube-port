@@ -1,0 +1,13 @@
+diff --git a/src/sdk_port/pad/PAD.c b/src/sdk_port/pad/PAD.c
+index c9f657f..8d0e27a 100644
+--- a/src/sdk_port/pad/PAD.c
++++ b/src/sdk_port/pad/PAD.c
+@@ -97,7 +97,7 @@ void PADSetSpec(u32 spec) {
+             make_status_pc = PAD_SPEC0_MAKE_STATUS_PC;
+             break;
+         case 1: /* PAD_SPEC_1 */
+-            kind = GC_PAD_MAKE_STATUS_SPEC1;
++            kind = GC_PAD_MAKE_STATUS_SPEC2;
+             make_status_pc = PAD_SPEC1_MAKE_STATUS_PC;
+             break;
+         default: /* PAD_SPEC_2..5 */
