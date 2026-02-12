@@ -2305,3 +2305,22 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_pad_clamp_pbt.sh` → PASS
   - `tools/run_mutation_check.sh tools/mutations/pad_clamp_skip_call_counter.patch -- tools/run_pad_clamp_pbt.sh` → PASS (mutant fails as expected).
+
+## 2026-02-13: PADRecalibrate unified DOL PBT suite (L0-L5)
+
+- Added unified PADRecalibrate PBT suite:
+  - `tests/sdk/pad/pad_recalibrate/dol/pbt/pad_recalibrate_pbt_001/*`
+  - `tests/sdk/pad/pad_recalibrate/host/pad_recalibrate_pbt_001_scenario.c`
+  - `tools/run_pad_recalibrate_pbt.sh`
+- Coverage levels in `pad_recalibrate_pbt_001`:
+  - L0 isolated mask matrix
+  - L1 accumulation (two-call sequences)
+  - L2 overwrite from non-zero starting state
+  - L3 random-start seeded state
+  - L4 trace-style repeated masks (`0x70000000` / `0x60000000`)
+  - L5 boundary masks (`0x0`, `0x1`, `0x7fffffff`, `0x80000000`, `0xffffffff`, channel bits)
+- DOL oracle decoupled from host sdk_port:
+  - `tests/sdk/pad/pad_recalibrate/dol/pbt/pad_recalibrate_pbt_001/oracle_pad_recalibrate.c`
+- Validation:
+  - `tools/run_pad_recalibrate_pbt.sh` → PASS
+  - `tools/run_mutation_check.sh tools/mutations/pad_recalibrate_skip_call_counter.patch -- tools/run_pad_recalibrate_pbt.sh` → PASS (mutant fails as expected).
