@@ -1587,3 +1587,20 @@ Notes:
   - `GC_REPLAY_MAX_CASES=1 bash tools/run_replay_gate.sh`
 - Observed known non-blocking replay skip retained:
   - `pad_set_spec` v1 case missing `in_pad_spec_shadow.bin` (treated as SKIP by replay suite).
+
+## 2026-02-12: Claude inline-migration branch re-check after latest push
+
+- Re-fetched `origin/claude-win11/pbt-migrate-inline-to-sdk-port`.
+- Latest commit now includes merge from `origin/main`:
+  - `d67e0c3 Merge remote-tracking branch 'origin/main' into claude-win11/pbt-migrate-inline-to-sdk-port`
+- Verified blockers/tests now present on that branch:
+  - `src/sdk_port/dvd/DVD.c` (`DVDCancel`)
+  - `src/sdk_port/os/OSRtc.c` (`OSGetTick`, `OSTicksToCalendarTime`)
+  - `src/sdk_port/os/OSStopwatch.c` (`OSDumpStopwatch`)
+  - `tests/sdk/dvd/property/dvdcancel_unit_test.c`
+  - `tests/sdk/os/ostime/property/ostime_sdk_port_unit_test.c`
+  - `tools/run_dvdcancel_unit_test.sh`, `tools/run_ostime_sdk_port_unit_test.sh`
+- Validation in isolated worktree (`.worktrees/claude-inline-check`) PASS:
+  - `bash tools/run_dvdcancel_unit_test.sh`
+  - `bash tools/run_ostime_sdk_port_unit_test.sh`
+  - `bash tools/run_ostime_property_test.sh --num-runs=20 --seed=0xC0DEC0DE`
