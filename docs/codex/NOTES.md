@@ -2267,3 +2267,22 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_pad_init_pbt.sh` → PASS
   - `tools/run_mutation_check.sh tools/mutations/pad_init_skip_reset_internal.patch -- tools/run_pad_init_pbt.sh` → PASS (mutant fails as expected).
+
+## 2026-02-12: PADRead unified DOL PBT suite (L0-L5)
+
+- Added unified PADRead PBT suite:
+  - `tests/sdk/pad/pad_read/dol/pbt/pad_read_pbt_001/*`
+  - `tests/sdk/pad/pad_read/host/pad_read_pbt_001_scenario.c`
+  - `tools/run_pad_read_pbt.sh`
+- Coverage levels in `pad_read_pbt_001`:
+  - L0 isolated (prefill variations, non-null status pointer)
+  - L1 accumulation (double-read sequencing)
+  - L2 overwrite from seeded garbage
+  - L3 random-start (deterministic PRNG; null/non-null pointer mix)
+  - L4 harvest-style replay (nonnull path)
+  - L5 boundary/null-pointer toggles
+- DOL oracle decoupled from host sdk_port:
+  - `tests/sdk/pad/pad_read/dol/pbt/pad_read_pbt_001/oracle_pad_read.c`
+- Validation:
+  - `tools/run_pad_read_pbt.sh` → PASS
+  - `tools/run_mutation_check.sh tools/mutations/pad_read_return_zero.patch -- tools/run_pad_read_pbt.sh` → PASS (mutant fails as expected).
