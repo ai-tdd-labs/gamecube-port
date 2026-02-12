@@ -1563,3 +1563,8 @@ Notes:
   - added compatibility symlink `tests/traces -> trace-harvest`
   - replay smoke re-run remains PASS:
     - `GC_REPLAY_MAX_CASES=1 bash tools/replay_trace_suite.sh`
+- Added compatibility mirrors for next migration phases:
+  - `tests/sdk/callsite/<subsystem>` symlinks to existing `tests/sdk/<subsystem>`
+  - `tests/sdk/pbt/legacy` symlink to `tests/pbt`
+  - `tests/sdk/pbt/<subsystem>/...` symlink entries to existing property suites
+- Retargeted replay suite globs to prefer `tests/trace-harvest/...` directly.

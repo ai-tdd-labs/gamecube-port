@@ -27,6 +27,9 @@ MP4 boot-forward chain (bd):
   Evidence target: `docs/codex/TEST_LAYOUT_MIGRATION.md`
   Progress:
   - [x] Phase 2 complete: trace corpora moved to `tests/trace-harvest` with compatibility symlink `tests/traces`.
+  - [x] Phase 3 complete: `tests/sdk/callsite` mirrors legacy SDK suite paths via symlinks.
+  - [x] Phase 4 complete: `tests/sdk/pbt` mirrors legacy `tests/pbt` + sdk property suites via symlinks.
+  - [x] Phase 5 partial: replay suite now targets `tests/trace-harvest` first.
 - [x] Small SDK blocker batch landed: `OSGetTick`, `OSTicksToCalendarTime`, `OSDumpStopwatch`, `DVDCancel`.
   Evidence: `src/sdk_port/os/OSRtc.c`, `src/sdk_port/os/OSStopwatch.c`, `src/sdk_port/dvd/DVD.c`,
   `tests/sdk/os/ostime/property/ostime_sdk_port_unit_test.c`, `tests/sdk/dvd/property/dvdcancel_unit_test.c`

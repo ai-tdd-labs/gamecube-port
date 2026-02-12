@@ -61,24 +61,24 @@ if [[ -n "$case_glob" ]]; then
 fi
 
 # OS
-run_glob "$repo_root/tools/replay_trace_case_os_disable_interrupts.sh" "tests/traces/os_disable_interrupts/mp4_rvz_v1/hit_*"
-run_glob "$repo_root/tools/replay_trace_case_os_link.sh" "tests/traces/os_link/mp4_rvz_v1/hit_*"
-run_glob "$repo_root/tools/replay_trace_case_os_unlink.sh" "tests/traces/os_unlink/synth_case_*"
+run_glob "$repo_root/tools/replay_trace_case_os_disable_interrupts.sh" "tests/trace-harvest/os_disable_interrupts/mp4_rvz_v1/hit_*"
+run_glob "$repo_root/tools/replay_trace_case_os_link.sh" "tests/trace-harvest/os_link/mp4_rvz_v1/hit_*"
+run_glob "$repo_root/tools/replay_trace_case_os_unlink.sh" "tests/trace-harvest/os_unlink/synth_case_*"
 
 # VI
-run_glob "$repo_root/tools/replay_trace_case_vi_set_post_retrace_callback.sh" "tests/traces/vi_set_post_retrace_callback/mp4_rvz_postcb/hit_*"
+run_glob "$repo_root/tools/replay_trace_case_vi_set_post_retrace_callback.sh" "tests/trace-harvest/vi_set_post_retrace_callback/mp4_rvz_postcb/hit_*"
 
 # SI
-run_glob "$repo_root/tools/replay_trace_case_si_set_sampling_rate.sh" "tests/traces/si_set_sampling_rate/mp4_rvz_si_ctrl/hit_*"
-run_glob "$repo_root/tools/replay_trace_case_si_get_response.sh" "tests/traces/si_get_response/mp4_rvz_v1/hit_*"
-run_glob "$repo_root/tools/replay_trace_case_si_transfer.sh" "tests/traces/si_transfer/mp4_rvz_v4/hit_*"
+run_glob "$repo_root/tools/replay_trace_case_si_set_sampling_rate.sh" "tests/trace-harvest/si_set_sampling_rate/mp4_rvz_si_ctrl/hit_*"
+run_glob "$repo_root/tools/replay_trace_case_si_get_response.sh" "tests/trace-harvest/si_get_response/mp4_rvz_v1/hit_*"
+run_glob "$repo_root/tools/replay_trace_case_si_transfer.sh" "tests/trace-harvest/si_transfer/mp4_rvz_v4/hit_*"
 
 # PAD
-run_glob "$repo_root/tools/replay_trace_case_pad_set_spec.sh" "tests/traces/pad_set_spec/mp4_rvz_v1/hit_*"
-run_glob "$repo_root/tools/replay_trace_case_pad_init.sh" "tests/traces/pad_init/mp4_rvz_v1/hit_*"
-run_glob "$repo_root/tools/replay_trace_case_pad_read.sh" "tests/traces/pad_read/mp4_rvz/hit_*"
-run_glob "$repo_root/tools/replay_trace_case_pad_reset.sh" "tests/traces/pad_reset/mp4_rvz_v2/hit_*"
-run_glob "$repo_root/tools/replay_trace_case_pad_clamp.sh" "tests/traces/pad_clamp/mp4_rvz/hit_*"
-run_glob "$repo_root/tools/replay_trace_case_pad_control_motor.sh" "tests/traces/pad_control_motor/mp4_rvz_v1/hit_*"
+run_glob "$repo_root/tools/replay_trace_case_pad_set_spec.sh" "tests/trace-harvest/pad_set_spec/mp4_rvz_v1/hit_*"
+run_glob "$repo_root/tools/replay_trace_case_pad_init.sh" "tests/trace-harvest/pad_init/mp4_rvz_v1/hit_*"
+run_glob "$repo_root/tools/replay_trace_case_pad_read.sh" "tests/trace-harvest/pad_read/mp4_rvz/hit_*"
+run_glob "$repo_root/tools/replay_trace_case_pad_reset.sh" "tests/trace-harvest/pad_reset/mp4_rvz_v2/hit_*"
+run_glob "$repo_root/tools/replay_trace_case_pad_clamp.sh" "tests/trace-harvest/pad_clamp/mp4_rvz/hit_*"
+run_glob "$repo_root/tools/replay_trace_case_pad_control_motor.sh" "tests/trace-harvest/pad_control_motor/mp4_rvz_v1/hit_*"
 
 echo "[replay-suite] PASS"
