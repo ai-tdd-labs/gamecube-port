@@ -2112,3 +2112,18 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
   - derived models/cases: `tests/trace-guided/`
   - executable suites: `tests/sdk/<module>/<function>/...`
 - Validation: docs-only update (`git diff --check` clean).
+
+## 2026-02-12: Trace-guided constrained-random pilot implemented (PADControlMotor)
+
+- Added first trace-guided pilot assets:
+  - `tests/trace-guided/pad_control_motor/model.json`
+  - `tests/trace-guided/pad_control_motor/README.md`
+  - `tools/generate_trace_guided_pad_control_motor_cases.py`
+  - `tools/replay_trace_guided_pad_control_motor.sh`
+- Generator behavior:
+  - deterministic by seed
+  - trace-biased + boundary-valid + exploratory-valid mix
+  - outputs JSONL case batches under `tests/trace-guided/pad_control_motor/cases/`
+- Validation run:
+  - `tools/replay_trace_guided_pad_control_motor.sh --seed 0xC0DE1234 --count 64`
+  - Result: `PASS: PADControlMotor trace-guided batch (64 cases, seed=0xC0DE1234)`

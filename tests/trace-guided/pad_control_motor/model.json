@@ -1,0 +1,26 @@
+{
+  "function": "PADControlMotor",
+  "source_trace_glob": "tests/trace-harvest/pad_control_motor/mp4_rvz*/hit_*/in_regs.json",
+  "notes": [
+    "Harvest coverage is sparse: observed args are only chan=0, cmd=2 in current retail captures.",
+    "Generator keeps valid state constraints from SDK contract and biases strongly to observed values."
+  ],
+  "constraints": {
+    "chan_valid_range": [0, 3],
+    "cmd_valid_values": [0, 1, 2]
+  },
+  "distribution": {
+    "trace_biased": 0.7,
+    "boundary": 0.2,
+    "explore_valid": 0.1
+  },
+  "observed": {
+    "pairs": [
+      {
+        "chan": 0,
+        "cmd": 2,
+        "count": 4
+      }
+    ]
+  }
+}
