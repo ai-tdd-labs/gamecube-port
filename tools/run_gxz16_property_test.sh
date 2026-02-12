@@ -3,12 +3,18 @@ set -euo pipefail
 
 # Property-style parity test runner for GXCompressZ16/GXDecompressZ16.
 #
+# Builds a single host binary that contains BOTH:
+# - Oracle: decomp Z16 functions inlined in test file
+# - Port:   sdk_port GXCompressZ16/GXDecompressZ16 (GX.c)
+#
 # Usage:
 #   tools/run_gxz16_property_test.sh [--seed=N] [--num-runs=N] [-v]
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 build_dir="$repo_root/tests/build/gxz16_property"
 test_src="$repo_root/tests/sdk/gx/property"
+port_src="$repo_root/src/sdk_port/gx"
+gc_mem_src="$repo_root/src/sdk_port"
 
 mkdir -p "$build_dir"
 
@@ -48,7 +54,11 @@ echo "[gxz16-property-build] CC=$CC"
 "$CC" "${opt_flags[@]}" -ffunction-sections -fdata-sections \
   -D_XOPEN_SOURCE=700 -D_CRT_SECURE_NO_WARNINGS \
   -Wno-implicit-function-declaration \
+  -I"$port_src" \
+  -I"$gc_mem_src" \
   "$test_src/gxz16_property_test.c" \
+  "$port_src/GX.c" \
+  "$gc_mem_src/gc_mem.c" \
   "${ld_gc_flags[@]}" \
   -o "$build_dir/gxz16_property_test"
 

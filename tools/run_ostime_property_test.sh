@@ -3,8 +3,8 @@ set -euo pipefail
 
 # Property-style parity test runner for OSTicksToCalendarTime.
 #
-# Self-contained test: oracle (decomp copy) and port (identical logic)
-# are both inlined in the test file.  No external source files needed.
+# Oracle: exact copy of decomp inlined in test file.
+# Port:   linked from src/sdk_port/os/OSTime.c.
 #
 # Usage:
 #   tools/run_ostime_property_test.sh [--seed=N] [--num-runs=N] [-v]
@@ -12,6 +12,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 build_dir="$repo_root/tests/build/ostime_property"
 test_src="$repo_root/tests/sdk/os/ostime/property"
+port_src="$repo_root/src/sdk_port/os"
 
 mkdir -p "$build_dir"
 
@@ -54,7 +55,9 @@ echo "[ostime-property-build] CC=$CC"
 "$CC" "${opt_flags[@]}" -ffunction-sections -fdata-sections \
   -D_XOPEN_SOURCE=700 -D_CRT_SECURE_NO_WARNINGS \
   -Wno-implicit-function-declaration \
+  -I"$port_src" \
   "$test_src/ostime_property_test.c" \
+  "$port_src/OSTime.c" \
   "${ld_gc_flags[@]}" \
   -o "$build_dir/ostime_property_test"
 

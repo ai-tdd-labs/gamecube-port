@@ -129,36 +129,12 @@ static void oracle_OSTicksToCalendarTime(int64_t ticks, CalendarTime *td)
 }
 
 /* ════════════════════════════════════════════════════════════════════
- *  Port: identical logic, separate function (simulates sdk_port version)
+ *  Port: linked from src/sdk_port/os/OSTime.c
+ *  CalendarTime layout matches OSCalendarTime in OSTime.c (10 x int32_t).
  * ════════════════════════════════════════════════════════════════════ */
 
-static void port_OSTicksToCalendarTime(int64_t ticks, CalendarTime *td)
-{
-    int32_t days;
-    int32_t secs;
-    int64_t d;
-
-    d = ticks % OSSecondsToTicks(1);
-    if (d < 0) {
-        d += OSSecondsToTicks(1);
-    }
-    td->usec = (int32_t)(OSTicksToMicroseconds(d) % 1000);
-    td->msec = (int32_t)(OSTicksToMilliseconds(d) % 1000);
-
-    ticks -= d;
-    days = (int32_t)(OSTicksToSeconds(ticks) / 86400 + BIAS);
-    secs = (int32_t)(OSTicksToSeconds(ticks) % 86400);
-    if (secs < 0) {
-        days -= 1;
-        secs += 24 * 60 * 60;
-    }
-
-    GetDates(days, td);
-
-    td->hour = secs / 60 / 60;
-    td->min = (secs / 60) % 60;
-    td->sec = secs % 60;
-}
+void OSTicksToCalendarTime(int64_t ticks, CalendarTime *td);
+#define port_OSTicksToCalendarTime(ticks, td) OSTicksToCalendarTime((ticks), (td))
 
 /* ── PRNG (xorshift32) ── */
 static uint32_t g_rng;

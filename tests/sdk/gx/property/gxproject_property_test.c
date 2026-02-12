@@ -98,37 +98,13 @@ static void oracle_GXProject(float x, float y, float z,
 }
 
 /* ═══════════════════════════════════════════════════════════════════
- * PORT — identical pure-float implementation (verified against oracle)
+ * PORT — linked from src/sdk_port/gx/GX.c (GXProject)
  * ═══════════════════════════════════════════════════════════════════ */
 
-static void port_GXProject(float x, float y, float z,
-                            const float mtx[3][4], const float *pm,
-                            const float *vp,
-                            float *sx, float *sy, float *sz)
-{
-    float peye_x, peye_y, peye_z;
-    float xc, yc, zc, wc;
-
-    peye_x = mtx[0][3] + ((mtx[0][2] * z) + ((mtx[0][0] * x) + (mtx[0][1] * y)));
-    peye_y = mtx[1][3] + ((mtx[1][2] * z) + ((mtx[1][0] * x) + (mtx[1][1] * y)));
-    peye_z = mtx[2][3] + ((mtx[2][2] * z) + ((mtx[2][0] * x) + (mtx[2][1] * y)));
-
-    if (pm[0] == 0.0f) {
-        xc = (peye_x * pm[1]) + (peye_z * pm[2]);
-        yc = (peye_y * pm[3]) + (peye_z * pm[4]);
-        zc = pm[6] + (peye_z * pm[5]);
-        wc = 1.0f / -peye_z;
-    } else {
-        xc = pm[2] + (peye_x * pm[1]);
-        yc = pm[4] + (peye_y * pm[3]);
-        zc = pm[6] + (peye_z * pm[5]);
-        wc = 1.0f;
-    }
-
-    *sx = (vp[2] / 2.0f) + (vp[0] + (wc * (xc * vp[2] / 2.0f)));
-    *sy = (vp[3] / 2.0f) + (vp[1] + (wc * (-yc * vp[3] / 2.0f)));
-    *sz = vp[5] + (wc * (zc * (vp[5] - vp[4])));
-}
+typedef float f32;
+void GXProject(f32 x, f32 y, f32 z,
+               const f32 mtx[3][4], const f32 *pm, const f32 *vp,
+               f32 *sx, f32 *sy, f32 *sz);
 
 /* ═══════════════════════════════════════════════════════════════════
  * Helper: generate random test inputs
@@ -224,7 +200,7 @@ static int test_L0_parity(void) {
         }
 
         oracle_GXProject(x, y, z, mtx, pm, vp, &osx, &osy, &osz);
-        port_GXProject(x, y, z, mtx, pm, vp, &psx, &psy, &psz);
+        GXProject(x, y, z, mtx, pm, vp, &psx, &psy, &psz);
 
         /* Bit-exact parity since both are identical float code */
         CHECK(osx == psx && osy == psy && osz == psz,
@@ -422,7 +398,7 @@ static int test_L5_random_integration(void) {
         }
 
         oracle_GXProject(x, y, z, mtx, pm, vp, &osx, &osy, &osz);
-        port_GXProject(x, y, z, mtx, pm, vp, &psx, &psy, &psz);
+        GXProject(x, y, z, mtx, pm, vp, &psx, &psy, &psz);
 
         /* Bit-exact parity */
         CHECK(osx == psx && osy == psy && osz == psz,

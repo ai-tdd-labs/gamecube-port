@@ -48,7 +48,11 @@ echo "[gxtexture-property-build] CC=$CC"
 "$CC" "${opt_flags[@]}" -ffunction-sections -fdata-sections \
   -D_XOPEN_SOURCE=700 -D_CRT_SECURE_NO_WARNINGS \
   -Wno-implicit-function-declaration \
+  -I"$repo_root/src/sdk_port/gx" \
+  -I"$repo_root/src/sdk_port" \
   "$test_src/gxtexture_property_test.c" \
+  "$repo_root/src/sdk_port/gx/GX.c" \
+  "$repo_root/src/sdk_port/gc_mem.c" \
   "${ld_gc_flags[@]}" \
   -o "$build_dir/gxtexture_property_test"
 
