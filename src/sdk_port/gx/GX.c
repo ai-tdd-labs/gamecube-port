@@ -1931,6 +1931,22 @@ void GXSetProjection(f32 mtx[4][4], GXProjectionType type) {
     gc_gx_bp_sent_not = 1;
 }
 
+void GXGetProjectionv(f32 *ptr) {
+    // Mirror GXTransform.c:GXGetProjectionv: returns projType as float + 6 matrix values.
+    if (!ptr) return;
+    ptr[0] = (f32)gc_gx_proj_type;
+    u32 i;
+    for (i = 0; i < 6; i++) {
+        __builtin_memcpy(&ptr[i + 1], &gc_gx_proj_mtx_bits[i], sizeof(f32));
+    }
+}
+
+void GXPixModeSync(void) {
+    // Mirror GXMisc.c:GXPixModeSync: write peCtrl, mark bpSentNot.
+    gx_write_ras_reg(gc_gx_pe_ctrl);
+    gc_gx_bp_sent_not = 0;
+}
+
 void GXSetZMode(u8 enable, u32 func, u8 update_enable) {
     gc_gx_zmode_enable = (u32)enable;
     gc_gx_zmode_func = func;
