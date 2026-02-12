@@ -1728,3 +1728,22 @@ Notes:
   - `bash tools/run_mtx44_property_test.sh --num-runs=50 --seed=0xC0DEC0DE` -> 500/500 PASS
   - `bash tools/run_gxoverscan_property_test.sh --num-runs=50 --seed=0xC0DEC0DE` -> 400/400 PASS
 - Skipped Windows-only commit (`35dc47a`) by request.
+
+## 2026-02-12: GXLoadNrmMtxImm revalidation
+
+- Re-ran host scenario compare for `tests/sdk/gx/gx_load_nrm_mtx_imm`:
+  - `bash tools/run_host_scenario.sh tests/sdk/gx/gx_load_nrm_mtx_imm/host/gx_load_nrm_mtx_imm_mp4_hsfdraw_001_scenario.c`
+  - `python3 tools/ram_compare.py tests/sdk/gx/gx_load_nrm_mtx_imm/expected/gx_load_nrm_mtx_imm_mp4_hsfdraw_001.bin tests/sdk/gx/gx_load_nrm_mtx_imm/actual/gx_load_nrm_mtx_imm_mp4_hsfdraw_001.bin`
+- Result: `PASS: files are identical`.
+
+## 2026-02-12: VIWaitForRetrace callback behavior revalidation
+
+- Re-ran `tests/sdk/vi/vi_wait_for_retrace` host scenarios and compares:
+  - `vi_wait_for_retrace_mp4_init_vi_001`
+  - `vi_wait_for_retrace_calls_post_cb_hupadinit_001`
+- Commands:
+  - `bash tools/run_host_scenario.sh tests/sdk/vi/vi_wait_for_retrace/host/vi_wait_for_retrace_mp4_init_vi_001_scenario.c`
+  - `python3 tools/ram_compare.py tests/sdk/vi/vi_wait_for_retrace/expected/vi_wait_for_retrace_mp4_init_vi_001.bin tests/sdk/vi/vi_wait_for_retrace/actual/vi_wait_for_retrace_mp4_init_vi_001.bin`
+  - `bash tools/run_host_scenario.sh tests/sdk/vi/vi_wait_for_retrace/host/vi_wait_for_retrace_calls_post_cb_hupadinit_001_scenario.c`
+  - `python3 tools/ram_compare.py tests/sdk/vi/vi_wait_for_retrace/expected/vi_wait_for_retrace_calls_post_cb_hupadinit_001.bin tests/sdk/vi/vi_wait_for_retrace/actual/vi_wait_for_retrace_calls_post_cb_hupadinit_001.bin`
+- Result: both compares PASS (bit-exact).
