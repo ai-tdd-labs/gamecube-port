@@ -1576,3 +1576,14 @@ Notes:
 - Removed legacy `tests/traces` alias path from repository.
 - Validation (PASS):
   - `GC_REPLAY_MAX_CASES=1 bash tools/run_replay_gate.sh`
+
+## 2026-02-12: Integration-all migration test branch validation
+
+- Created integration validation branch from `origin/codex/integration-all`:
+  - `codex/integration-all-migration-test`
+- Merged:
+  - `codex/macos-codex5.3-migrate-tests-layout`
+- Replay gate validation on integration branch (PASS):
+  - `GC_REPLAY_MAX_CASES=1 bash tools/run_replay_gate.sh`
+- Observed known non-blocking replay skip retained:
+  - `pad_set_spec` v1 case missing `in_pad_spec_shadow.bin` (treated as SKIP by replay suite).
