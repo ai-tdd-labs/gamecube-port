@@ -5,7 +5,7 @@ Last updated: 2026-02-12
 ## Summary
 
 The game calls **~305 unique SDK functions** across 13 modules.
-The port currently implements **~214 functions** (plus internal helpers).
+The port currently implements **~219 functions** (plus internal helpers).
 
 | Module | Game needs | Ported | Coverage | Notes |
 |--------|-----------|--------|----------|-------|
@@ -16,12 +16,12 @@ The port currently implements **~214 functions** (plus internal helpers).
 | **VI** | 13 | 12 | **92%** | Only VISetPreRetraceCallback missing |
 | **SI** | 1 | 1 | **100%** | SISetSamplingRate |
 | **MTX** | 33 | 33 | **100%** | All C_MTX* implemented; MTX*/PSMTX* are macros/aliases |
-| **CARD** | 23 | 4 | **17%** | Only FAT internals; need full mount/open/read/write/close chain |
+| **CARD** | 23 | 9 | **39%** | FAT internals + CompareFileName, Access, IsPublic, GetFileNo, Seek |
 | **AR** | 10 | 6 | **60%** | ARInit, ARAlloc, ARFree, ARCheckInit, ARGetBaseAddress, ARGetSize |
 | **ARQ** | 2 | 2 | **100%** | ARQInit + ARQPostRequest (+ internal helpers) |
 | **AI** | 7 | 0 | **0%** | Audio interface — not started |
 | **THP** | 27 | 0 | **0%** | Video player — not started |
-| **TOTAL** | **~305** | **~214** | **~70%** | |
+| **TOTAL** | **~305** | **~219** | **~72%** | |
 
 ---
 
@@ -100,18 +100,23 @@ Plus QUAT (8): Add, Multiply, Normalize, Inverse, Slerp, RotAxisRad, Mtx.
 **Still need for game:** `PSMTXMultVecArray`, `PSMTXReorder`, `PSMTXROMultVecArray`
 (batch/reorder ops — PPC paired-single ASM, need C loop equivalents)
 
-### CARD (4/23 = 17%)
+### CARD (9/23 = 39%)
 
-**Ported:** CARDCheckSum, CARDUpdateFatBlock, CARDAllocBlock, CARDFreeBlock (internal FAT ops)
+**Ported:**
+- FAT internals: `__CARDCheckSum`, `__CARDUpdateFatBlock`, `__CARDAllocBlock`, `__CARDFreeBlock`
+- Directory ops: `__CARDCompareFileName`, `__CARDAccess`, `__CARDIsPublic`, `__CARDGetFileNo`
+- Seek: `__CARDSeek` (FAT chain traversal)
 
-**Missing (19 API functions):**
+PBT suites: CARD-FAT (AllocBlock/FreeBlock/CheckSum) + CARD-Dir (CompareFileName/Access/IsPublic/GetFileNo/Seek) — 78k checks, all PASS.
+
+**Missing (14 API functions):**
 CARDInit, CARDMount, CARDUnmount, CARDOpen, CARDClose, CARDCreate, CARDDelete,
 CARDRead, CARDWrite, CARDFormat, CARDCheck, CARDFreeBlocks, CARDGetSectorSize,
 CARDProbeEx, CARDGetSerialNo, CARDGetStatus, CARDSetStatus, CARDSetBannerFormat,
 CARDSetCommentAddress, CARDSetIconAddress, CARDSetIconAnim, CARDSetIconFormat, CARDSetIconSpeed
 
-Note: CARD needs EXI subsystem for actual hardware I/O. For port, we'll simulate
-with host filesystem (similar to Dolphin emulator approach).
+Note: Remaining CARD functions need EXI subsystem for actual hardware I/O.
+For port, we'll simulate with host filesystem (similar to Dolphin emulator approach).
 
 ### AR (6/10 = 60%)
 
@@ -137,12 +142,13 @@ PBT suite: 344,753 checks PASS (2000 seeds).
 
 All game-needed ARQ functions are implemented. PBT suite passes (2000 seeds).
 
-### AI (0/7 = 0%) — NOT STARTED
+### AI (0/7 = 0%) — HARDWARE ONLY
 
 **Missing:** AIGetDMAStartAddr, AIInitDMA, AIRegisterDMACallback, AISetStreamPlayState,
 AISetStreamVolLeft, AISetStreamVolRight, AIStartDMA
 
-Note: Audio interface. For port, needs audio backend (SDL_audio or similar).
+Note: All 21 functions in ai.c are pure hardware register I/O (`__AIRegs`, `__DSPRegs`).
+No pure computation suitable for PBT. For port, needs audio backend (SDL_audio or similar).
 
 ### THP (0/27 = 0%) — NOT STARTED
 
@@ -160,7 +166,7 @@ Locked Cache + paired-single (needs host JPEG decoder).
 
 ---
 
-## PBT Coverage (18 suites — all pure-computation functions covered)
+## PBT Coverage (19 suites — all pure-computation functions covered)
 
 | Suite | Checks | Status | Links to sdk_port |
 |-------|--------|--------|-------------------|
@@ -180,10 +186,19 @@ Locked Cache + paired-single (needs host JPEG decoder).
 | AR | ~345k | PASS | yes (ar.c) |
 | ARQ | — | PASS | yes (arq.c) |
 | CARD-FAT | — | PASS | yes |
+| CARD-Dir | ~78k | PASS | yes (card_dir.c) |
 | DVDFS | — | PASS | yes |
 
 **Total:** ~200M+ checks across all suites, all passing (2000 seeds each).
 All oracle functions verified as exact copies of mp4-decomp Nintendo SDK code (141 functions, 0 mismatches).
+
+### PBT Coverage Analysis
+
+All pure-computation functions in the decomp have been PBT-tested. Remaining untested modules:
+- **AI**: 21 functions — all hardware register I/O, no PBT possible
+- **AR DMA**: ARStartDMA, ARGetDMAStatus, ARRegisterDMACallback — all hardware, no PBT possible
+- **THP video**: THPDec.c has ~14 pure functions (Huffman tables, IDCT, MCU decompression) but they use PPC paired-single ASM and locked cache — would need host JPEG decoder reimplementation
+- **CARD remaining**: 14 API functions need EXI subsystem mock for hardware I/O
 
 ---
 
