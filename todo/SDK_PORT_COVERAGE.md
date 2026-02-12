@@ -167,7 +167,7 @@ Locked Cache + paired-single (needs host JPEG decoder).
 
 ---
 
-## PBT Coverage (20 suites — all pure-computation functions covered)
+## PBT Coverage (23 suites — all pure-computation functions covered)
 
 | Suite | Checks | Status | Links to sdk_port |
 |-------|--------|--------|-------------------|
@@ -189,6 +189,9 @@ Locked Cache + paired-single (needs host JPEG decoder).
 | CARD-FAT | — | PASS | yes |
 | CARD-Dir | ~78k | PASS | yes (card_dir.c) |
 | CARD-Unlock | ~252k | PASS | yes (card_unlock.c) |
+| GXLight | ~60k | PASS | yes (GX.c) |
+| MTX44 | ~20k | PASS | yes (mtx44.c) |
+| GXOverscan | ~16k | PASS | yes (GX.c) |
 | DVDFS | — | PASS | yes |
 
 **Total:** ~200M+ checks across all suites, all passing (2000 seeds each).
