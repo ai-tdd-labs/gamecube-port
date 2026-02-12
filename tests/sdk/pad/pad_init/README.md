@@ -8,3 +8,9 @@ Important:
 
 Canonical rule:
 - A canonical test must derive behavior from decompiled SDK sources and/or Dolphin runtime evidence, not from stubs.
+
+Unified DOL PBT suite (L0-L5):
+
+```bash
+tools/run_pad_init_pbt.sh
+```
