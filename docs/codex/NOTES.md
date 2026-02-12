@@ -1716,3 +1716,15 @@ Notes:
   - Trace replay: ~80
   - PBT: ~3
   - No test needed: ~10
+
+## 2026-02-12: Promote Claude PBT additions into integration-all
+
+- Pulled in Claude PBT commits (non-Windows):
+  - `c5113c8` CARD unlock crypto suite + sdk_port `card_unlock`
+  - `dc95dc4` GXLight / MTX44 / GXOverscan PBT suites
+- Validation on `codex/integration-all` (all PASS):
+  - `bash tools/run_card_unlock_property_test.sh --num-runs=50 --seed=0xC0DEC0DE` -> 6300/6300 PASS
+  - `bash tools/run_gxlight_property_test.sh --num-runs=50 --seed=0xC0DEC0DE` -> 1500/1500 PASS
+  - `bash tools/run_mtx44_property_test.sh --num-runs=50 --seed=0xC0DEC0DE` -> 500/500 PASS
+  - `bash tools/run_gxoverscan_property_test.sh --num-runs=50 --seed=0xC0DEC0DE` -> 400/400 PASS
+- Skipped Windows-only commit (`35dc47a`) by request.
