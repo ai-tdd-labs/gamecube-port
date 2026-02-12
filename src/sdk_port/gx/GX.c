@@ -1799,6 +1799,20 @@ void GXSetProjection(f32 mtx[4][4], GXProjectionType type) {
     gc_gx_bp_sent_not = 1;
 }
 
+void GXGetProjectionv(f32 *ptr) {
+    if (!ptr) {
+        return;
+    }
+
+    ptr[0] = (f32)gc_gx_proj_type;
+    __builtin_memcpy(&ptr[1], &gc_gx_proj_mtx_bits[0], sizeof(u32));
+    __builtin_memcpy(&ptr[2], &gc_gx_proj_mtx_bits[1], sizeof(u32));
+    __builtin_memcpy(&ptr[3], &gc_gx_proj_mtx_bits[2], sizeof(u32));
+    __builtin_memcpy(&ptr[4], &gc_gx_proj_mtx_bits[3], sizeof(u32));
+    __builtin_memcpy(&ptr[5], &gc_gx_proj_mtx_bits[4], sizeof(u32));
+    __builtin_memcpy(&ptr[6], &gc_gx_proj_mtx_bits[5], sizeof(u32));
+}
+
 void GXSetZMode(u8 enable, u32 func, u8 update_enable) {
     gc_gx_zmode_enable = (u32)enable;
     gc_gx_zmode_func = func;
@@ -1982,6 +1996,12 @@ void GXSetNumTevStages(u8 nStages) {
     gc_gx_dirty_state |= 4u;
 }
 
+void GXSetNumIndStages(u8 nIndStages) {
+    // GXBump.c: genMode bits 16..18 hold indirect stage count (0..4).
+    gc_gx_gen_mode = set_field(gc_gx_gen_mode, 3, 16, (u32)(nIndStages & 7u));
+    gc_gx_dirty_state |= 6u;
+}
+
 // Forward declarations (implemented later in this file).
 void GXSetTevColorIn(u32 stage, u32 a, u32 b, u32 c, u32 d);
 void GXSetTevAlphaIn(u32 stage, u32 a, u32 b, u32 c, u32 d);
@@ -2069,6 +2089,17 @@ void GXSetZCompLoc(u8 before_tex) {
     gc_gx_pe_ctrl = set_field(gc_gx_pe_ctrl, 1, 6, (u32)(before_tex != 0));
     gx_write_ras_reg(gc_gx_pe_ctrl);
     gc_gx_bp_sent_not = 0;
+}
+
+void GXPixModeSync(void) {
+    // GXMisc.c: write peCtrl BP register and clear bpSentNot.
+    gx_write_ras_reg(gc_gx_pe_ctrl);
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXResetWriteGatherPipe(void) {
+    // GXMisc.c touches PPC WPAR hardware state; no modeled memory-visible side effects.
+    // Keep as a host-safe no-op.
 }
 
 void GXSetDither(u8 dither) {

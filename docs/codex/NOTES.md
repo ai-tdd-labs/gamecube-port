@@ -1857,3 +1857,78 @@ Notes:
 - Probe evidence:
   - `tests/trace-harvest/os_unlink/probes/20260212_145716/`
   - `omOvlGotoEx` now consistently hits with default delay 12; unload path probes (`omOvlKill`/`omDLLNumEnd`/`OSUnlink`) still miss without DTM trigger input.
+
+## 2026-02-12: GXPixModeSync added + deterministic PPC-vs-host suite
+
+- Added sdk_port function in `src/sdk_port/gx/GX.c`:
+  - `GXPixModeSync()` now writes `gc_gx_pe_ctrl` BP register (`gx_write_ras_reg`) and clears `gc_gx_bp_sent_not`.
+- Added deterministic suite:
+  - `tests/sdk/gx/gx_pix_mode_sync/dol/mp4/gx_pix_mode_sync_mp4_init_gx_001/`
+  - `tests/sdk/gx/gx_pix_mode_sync/host/gx_pix_mode_sync_mp4_init_gx_001_scenario.c`
+- Scenario shape:
+  - Set `peCtrl` via `GXSetZCompLoc(1)` (bit 6 set), force `bp_sent_not = 1`, call `GXPixModeSync`, then dump marker + peCtrl + lastRasReg + bpSentNot.
+- Validation commands:
+  - `cd tests/sdk/gx/gx_pix_mode_sync/dol/mp4/gx_pix_mode_sync_mp4_init_gx_001 && make clean && make`
+  - `python3 tools/ram_dump.py --exec tests/sdk/gx/gx_pix_mode_sync/dol/mp4/gx_pix_mode_sync_mp4_init_gx_001/gx_pix_mode_sync_mp4_init_gx_001.dol --addr 0x80300000 --size 0x40 --out tests/sdk/gx/gx_pix_mode_sync/expected/gx_pix_mode_sync_mp4_init_gx_001.bin --run 0.5 --halt`
+  - `tools/run_host_scenario.sh tests/sdk/gx/gx_pix_mode_sync/host/gx_pix_mode_sync_mp4_init_gx_001_scenario.c`
+  - `python3 tools/ram_compare.py tests/sdk/gx/gx_pix_mode_sync/expected/gx_pix_mode_sync_mp4_init_gx_001.bin tests/sdk/gx/gx_pix_mode_sync/actual/gx_pix_mode_sync_mp4_init_gx_001.bin`
+- Result: PASS (bit-exact).
+- Coverage/todo snapshot updates:
+  - `todo/REMAINING_TEST_STRATEGY.md`: trace replay `~79 -> ~78`, GX gap count `25 -> 24`.
+  - `todo/SDK_PORT_COVERAGE.md`: GX `96 -> 97`, total ported `~225 -> ~226`.
+
+## 2026-02-12: GXGetProjectionv added + deterministic PPC-vs-host suite
+
+- Added sdk_port function in `src/sdk_port/gx/GX.c`:
+  - `GXGetProjectionv(f32* ptr)` mirrors decomp `GXTransform.c`: returns `projType` as float in `ptr[0]` and `projMtx[0..5]` in `ptr[1..6]`.
+- Added deterministic suite:
+  - `tests/sdk/gx/gx_get_projectionv/dol/mp4/gx_get_projectionv_mp4_shadow_001/`
+  - `tests/sdk/gx/gx_get_projectionv/host/gx_get_projectionv_mp4_shadow_001_scenario.c`
+- Scenario shape:
+  - set orthographic projection via `GXSetProjection`, then fetch with `GXGetProjectionv`, dump 7 float words + `bpSentNot`.
+- Validation commands:
+  - `cd tests/sdk/gx/gx_get_projectionv/dol/mp4/gx_get_projectionv_mp4_shadow_001 && make clean && make`
+  - `python3 tools/ram_dump.py --exec tests/sdk/gx/gx_get_projectionv/dol/mp4/gx_get_projectionv_mp4_shadow_001/gx_get_projectionv_mp4_shadow_001.dol --addr 0x80300000 --size 0x40 --out tests/sdk/gx/gx_get_projectionv/expected/gx_get_projectionv_mp4_shadow_001.bin --run 0.5 --halt`
+  - `tools/run_host_scenario.sh tests/sdk/gx/gx_get_projectionv/host/gx_get_projectionv_mp4_shadow_001_scenario.c`
+  - `python3 tools/ram_compare.py tests/sdk/gx/gx_get_projectionv/expected/gx_get_projectionv_mp4_shadow_001.bin tests/sdk/gx/gx_get_projectionv/actual/gx_get_projectionv_mp4_shadow_001.bin`
+- Result: PASS (bit-exact).
+- Coverage/todo snapshot updates:
+  - `todo/REMAINING_TEST_STRATEGY.md`: trace replay `~78 -> ~77`, GX gap count `24 -> 23`.
+  - `todo/SDK_PORT_COVERAGE.md`: GX `97 -> 98`, total ported `~226 -> ~227`.
+
+## 2026-02-12: GXResetWriteGatherPipe host-safe stub + deterministic suite
+
+- Added sdk_port function in `src/sdk_port/gx/GX.c`:
+  - `GXResetWriteGatherPipe()` as host-safe no-op (decomp function only mutates PPC WPAR hardware state).
+- Added deterministic suite:
+  - `tests/sdk/gx/gx_reset_write_gather_pipe/dol/mp4/gx_reset_write_gather_pipe_mp4_hsfdraw_001/`
+  - `tests/sdk/gx/gx_reset_write_gather_pipe/host/gx_reset_write_gather_pipe_mp4_hsfdraw_001_scenario.c`
+- Scenario shape:
+  - initialize `bp_sent_not = 0x11223344`, call `GXResetWriteGatherPipe`, assert sentinel unchanged.
+- Validation commands:
+  - `cd tests/sdk/gx/gx_reset_write_gather_pipe/dol/mp4/gx_reset_write_gather_pipe_mp4_hsfdraw_001 && make clean && make`
+  - `python3 tools/ram_dump.py --exec tests/sdk/gx/gx_reset_write_gather_pipe/dol/mp4/gx_reset_write_gather_pipe_mp4_hsfdraw_001/gx_reset_write_gather_pipe_mp4_hsfdraw_001.dol --addr 0x80300000 --size 0x40 --out tests/sdk/gx/gx_reset_write_gather_pipe/expected/gx_reset_write_gather_pipe_mp4_hsfdraw_001.bin --run 0.5 --halt`
+  - `tools/run_host_scenario.sh tests/sdk/gx/gx_reset_write_gather_pipe/host/gx_reset_write_gather_pipe_mp4_hsfdraw_001_scenario.c`
+  - `python3 tools/ram_compare.py tests/sdk/gx/gx_reset_write_gather_pipe/expected/gx_reset_write_gather_pipe_mp4_hsfdraw_001.bin tests/sdk/gx/gx_reset_write_gather_pipe/actual/gx_reset_write_gather_pipe_mp4_hsfdraw_001.bin`
+- Result: PASS (bit-exact).
+- Coverage snapshot update:
+  - `todo/SDK_PORT_COVERAGE.md`: GX `98 -> 99`, total ported `~227 -> ~228`.
+
+## 2026-02-12: GXSetNumIndStages added + deterministic PPC-vs-host suite
+
+- Added sdk_port function in `src/sdk_port/gx/GX.c`:
+  - `GXSetNumIndStages(u8 nIndStages)` mirrors `GXBump.c`:
+    - updates `genMode` bits `16..18`
+    - sets `dirtyState |= 6`
+- Added deterministic suite:
+  - `tests/sdk/gx/gx_set_num_ind_stages/dol/mp4/gx_set_num_ind_stages_mp4_init_gx_001/`
+  - `tests/sdk/gx/gx_set_num_ind_stages/host/gx_set_num_ind_stages_mp4_init_gx_001_scenario.c`
+- Validation commands:
+  - `cd tests/sdk/gx/gx_set_num_ind_stages/dol/mp4/gx_set_num_ind_stages_mp4_init_gx_001 && make clean && make`
+  - `python3 tools/ram_dump.py --exec tests/sdk/gx/gx_set_num_ind_stages/dol/mp4/gx_set_num_ind_stages_mp4_init_gx_001/gx_set_num_ind_stages_mp4_init_gx_001.dol --addr 0x80300000 --size 0x40 --out tests/sdk/gx/gx_set_num_ind_stages/expected/gx_set_num_ind_stages_mp4_init_gx_001.bin --run 0.5 --halt`
+  - `tools/run_host_scenario.sh tests/sdk/gx/gx_set_num_ind_stages/host/gx_set_num_ind_stages_mp4_init_gx_001_scenario.c`
+  - `python3 tools/ram_compare.py tests/sdk/gx/gx_set_num_ind_stages/expected/gx_set_num_ind_stages_mp4_init_gx_001.bin tests/sdk/gx/gx_set_num_ind_stages/actual/gx_set_num_ind_stages_mp4_init_gx_001.bin`
+- Result: PASS (bit-exact).
+- Coverage/todo snapshot updates:
+  - `todo/REMAINING_TEST_STRATEGY.md`: trace replay `~77 -> ~76`, GX gap count `23 -> 22`.
+  - `todo/SDK_PORT_COVERAGE.md`: GX `99 -> 100`, total ported `~228 -> ~229`.
