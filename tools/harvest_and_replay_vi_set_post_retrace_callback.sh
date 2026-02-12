@@ -22,7 +22,7 @@ if [[ -z "$rvz" || ! -f "$rvz" ]]; then
   exit 2
 fi
 
-out_dir="$repo_root/tests/traces/vi_set_post_retrace_callback/mp4_rvz_v2"
+out_dir="$repo_root/tests/trace-harvest/vi_set_post_retrace_callback/mp4_rvz_v2"
 mkdir -p "$out_dir"
 
 python3 "$repo_root/tools/trace_pc_entry_exit.py" \

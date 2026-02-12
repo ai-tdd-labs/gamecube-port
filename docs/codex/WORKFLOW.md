@@ -201,7 +201,7 @@ Implementation in this repo:
 
 Example:
 ```bash
-tools/mutations/si_transfer_fire_plus1.sh tests/traces/si_transfer/mp4_rvz_v4/hit_000002_pc_800D9CC4_lr_800DA26C
+tools/mutations/si_transfer_fire_plus1.sh tests/trace-harvest/si_transfer/mp4_rvz_v4/hit_000002_pc_800D9CC4_lr_800DA26C
 ```
 5) optionally appends facts/evidence links to `docs/codex/NOTES.md`
 6) optionally commits (when a task is complete)
@@ -256,7 +256,7 @@ python3 tools/trace_pc_entry_exit.py \
   --entry-pc 0x800B723C \
   --enable-mmu \
   --max-unique 25 \
-  --out-dir tests/traces/os_disable_interrupts/mp4_rvz
+  --out-dir tests/trace-harvest/os_disable_interrupts/mp4_rvz
 ```
 
 Example with deterministic input movie (`.dtm`):
@@ -267,16 +267,16 @@ python3 tools/trace_pc_entry_exit.py \
   --entry-pc 0x800B8180 \
   --enable-mmu \
   --max-unique 10 \
-  --out-dir tests/traces/os_unlink/mp4_rvz_movie_v1
+  --out-dir tests/trace-harvest/os_unlink/mp4_rvz_movie_v1
 ```
 
 After harvesting a trace case directory (`hit_.../`), prefer turning it into a deterministic
 host replay using a small scenario + replay wrapper script, so it becomes a one-command check:
 
 ```bash
-tools/replay_trace_case_pad_read.sh  tests/traces/pad_read/mp4_rvz/<hit_dir>
-tools/replay_trace_case_pad_clamp.sh tests/traces/pad_clamp/mp4_rvz/<hit_dir>
-tools/replay_trace_case_pad_reset.sh tests/traces/pad_reset/mp4_rvz_v2/<hit_dir>
+tools/replay_trace_case_pad_read.sh  tests/trace-harvest/pad_read/mp4_rvz/<hit_dir>
+tools/replay_trace_case_pad_clamp.sh tests/trace-harvest/pad_clamp/mp4_rvz/<hit_dir>
+tools/replay_trace_case_pad_reset.sh tests/trace-harvest/pad_reset/mp4_rvz_v2/<hit_dir>
 ```
 
 For MP4 HuPadInit blocker functions, use the one-button harvest/replay loop:
@@ -321,7 +321,7 @@ that normal replay/unit tests FAIL under that mutant.
 
 Run:
 ```bash
-tools/mutations/si_transfer_fire_plus1.sh tests/traces/si_transfer/mp4_rvz_v4/<hit_dir>
+tools/mutations/si_transfer_fire_plus1.sh tests/trace-harvest/si_transfer/mp4_rvz_v4/<hit_dir>
 ```
 
 Rules:
@@ -329,7 +329,7 @@ Rules:
 - the script auto-reverts the mutant via `trap` even if the test command crashes
 
 Notes:
-- Output under `tests/traces/**` is local-only (gitignored). Commit only *derived facts* and testcases.
+- Output under `tests/trace-harvest/**` is local-only (gitignored). Commit only *derived facts* and testcases.
 - If you see `Connection refused`, increase `--delay` (Dolphin needs time to open the GDB stub).
 - For pointer arguments (stack buffers), dump relative to entry registers:
   - `--dump status:@r3:0x30` dumps 0x30 bytes at the address in `r3` *at function entry*.

@@ -7,7 +7,7 @@ cd "$repo_root"
 # Run available trace-replay case scripts over local trace corpora.
 # Defaults to a fast smoke pass (1 case per corpus). Override with:
 #   GC_REPLAY_MAX_CASES=<n>
-#   GC_REPLAY_CASE_GLOB='tests/traces/.../hit_*'
+#   GC_REPLAY_CASE_GLOB='tests/trace-harvest/.../hit_*'
 
 max_cases="${GC_REPLAY_MAX_CASES:-1}"
 case_glob="${GC_REPLAY_CASE_GLOB:-}"

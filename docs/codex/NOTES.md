@@ -113,7 +113,7 @@ Rules:
   - `tools/trace_pc_entry_exit.py --dump status:@r3:0x30` (dynamic addr uses entry regs).
   - Observed idle-case invariant in retail: return `0x80000000` and `PADStatus.err` = `[0, -1, -1, -1]` (chan0 present, others absent) with all other fields zero.
   - Replay harness: `tools/replay_trace_case_pad_read.sh <hit_dir>` compares retail `out_status.bin` against host `sdk_port` output buffer.
-  Evidence: `tests/traces/pad_read/mp4_rvz/hit_000001_pc_800C4B88_lr_8005A7F0/` and `tools/replay_trace_case_pad_read.sh`.
+  Evidence: `tests/trace-harvest/pad_read/mp4_rvz/hit_000001_pc_800C4B88_lr_8005A7F0/` and `tools/replay_trace_case_pad_read.sh`.
 - Determinism scope:
   - Primary oracle: `sdk_port` on PPC (Dolphin DOL) vs `sdk_port` on host (virtual RAM) should be bit-exact for the dumped ranges.
   - This does NOT prove retail MP4 correctness; retail correctness needs the RVZ breakpoint dump oracle.
@@ -993,7 +993,7 @@ Notes:
   - return `r3 = 1`
   - `ResettingBits: 0x00000000 -> 0x30000000`
   - `ResettingChan: 32 -> 1`
-- Trace harvesting output is local-only (gitignored) under `tests/traces/pad_reset/mp4_rvz_v2/`.
+- Trace harvesting output is local-only (gitignored) under `tests/trace-harvest/pad_reset/mp4_rvz_v2/`.
 - Host replay harness (committed):
   - Scenario: `tests/sdk/pad/pad_reset/host/pad_reset_rvz_trace_replay_001_scenario.c`
   - Replay: `tools/replay_trace_case_pad_reset.sh <trace_case_dir>`
@@ -1008,7 +1008,7 @@ Notes:
 
 ### PADInit
 - Retail entry PC: `0x800C4978` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
-- Trace dir (local-only, gitignored): `tests/traces/pad_init/mp4_rvz_v1/` (2 unique cases)
+- Trace dir (local-only, gitignored): `tests/trace-harvest/pad_init/mp4_rvz_v1/` (2 unique cases)
 - Replay harness (committed):
   - Scenario: `tests/sdk/pad/pad_init/host/pad_init_rvz_trace_replay_001_scenario.c`
   - Replay: `tools/replay_trace_case_pad_init.sh <trace_case_dir>`
@@ -1018,7 +1018,7 @@ Notes:
 
 ### PADSetSpec
 - Retail entry PC: `0x800C4FD8` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
-- Trace dir (local-only, gitignored): `tests/traces/pad_set_spec/mp4_rvz_v3/` (1 unique case)
+- Trace dir (local-only, gitignored): `tests/trace-harvest/pad_set_spec/mp4_rvz_v3/` (1 unique case)
 - Replay harness (committed):
   - Scenario: `tests/sdk/pad/pad_set_spec/host/pad_set_spec_rvz_trace_replay_001_scenario.c`
   - Replay: `tools/replay_trace_case_pad_set_spec.sh <trace_case_dir>`
@@ -1033,7 +1033,7 @@ Notes:
 
 ### OSDisableInterrupts
 - Retail entry PC: `0x800B723C` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
-- Trace dir (local-only, gitignored): `tests/traces/os_disable_interrupts/mp4_rvz_v1/` (10 unique cases)
+- Trace dir (local-only, gitignored): `tests/trace-harvest/os_disable_interrupts/mp4_rvz_v1/` (10 unique cases)
 - Replay harness (committed):
   - Scenario: `tests/sdk/os/os_disable_interrupts/host/os_disable_interrupts_rvz_trace_replay_001_scenario.c`
   - Replay: `tools/replay_trace_case_os_disable_interrupts.sh <trace_case_dir>`
@@ -1047,7 +1047,7 @@ Notes:
 ### VISetPostRetraceCallback
 - Retail entry PC: `0x800C0DD8` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
 - Retail global: `PostCB` @ `0x801D443C` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
-- Trace dir (local-only, gitignored): `tests/traces/vi_set_post_retrace_callback/mp4_rvz_v2/` (1 unique case)
+- Trace dir (local-only, gitignored): `tests/trace-harvest/vi_set_post_retrace_callback/mp4_rvz_v2/` (1 unique case)
 - Replay harness (committed):
   - Scenario: `tests/sdk/vi/vi_set_post_retrace_callback/host/vi_set_post_retrace_callback_rvz_trace_replay_001_scenario.c`
   - Replay: `tools/replay_trace_case_vi_set_post_retrace_callback.sh <trace_case_dir>`
@@ -1060,7 +1060,7 @@ Notes:
 
 ### SISetSamplingRate
 - Retail entry PC: `0x800DA3C8` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
-- Trace dir (local-only, gitignored): `tests/traces/si_set_sampling_rate/mp4_rvz_si_ctrl/` (10 unique cases)
+- Trace dir (local-only, gitignored): `tests/trace-harvest/si_set_sampling_rate/mp4_rvz_si_ctrl/` (10 unique cases)
 - Replay harness (committed):
   - Scenario: `tests/sdk/si/si_set_sampling_rate/host/si_set_sampling_rate_rvz_trace_replay_001_scenario.c`
   - Replay: `tools/replay_trace_case_si_set_sampling_rate.sh <trace_case_dir>`
@@ -1072,7 +1072,7 @@ Notes:
 
 ### PADControlMotor
 - Retail entry PC: `0x800C4F34` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
-- Trace dir (local-only, gitignored): `tests/traces/pad_control_motor/mp4_rvz_v1/` (2 unique cases)
+- Trace dir (local-only, gitignored): `tests/trace-harvest/pad_control_motor/mp4_rvz_v1/` (2 unique cases)
 - Replay harness (committed):
   - Scenario: `tests/sdk/pad/pad_control_motor/host/pad_control_motor_rvz_trace_replay_001_scenario.c`
   - Replay: `tools/replay_trace_case_pad_control_motor.sh <trace_case_dir>`
@@ -1088,7 +1088,7 @@ Notes:
 
 ### SITransfer
 - Retail entry PC: `0x800D9CC4` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
-- Trace dir (local-only, gitignored): `tests/traces/si_transfer/mp4_rvz_v4/` (20 unique cases)
+- Trace dir (local-only, gitignored): `tests/trace-harvest/si_transfer/mp4_rvz_v4/` (20 unique cases)
 - Replay harness (committed):
   - Scenario: `tests/sdk/si/si_transfer/host/si_transfer_rvz_trace_replay_001_scenario.c`
   - Replay: `tools/replay_trace_case_si_transfer.sh <trace_case_dir>`
@@ -1104,7 +1104,7 @@ Notes:
 ### SIGetResponse
 - Retail entry PC: `0x800D9B74` (from `external/mp4-decomp/config/GMPE01_00/symbols.txt`)
 - Decomp reference: `external/mp4-decomp/src/dolphin/si/SIBios.c` (`SIGetResponseRaw` + `SIGetResponse`)
-- Trace dir (local-only, gitignored): `tests/traces/si_get_response/mp4_rvz_v1/`
+- Trace dir (local-only, gitignored): `tests/trace-harvest/si_get_response/mp4_rvz_v1/`
 - Replay harness (committed):
   - Scenario: `tests/sdk/si/si_get_response/host/si_get_response_rvz_trace_replay_001_scenario.c`
   - Replay: `tools/replay_trace_case_si_get_response.sh <trace_case_dir>`
@@ -1213,10 +1213,10 @@ Notes:
 
 ## 2026-02-11: HuPadInit blocker retail replay refresh
 - Revalidated blocker replays with current trace corpus:
-  - `OSDisableInterrupts/OSRestoreInterrupts`: harvested (unique=3 target) and replay PASS over existing hit set under `tests/traces/os_disable_interrupts/mp4_rvz_v1/`.
-  - `VISetPostRetraceCallback`: replay PASS on `tests/traces/vi_set_post_retrace_callback/mp4_rvz_v2/hit_000001_pc_800C0DD8_lr_80005A98`.
-  - `SISetSamplingRate`: replay PASS for 3 unique cases from `tests/traces/si_set_sampling_rate/mp4_rvz_si_ctrl/`.
-  - `PADControlMotor`: replay PASS on `tests/traces/pad_control_motor/mp4_rvz_v1/hit_000002_pc_800C4F34_lr_80005B00`.
+  - `OSDisableInterrupts/OSRestoreInterrupts`: harvested (unique=3 target) and replay PASS over existing hit set under `tests/trace-harvest/os_disable_interrupts/mp4_rvz_v1/`.
+  - `VISetPostRetraceCallback`: replay PASS on `tests/trace-harvest/vi_set_post_retrace_callback/mp4_rvz_v2/hit_000001_pc_800C0DD8_lr_80005A98`.
+  - `SISetSamplingRate`: replay PASS for 3 unique cases from `tests/trace-harvest/si_set_sampling_rate/mp4_rvz_si_ctrl/`.
+  - `PADControlMotor`: replay PASS on `tests/trace-harvest/pad_control_motor/mp4_rvz_v1/hit_000002_pc_800C4F34_lr_80005B00`.
 - Tooling note:
   - `harvest_and_replay_vi_set_post_retrace_callback.sh` and `harvest_and_replay_pad_control_motor.sh` can hang after collecting hits (no terminal completion message).
   - Workaround used in this session: stop harvest process after hit files appear, then run replay script directly for collected hit dirs.
@@ -1236,7 +1236,7 @@ Notes:
 - Added script: `tools/harvest_and_replay_pad_read.sh`
   - Entry PC: `0x800C4B88` (`PADRead`)
   - Dump window: `status:@r3:0x30`
-  - Output trace dir: `tests/traces/pad_read/mp4_rvz_v3/`
+  - Output trace dir: `tests/trace-harvest/pad_read/mp4_rvz_v3/`
 - Validation run:
   - `GC_MAX_UNIQUE=1 GC_MAX_HITS=10 GC_TIMEOUT=25 tools/harvest_and_replay_pad_read.sh <rvz>`
   - Harvest completed with 1 unique case.
@@ -1258,8 +1258,8 @@ Notes:
 ## 2026-02-11: OSLink retail trace harvest (omMaster blocker path)
 - Captured first real-game `OSLink` entry/exit case from MP4 RVZ:
   - Entry PC: `0x800B7D24`
-  - Output dir: `tests/traces/os_link/mp4_rvz_v1/`
-  - Hit dir: `tests/traces/os_link/mp4_rvz_v1/hit_000001_pc_800B7D24_lr_8003222C/`
+  - Output dir: `tests/trace-harvest/os_link/mp4_rvz_v1/`
+  - Hit dir: `tests/trace-harvest/os_link/mp4_rvz_v1/hit_000001_pc_800B7D24_lr_8003222C/`
 - Captured windows:
   - `module_info` (`@r3`, 0x100 bytes)
   - `bss` (`@r4`, 0x80 bytes)
@@ -1272,7 +1272,7 @@ Notes:
   - `tools/replay_trace_case_os_link.sh`
   - scenario: `tests/sdk/os/os_link/host/os_link_rvz_trace_replay_001_scenario.c`
 - Validation:
-  - `GC_ALLOW_DIRTY=1 tools/replay_trace_case_os_link.sh tests/traces/os_link/mp4_rvz_v1/hit_000001_pc_800B7D24_lr_8003222C`
+  - `GC_ALLOW_DIRTY=1 tools/replay_trace_case_os_link.sh tests/trace-harvest/os_link/mp4_rvz_v1/hit_000001_pc_800B7D24_lr_8003222C`
   - pass marker: `0xDEADBEEF`
   - core semantics aligned for this case (return/head/tail/link nullability flags).
 - `OSUnlink` harvest status:
@@ -1296,7 +1296,7 @@ Notes:
   - Writes marker `0xDEADBEEF` on pass.
 - Validation:
   - Synthetic case replay PASS:
-    `GC_ALLOW_DIRTY=1 tools/replay_trace_case_os_unlink.sh tests/traces/os_unlink/synth_case_001`
+    `GC_ALLOW_DIRTY=1 tools/replay_trace_case_os_unlink.sh tests/trace-harvest/os_unlink/synth_case_001`
   - Harvest script smoke run:
     `GC_MAX_UNIQUE=1 GC_MAX_HITS=5 GC_TIMEOUT=30 tools/harvest_and_replay_os_unlink.sh`
     completed with `unique=0` (no real RVZ hits yet), so replay-on-real-case remains blocked on trigger-path capture.
@@ -1368,7 +1368,7 @@ Notes:
   - `tools/probe_os_unlink_overlay_chain.sh`
   - probes in one command: `omOvlGotoEx` (`0x8002EEC0`) -> `omOvlKill` (`0x8002F014`) -> `omDLLNumEnd` (`0x80031FA0`) -> `OSUnlink` (`0x800B8180`)
 - Evidence run (45s per probe):
-  - output: `tests/traces/os_unlink/probes/20260211_160246/`
+  - output: `tests/trace-harvest/os_unlink/probes/20260211_160246/`
   - result: no hit for all 4 PCs in boot-window run.
 - Added movie-capable harvest plumbing:
   - `tools/ram_dump.py` now supports `--movie <.dtm>` (passes `-m` to Dolphin)
@@ -1560,7 +1560,7 @@ Notes:
     - `tests/sdk/pbt/`
 - Completed phase-2 trace move:
   - moved trace corpora from `tests/traces/*` to `tests/trace-harvest/*`
-  - added compatibility symlink `tests/traces -> trace-harvest`
+  - removed legacy `tests/traces` alias after script retarget
   - replay smoke re-run remains PASS:
     - `GC_REPLAY_MAX_CASES=1 bash tools/replay_trace_suite.sh`
 - Added compatibility mirrors for next migration phases:
@@ -1568,3 +1568,11 @@ Notes:
   - `tests/sdk/pbt/legacy` symlink to `tests/pbt`
   - `tests/sdk/pbt/<subsystem>/...` symlink entries to existing property suites
 - Retargeted replay suite globs to prefer `tests/trace-harvest/...` directly.
+
+## 2026-02-12: Trace-path migration finalized (`tests/traces` removed)
+
+- Finalized migration to `tests/trace-harvest` as canonical retail-trace path.
+- Updated replay/harvest tooling and docs to use `tests/trace-harvest/...`.
+- Removed legacy `tests/traces` alias path from repository.
+- Validation (PASS):
+  - `GC_REPLAY_MAX_CASES=1 bash tools/run_replay_gate.sh`

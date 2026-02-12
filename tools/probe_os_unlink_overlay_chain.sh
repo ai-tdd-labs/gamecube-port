@@ -24,7 +24,7 @@ if [[ -z "$rvz" || ! -f "$rvz" ]]; then
 fi
 
 timeout_s="${2:-180}"
-out_root="${3:-$repo_root/tests/traces/os_unlink/probes}"
+out_root="${3:-$repo_root/tests/trace-harvest/os_unlink/probes}"
 stamp="$(date +%Y%m%d_%H%M%S)"
 run_dir="$out_root/$stamp"
 mkdir -p "$run_dir"
