@@ -160,6 +160,23 @@ STEP 7 - NOTES (LEARNING)
 STEP 8 - HELPERS (OPTIONAL)
 If something repeats (dump boilerplate, diff interpretation), create helpers under tools/helpers/.
 
+## DOL GOLDEN MAX-COVERAGE POLICY (SDK FUNCTIONS)
+
+For each SDK function, prefer a Dolphin-oracle DOL suite that pushes coverage to the practical maximum.
+
+Target pattern per function:
+- L0: isolated matrix/enumeration of valid+edge inputs
+- L1: accumulation (multiple calls without reset)
+- L2: overwrite/idempotency transitions
+- L3: random-start state (deterministic seeded PRNG)
+- L4: harvest replay (real RVZ call sequence)
+- L5: boundary/no-op invariants
+
+Rules:
+- DOL oracle code must be decoupled from `src/sdk_port` when mutation checks need oracle independence.
+- Keep outputs deterministic (`expected.bin`/`actual.bin`, fixed seeds, fixed layout).
+- Run mutation check proving the suite fails under at least one meaningful mutant.
+
 =====================
 SESSION CLOSURE
 =====================

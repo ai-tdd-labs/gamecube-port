@@ -2,7 +2,10 @@
 
 #include "src/sdk_port/gc_mem.c"
 #include "src/sdk_port/sdk_state.h"
-#include "src/sdk_port/pad/PAD.c"
+
+typedef int32_t s32;
+typedef uint32_t u32;
+void PADControlMotor(s32 chan, u32 command);
 
 static inline void store_u32be_ptr(volatile uint8_t *p, uint32_t v) {
     p[0] = (uint8_t)(v >> 24);
