@@ -21,7 +21,7 @@ fi
 #
 # Example:
 #   tools/replay_trace_case_os_disable_interrupts.sh \
-#     tests/traces/os_disable_interrupts/mp4_rvz/hit_000001_pc_800B723C_lr_800BAE98
+#     tests/trace-harvest/os_disable_interrupts/mp4_rvz/hit_000001_pc_800B723C_lr_800BAE98
 
 case_dir=${1:?case_dir required}
 

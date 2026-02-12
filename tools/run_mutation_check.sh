@@ -11,7 +11,7 @@ set -euo pipefail
 #
 # Example:
 #   tools/run_mutation_check.sh tools/mutations/si_transfer_fire_plus1.patch -- \
-#     tools/replay_trace_case_si_transfer.sh tests/traces/si_transfer/mp4_rvz_v4/hit_000002_pc_800D9CC4_lr_800DA26C
+#     tools/replay_trace_case_si_transfer.sh tests/trace-harvest/si_transfer/mp4_rvz_v4/hit_000002_pc_800D9CC4_lr_800DA26C
 
 patch_file=${1:?patch_file required}
 shift

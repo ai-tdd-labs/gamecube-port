@@ -163,7 +163,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Trace function entry/exit snapshots in Dolphin RVZ")
     ap.add_argument("--rvz", required=True, help="Path to RVZ/ISO to run in Dolphin")
     ap.add_argument("--entry-pc", type=parse_int, required=True, help="Function entry PC address (hex ok)")
-    ap.add_argument("--out-dir", default="tests/traces/os_disable_interrupts/mp4_rvz", help="Output directory")
+    ap.add_argument("--out-dir", default="tests/trace-harvest/os_disable_interrupts/mp4_rvz", help="Output directory")
     ap.add_argument("--max-unique", type=int, default=25, help="Stop after collecting N unique input snapshots")
     ap.add_argument("--max-hits", type=int, default=2000, help="Hard cap on total breakpoint hits processed")
     ap.add_argument("--delay", type=float, default=8.0, help="Seconds to wait after starting Dolphin")

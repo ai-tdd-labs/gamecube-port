@@ -16,7 +16,7 @@ We can also replay **retail MP4 RVZ** entry/exit snapshots (harvested via Dolphi
 as a host-only check.
 
 - Scenario: `host/os_disable_interrupts_rvz_trace_replay_001_scenario.c`
-- Inputs (local-only, gitignored): `tests/traces/os_disable_interrupts/mp4_rvz/*/in_regs.json` (MSR)
+- Inputs (local-only, gitignored): `tests/trace-harvest/os_disable_interrupts/mp4_rvz/*/in_regs.json` (MSR)
 
 Important: retail `OSDisableInterrupts` does not write to a synthetic state page at `0x817FE000`.
 So this replay checks only a derived invariant from MSR:
@@ -26,7 +26,7 @@ So this replay checks only a derived invariant from MSR:
 Run one case (auto-derives MSR[EE] from the trace):
 
 ```bash
-CASE_DIR="tests/traces/os_disable_interrupts/mp4_rvz/<case_id>"
+CASE_DIR="tests/trace-harvest/os_disable_interrupts/mp4_rvz/<case_id>"
 tools/replay_trace_case_os_disable_interrupts.sh "$CASE_DIR"
 ```
 
