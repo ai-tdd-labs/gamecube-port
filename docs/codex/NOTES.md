@@ -2102,3 +2102,13 @@ Validation:
   - `tests/sdk/os/os_time/*` expected vs actual: PASS (384 bytes)
 
 Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for these suites.
+
+## 2026-02-12: Planned trace-guided constrained-random workflow
+
+- Added explicit plan items to `todo/REMAINING_TEST_STRATEGY.md` for a new trace-guided constrained-random pipeline (DOL-PBT hybrid).
+- Added new directory boundary doc: `tests/trace-guided/README.md`.
+- Directory separation now documented as:
+  - raw captures: `tests/trace-harvest/`
+  - derived models/cases: `tests/trace-guided/`
+  - executable suites: `tests/sdk/<module>/<function>/...`
+- Validation: docs-only update (`git diff --check` clean).

@@ -91,6 +91,46 @@ across GX (109), OS (50), VI (20), PAD (14), DVD (11), SI (4), MTX (2).
 
 ---
 
+## New work: trace-guided constrained-random (DOL-PBT hybrid)
+
+Goal: use harvested retail traces as input/state constraints, then run seeded
+high-volume randomized cases in Dolphin (oracle) and host (`sdk_port`) with
+bit-exact comparison.
+
+This is **not** a replacement for trace replay; it extends it for wider coverage.
+
+### Directory split (important)
+
+- `tests/trace-harvest/` = raw captured retail traces (ground-truth samples).
+- `tests/trace-guided/` = derived models + generated case batches (new).
+- `tests/sdk/<module>/<function>/...` = executable DOL/host test suites that
+  consume those artifacts.
+
+### Implementation tasks
+
+1. Add trace model schema (`model.json`) per target function:
+   - valid ranges, enums, pointer/struct constraints, call-order rules.
+2. Add constrained generator:
+   - 70% near-trace mutation
+   - 20% boundary values
+   - 10% exploratory within constraints
+3. Add deterministic case format (`cases.bin` / `cases.jsonl`) with seed + case_id.
+4. Add DOL batch runner:
+   - executes N cases, records compact outputs/state hashes.
+5. Add host batch runner:
+   - replays same N cases against `sdk_port`.
+6. Add diff tool:
+   - first mismatch by case_id + offset + seed reproduction.
+7. Add mutation gate for each new trace-guided suite (`tools/mutations/*`).
+8. Start with one pilot function, then template-rollout.
+
+### Pilot recommendation
+
+- First pilot: `OSTicksToCalendarTime` or `PSMTXConcat` (low side effects).
+- Second pilot: one hardware-near callback/register function (e.g. VI/PAD).
+
+---
+
 ## Priority order
 
 1. **GX gaps** (17) — blocking MP4 board rendering (indirect tex, TEV konstant/swap, vertex formats)
