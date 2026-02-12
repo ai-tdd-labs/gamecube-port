@@ -2248,3 +2248,22 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_pad_reset_pbt.sh` → PASS
   - `tools/run_mutation_check.sh tools/mutations/pad_reset_skip_or_mask.patch -- tools/run_pad_reset_pbt.sh` → PASS (mutant fails as expected).
+
+## 2026-02-12: PADInit unified DOL PBT suite (L0-L5)
+
+- Added unified PADInit PBT suite:
+  - `tests/sdk/pad/pad_init/dol/pbt/pad_init_pbt_001/*`
+  - `tests/sdk/pad/pad_init/host/pad_init_pbt_001_scenario.c`
+  - `tools/run_pad_init_pbt.sh`
+- Coverage levels in `pad_init_pbt_001`:
+  - L0 isolated matrix (`initialized` x `fix_bits` x `spec`)
+  - L1 accumulation (two-stage init sequence with spec transitions)
+  - L2 idempotency (second call with initialized already set)
+  - L3 random-start state (deterministic PRNG)
+  - L4 harvest-style replay (`spec=5`, clean init path)
+  - L5 boundary states (`initialized=1`, fix_bits extremes, spec edge values)
+- DOL oracle decoupled from host sdk_port:
+  - `tests/sdk/pad/pad_init/dol/pbt/pad_init_pbt_001/oracle_pad_init.c`
+- Validation:
+  - `tools/run_pad_init_pbt.sh` → PASS
+  - `tools/run_mutation_check.sh tools/mutations/pad_init_skip_reset_internal.patch -- tools/run_pad_init_pbt.sh` → PASS (mutant fails as expected).
