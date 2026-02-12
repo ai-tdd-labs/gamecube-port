@@ -186,4 +186,12 @@ enum {
   // These model the minimal MMIO-derived inputs needed to reproduce SIGetResponseRaw().
   GC_SDK_OFF_SI_STATUS_BASE = 0x3C0,        // 4 * u32 (chan 0..3)
   GC_SDK_OFF_SI_RESP_WORDS_BASE = 0x3D0,    // 4 * 2 * u32 (chan-major, word0/word1)
+
+  // GX indirect texturing (GXBump.c)
+  GC_SDK_OFF_GX_IREF = 0x400,              // u32
+  GC_SDK_OFF_GX_IND_TEX_SCALE0 = 0x404,    // u32
+  GC_SDK_OFF_GX_IND_TEX_SCALE1 = 0x408,    // u32
+  GC_SDK_OFF_GX_TEV_IND_BASE = 0x410,      // 16 * u32 (stages 0..15)
+  GC_SDK_OFF_GX_IND_MTX_BASE = 0x450,      // 9 * u32 (3 matrices * 3 regs each)
+  GC_SDK_OFF_GX_GEN_MODE = 0x47C,          // u32 (genMode mirror for trace tests)
 };

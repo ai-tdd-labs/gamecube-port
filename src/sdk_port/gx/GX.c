@@ -4,6 +4,7 @@
 typedef uint32_t u32;
 typedef uint16_t u16;
 typedef uint8_t u8;
+typedef int8_t  s8;
 typedef int16_t s16;
 typedef int32_t s32;
 typedef float f32;
@@ -239,6 +240,13 @@ u32 gc_gx_tex_load_image3_last;
 // GXLight observable state (we mirror "last loaded" light object fields by index).
 u32 gc_gx_light_loaded_mask;
 GXLightObj gc_gx_light_loaded[8];
+
+// Indirect texturing state (GXBump.c).
+u32 gc_gx_iref;
+u32 gc_gx_ind_tex_scale0;
+u32 gc_gx_ind_tex_scale1;
+u32 gc_gx_tev_ind[16];
+u32 gc_gx_ind_mtx[9];
 
 // Display list mirrors (GXDisplayList.c).
 u32 gc_gx_dl_base;
@@ -2619,4 +2627,257 @@ u32 GXDecompressZ16(u32 z16, u32 zfmt)
             break;
     }
     return z24;
+}
+
+// ---------------------------------------------------------------------------
+// GXBump.c — Indirect texturing functions
+// ---------------------------------------------------------------------------
+
+typedef s32 GXTevStageID;
+typedef s32 GXIndTexStageID;
+typedef s32 GXIndTexFormat;
+typedef s32 GXIndTexBiasSel;
+typedef s32 GXIndTexMtxID;
+typedef s32 GXIndTexWrap;
+typedef s32 GXIndTexAlphaSel;
+typedef s32 GXIndTexScale;
+typedef u8  GXBool;
+
+// Enum values used by wrapper functions.
+enum {
+    GX_INDTEXSTAGE0 = 0,
+    GX_INDTEXSTAGE1 = 1,
+    GX_INDTEXSTAGE2 = 2,
+    GX_INDTEXSTAGE3 = 3,
+
+    GX_ITF_8     = 0,
+    GX_ITB_NONE  = 0,
+    GX_ITB_STU   = 7,
+    GX_ITM_OFF   = 0,
+    GX_ITM_0     = 1,
+    GX_ITM_1     = 2,
+    GX_ITM_2     = 3,
+    GX_ITM_S0    = 5,
+    GX_ITM_S1    = 6,
+    GX_ITM_S2    = 7,
+    GX_ITM_T0    = 9,
+    GX_ITM_T1    = 10,
+    GX_ITM_T2    = 11,
+    GX_ITW_OFF   = 0,
+    GX_ITW_256   = 1,
+    GX_ITW_128   = 2,
+    GX_ITW_64    = 3,
+    GX_ITW_32    = 4,
+    GX_ITW_16    = 5,
+    GX_ITW_0     = 6,
+};
+
+void GXSetTevIndirect(GXTevStageID tev_stage, GXIndTexStageID ind_stage,
+                      GXIndTexFormat format, GXIndTexBiasSel bias_sel,
+                      GXIndTexMtxID matrix_sel,
+                      GXIndTexWrap wrap_s, GXIndTexWrap wrap_t,
+                      GXBool add_prev, GXBool utc_lod,
+                      GXIndTexAlphaSel alpha_sel)
+{
+    u32 reg = 0;
+    reg = set_field(reg, 2, 0, (u32)ind_stage);
+    reg = set_field(reg, 2, 2, (u32)format);
+    reg = set_field(reg, 3, 4, (u32)bias_sel);
+    reg = set_field(reg, 2, 7, (u32)alpha_sel);
+    reg = set_field(reg, 4, 9, (u32)matrix_sel);
+    reg = set_field(reg, 3, 13, (u32)wrap_s);
+    reg = set_field(reg, 3, 16, (u32)wrap_t);
+    reg = set_field(reg, 1, 19, (u32)utc_lod);
+    reg = set_field(reg, 1, 20, (u32)add_prev);
+    reg = set_field(reg, 8, 24, (u32)(tev_stage + 16));
+
+    if ((u32)tev_stage < 16u) {
+        gc_gx_tev_ind[tev_stage] = reg;
+        gc_sdk_state_store_u32_mirror(
+            GC_SDK_OFF_GX_TEV_IND_BASE + (u32)tev_stage * 4u,
+            &gc_gx_tev_ind[tev_stage], reg);
+    }
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXSetTevDirect(GXTevStageID tev_stage) {
+    GXSetTevIndirect(tev_stage, GX_INDTEXSTAGE0, GX_ITF_8, GX_ITB_NONE,
+                     GX_ITM_OFF, GX_ITW_OFF, GX_ITW_OFF, 0, 0, 0);
+}
+
+void GXSetTevIndWarp(GXTevStageID tev_stage, GXIndTexStageID ind_stage,
+                     u8 signed_offset, u8 replace_mode,
+                     GXIndTexMtxID matrix_sel)
+{
+    GXIndTexWrap wrap = (replace_mode != 0) ? GX_ITW_0 : GX_ITW_OFF;
+    GXSetTevIndirect(tev_stage, ind_stage, GX_ITF_8,
+                     (signed_offset != 0) ? GX_ITB_STU : GX_ITB_NONE,
+                     matrix_sel, wrap, wrap, 0, 0, 0);
+}
+
+void GXSetIndTexMtx(GXIndTexMtxID mtx_id, float offset[2][3], s8 scale_exp) {
+    u32 id;
+    switch (mtx_id) {
+        case GX_ITM_0: case GX_ITM_1: case GX_ITM_2:
+            id = (u32)(mtx_id - 1);
+            break;
+        case GX_ITM_S0: case GX_ITM_S1: case GX_ITM_S2:
+            id = (u32)(mtx_id - 5);
+            break;
+        case GX_ITM_T0: case GX_ITM_T1: case GX_ITM_T2:
+            id = (u32)(mtx_id - 9);
+            break;
+        default:
+            id = 0;
+            break;
+    }
+
+    s32 m0 = (s32)(1024.0f * offset[0][0]) & 0x7FF;
+    s32 m1 = (s32)(1024.0f * offset[1][0]) & 0x7FF;
+    s8 se = scale_exp + 0x11;
+
+    u32 reg0 = 0;
+    reg0 = set_field(reg0, 11, 0, (u32)m0);
+    reg0 = set_field(reg0, 11, 11, (u32)m1);
+    reg0 = set_field(reg0, 2, 22, (u32)(se & 3));
+    reg0 = set_field(reg0, 8, 24, id * 3u + 6u);
+
+    s32 m2 = (s32)(1024.0f * offset[0][1]) & 0x7FF;
+    s32 m3 = (s32)(1024.0f * offset[1][1]) & 0x7FF;
+
+    u32 reg1 = 0;
+    reg1 = set_field(reg1, 11, 0, (u32)m2);
+    reg1 = set_field(reg1, 11, 11, (u32)m3);
+    reg1 = set_field(reg1, 2, 22, (u32)((se >> 2) & 3));
+    reg1 = set_field(reg1, 8, 24, id * 3u + 7u);
+
+    s32 m4 = (s32)(1024.0f * offset[0][2]) & 0x7FF;
+    s32 m5 = (s32)(1024.0f * offset[1][2]) & 0x7FF;
+
+    u32 reg2 = 0;
+    reg2 = set_field(reg2, 11, 0, (u32)m4);
+    reg2 = set_field(reg2, 11, 11, (u32)m5);
+    reg2 = set_field(reg2, 2, 22, (u32)((se >> 4) & 3));
+    reg2 = set_field(reg2, 8, 24, id * 3u + 8u);
+
+    if (id < 3u) {
+        gc_gx_ind_mtx[id * 3u + 0u] = reg0;
+        gc_gx_ind_mtx[id * 3u + 1u] = reg1;
+        gc_gx_ind_mtx[id * 3u + 2u] = reg2;
+        gc_sdk_state_store_u32_mirror(
+            GC_SDK_OFF_GX_IND_MTX_BASE + (id * 3u + 0u) * 4u,
+            &gc_gx_ind_mtx[id * 3u + 0u], reg0);
+        gc_sdk_state_store_u32_mirror(
+            GC_SDK_OFF_GX_IND_MTX_BASE + (id * 3u + 1u) * 4u,
+            &gc_gx_ind_mtx[id * 3u + 1u], reg1);
+        gc_sdk_state_store_u32_mirror(
+            GC_SDK_OFF_GX_IND_MTX_BASE + (id * 3u + 2u) * 4u,
+            &gc_gx_ind_mtx[id * 3u + 2u], reg2);
+    }
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXSetIndTexOrder(GXIndTexStageID ind_stage, u32 tex_coord, u32 tex_map) {
+    switch (ind_stage) {
+        case GX_INDTEXSTAGE0:
+            gc_gx_iref = set_field(gc_gx_iref, 3, 0, tex_map);
+            gc_gx_iref = set_field(gc_gx_iref, 3, 3, tex_coord);
+            break;
+        case GX_INDTEXSTAGE1:
+            gc_gx_iref = set_field(gc_gx_iref, 3, 6, tex_map);
+            gc_gx_iref = set_field(gc_gx_iref, 3, 9, tex_coord);
+            break;
+        case GX_INDTEXSTAGE2:
+            gc_gx_iref = set_field(gc_gx_iref, 3, 12, tex_map);
+            gc_gx_iref = set_field(gc_gx_iref, 3, 15, tex_coord);
+            break;
+        case GX_INDTEXSTAGE3:
+            gc_gx_iref = set_field(gc_gx_iref, 3, 18, tex_map);
+            gc_gx_iref = set_field(gc_gx_iref, 3, 21, tex_coord);
+            break;
+        default:
+            break;
+    }
+    gc_sdk_state_store_u32_mirror(GC_SDK_OFF_GX_IREF, &gc_gx_iref, gc_gx_iref);
+    gc_gx_dirty_state |= 3u;
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXSetIndTexCoordScale(GXIndTexStageID ind_stage,
+                           GXIndTexScale scale_s, GXIndTexScale scale_t)
+{
+    switch (ind_stage) {
+        case GX_INDTEXSTAGE0:
+            gc_gx_ind_tex_scale0 = set_field(gc_gx_ind_tex_scale0, 4, 0, (u32)scale_s);
+            gc_gx_ind_tex_scale0 = set_field(gc_gx_ind_tex_scale0, 4, 4, (u32)scale_t);
+            gc_gx_ind_tex_scale0 = set_field(gc_gx_ind_tex_scale0, 8, 24, 0x25u);
+            break;
+        case GX_INDTEXSTAGE1:
+            gc_gx_ind_tex_scale0 = set_field(gc_gx_ind_tex_scale0, 4, 8, (u32)scale_s);
+            gc_gx_ind_tex_scale0 = set_field(gc_gx_ind_tex_scale0, 4, 12, (u32)scale_t);
+            gc_gx_ind_tex_scale0 = set_field(gc_gx_ind_tex_scale0, 8, 24, 0x25u);
+            break;
+        case GX_INDTEXSTAGE2:
+            gc_gx_ind_tex_scale1 = set_field(gc_gx_ind_tex_scale1, 4, 0, (u32)scale_s);
+            gc_gx_ind_tex_scale1 = set_field(gc_gx_ind_tex_scale1, 4, 4, (u32)scale_t);
+            gc_gx_ind_tex_scale1 = set_field(gc_gx_ind_tex_scale1, 8, 24, 0x26u);
+            break;
+        case GX_INDTEXSTAGE3:
+            gc_gx_ind_tex_scale1 = set_field(gc_gx_ind_tex_scale1, 4, 8, (u32)scale_s);
+            gc_gx_ind_tex_scale1 = set_field(gc_gx_ind_tex_scale1, 4, 12, (u32)scale_t);
+            gc_gx_ind_tex_scale1 = set_field(gc_gx_ind_tex_scale1, 8, 24, 0x26u);
+            break;
+        default:
+            break;
+    }
+    gc_sdk_state_store_u32_mirror(GC_SDK_OFF_GX_IND_TEX_SCALE0,
+                                 &gc_gx_ind_tex_scale0, gc_gx_ind_tex_scale0);
+    gc_sdk_state_store_u32_mirror(GC_SDK_OFF_GX_IND_TEX_SCALE1,
+                                 &gc_gx_ind_tex_scale1, gc_gx_ind_tex_scale1);
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXSetNumIndStages(u8 nIndStages) {
+    if (nIndStages > 4u) return;
+    gc_gx_gen_mode = set_field(gc_gx_gen_mode, 3, 16, (u32)nIndStages);
+    gc_sdk_state_store_u32_mirror(GC_SDK_OFF_GX_GEN_MODE,
+                                 &gc_gx_gen_mode, gc_gx_gen_mode);
+    gc_gx_dirty_state |= 6u;
+}
+
+void GXSetTevIndTile(GXTevStageID tev_stage, GXIndTexStageID ind_stage,
+                     u16 tilesize_s, u16 tilesize_t,
+                     u16 tilespacing_s, u16 tilespacing_t,
+                     GXIndTexFormat format, GXIndTexMtxID matrix_sel,
+                     GXIndTexBiasSel bias_sel, GXIndTexAlphaSel alpha_sel)
+{
+    GXIndTexWrap wrap_s, wrap_t;
+    switch (tilesize_s) {
+        case 256: wrap_s = GX_ITW_256; break;
+        case 128: wrap_s = GX_ITW_128; break;
+        case 64:  wrap_s = GX_ITW_64;  break;
+        case 32:  wrap_s = GX_ITW_32;  break;
+        case 16:  wrap_s = GX_ITW_16;  break;
+        default:  wrap_s = GX_ITW_OFF; break;
+    }
+    switch (tilesize_t) {
+        case 256: wrap_t = GX_ITW_256; break;
+        case 128: wrap_t = GX_ITW_128; break;
+        case 64:  wrap_t = GX_ITW_64;  break;
+        case 32:  wrap_t = GX_ITW_32;  break;
+        case 16:  wrap_t = GX_ITW_16;  break;
+        default:  wrap_t = GX_ITW_OFF; break;
+    }
+
+    float mtx[2][3];
+    mtx[0][0] = tilespacing_s / 1024.0f;
+    mtx[0][1] = 0.0f;
+    mtx[0][2] = 0.0f;
+    mtx[1][0] = 0.0f;
+    mtx[1][1] = tilespacing_t / 1024.0f;
+    mtx[1][2] = 0.0f;
+
+    GXSetIndTexMtx(matrix_sel, mtx, 0xA);
+    GXSetTevIndirect(tev_stage, ind_stage, format, bias_sel, matrix_sel,
+                     wrap_s, wrap_t, 0, 1, alpha_sel);
 }
