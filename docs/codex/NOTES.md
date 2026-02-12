@@ -2200,3 +2200,13 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
   - `bd ready` → lists ready tasks, no mismatch warning
   - `bd sync` → export succeeds, no mismatch warning
 - Added permanent recovery procedure to `docs/codex/WORKFLOW.md`.
+
+## 2026-02-12: PADControlMotor pbt_001 oracle decoupled from sdk_port
+
+- Updated DOL PBT suite `pad_control_motor_pbt_001` to use a dedicated oracle implementation:
+  - Added `tests/sdk/pad/pad_control_motor/dol/pbt/pad_control_motor_pbt_001/oracle_pad_control_motor.c`
+  - Removed direct include dependency on `src/sdk_port/pad/PAD.c` in the DOL test TU.
+- Result: Dolphin oracle path is now independent from host `sdk_port` mutation.
+- Validation:
+  - `tools/replay_trace_guided_pad_control_motor.sh --oracle dolphin --dolphin-suite pbt_001` → PASS
+  - `tools/run_mutation_check.sh tools/mutations/pad_control_motor_zero_cmd.patch -- tools/replay_trace_guided_pad_control_motor.sh --oracle dolphin --dolphin-suite pbt_001` → PASS (mutant fails as expected).
