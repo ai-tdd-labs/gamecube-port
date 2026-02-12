@@ -2286,3 +2286,22 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_pad_read_pbt.sh` → PASS
   - `tools/run_mutation_check.sh tools/mutations/pad_read_return_zero.patch -- tools/run_pad_read_pbt.sh` → PASS (mutant fails as expected).
+
+## 2026-02-13: PADClamp unified DOL PBT suite (L0-L5)
+
+- Added unified PADClamp PBT suite:
+  - `tests/sdk/pad/pad_clamp/dol/pbt/pad_clamp_pbt_001/*`
+  - `tests/sdk/pad/pad_clamp/host/pad_clamp_pbt_001_scenario.c`
+  - `tools/run_pad_clamp_pbt.sh`
+- Coverage levels in `pad_clamp_pbt_001`:
+  - L0 isolated seeded cases
+  - L1 idempotency (double-clamp on same status buffer)
+  - L2 error-gated behavior (`err != 0` status entries remain unclamped)
+  - L3 random-start seeded mix (`err == 0` and `err != 0`)
+  - L4 realistic in-range/out-of-range sweep
+  - L5 boundary extremes (`int8` min/max and trigger 0/255)
+- DOL oracle decoupled from host sdk_port:
+  - `tests/sdk/pad/pad_clamp/dol/pbt/pad_clamp_pbt_001/oracle_pad_clamp.c`
+- Validation:
+  - `tools/run_pad_clamp_pbt.sh` → PASS
+  - `tools/run_mutation_check.sh tools/mutations/pad_clamp_skip_call_counter.patch -- tools/run_pad_clamp_pbt.sh` → PASS (mutant fails as expected).
