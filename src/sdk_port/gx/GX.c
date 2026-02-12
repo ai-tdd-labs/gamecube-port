@@ -214,6 +214,15 @@ u32 gc_gx_texcoord2f32_s_bits;
 u32 gc_gx_texcoord2f32_t_bits;
 u32 gc_gx_color1x8_last;
 u32 gc_gx_color3u8_last;
+u32 gc_gx_color1x16_last;
+u32 gc_gx_color4u8_last;
+u32 gc_gx_normal1x16_last;
+u32 gc_gx_normal3s16_x;
+u32 gc_gx_normal3s16_y;
+u32 gc_gx_normal3s16_z;
+u32 gc_gx_texcoord1x16_last;
+u32 gc_gx_texcoord2s16_s;
+u32 gc_gx_texcoord2s16_t;
 
 // Token / draw sync state (GXManage).
 uintptr_t gc_gx_token_cb_ptr;
@@ -2374,6 +2383,33 @@ void GXColor1x8(u8 c) {
 void GXColor3u8(u8 r, u8 g, u8 b) {
     // Deterministic host model: record last RGB triple packed as 0x00RRGGBB.
     gc_gx_color3u8_last = ((u32)r << 16) | ((u32)g << 8) | (u32)b;
+}
+
+void GXColor1x16(u16 index) {
+    gc_gx_color1x16_last = (u32)index;
+}
+
+void GXColor4u8(u8 r, u8 g, u8 b, u8 a) {
+    gc_gx_color4u8_last = ((u32)r << 24) | ((u32)g << 16) | ((u32)b << 8) | (u32)a;
+}
+
+void GXNormal1x16(u16 index) {
+    gc_gx_normal1x16_last = (u32)index;
+}
+
+void GXNormal3s16(s16 x, s16 y, s16 z) {
+    gc_gx_normal3s16_x = (u32)(s32)x;
+    gc_gx_normal3s16_y = (u32)(s32)y;
+    gc_gx_normal3s16_z = (u32)(s32)z;
+}
+
+void GXTexCoord1x16(u16 index) {
+    gc_gx_texcoord1x16_last = (u32)index;
+}
+
+void GXTexCoord2s16(s16 s, s16 t) {
+    gc_gx_texcoord2s16_s = (u32)(s32)s;
+    gc_gx_texcoord2s16_t = (u32)(s32)t;
 }
 
 void GXSetTevColorIn(u32 stage, u32 a, u32 b, u32 c, u32 d) {
