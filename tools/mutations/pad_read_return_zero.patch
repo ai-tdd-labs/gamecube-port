@@ -1,9 +1,13 @@
 diff --git a/src/sdk_port/pad/PAD.c b/src/sdk_port/pad/PAD.c
+index 6dc3488..566416d 100644
 --- a/src/sdk_port/pad/PAD.c
 +++ b/src/sdk_port/pad/PAD.c
-@@ -122,4 +122,4 @@
+@@ -151,7 +151,7 @@ u32 PADRead(PADStatus *status) {
+     }
      gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_READ_CALLS,
                               gc_sdk_state_load_u32_or(GC_SDK_OFF_PAD_READ_CALLS, 0) + 1u);
 -    return PAD_CHAN0_BIT;
-+    return 0; // MUTANT
++    return 0u;
  }
+ 
+ /* Mirror decomp Padclamp.c ClampStick/ClampTrigger + PADClamp. */
