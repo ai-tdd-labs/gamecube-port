@@ -1647,3 +1647,21 @@ Notes:
 - Additional long-window probe:
   - `DOLPHIN_START_DELAY=6 bash tools/dump_expected_rvz_probe_at_pc.sh "<MP4_RVZ>" 0x8002F014 tests/trace-harvest/os_unlink/probes/omovlkill_long_001 180 1`
   - Result: `omOvlKill` not hit within 180s boot-only run (timeout, hits=0).
+
+## 2026-02-12: DVDReadPrio invariants property suite
+
+- Added new property suite:
+  - `tests/sdk/dvd/property/dvdreadprio_property_test.c`
+  - `tools/run_dvdreadprio_property_test.sh`
+- Invariants covered:
+  - `L0/PARITY`: `DVDReadPrio` return parity with strict read-window oracle.
+  - `L1/COPY`: copied byte window (and no-write on invalid cases).
+  - `L2/STATE`: RAM-backed `GC_SDK_OFF_DVD_READ_CALLS`, `...LAST_READ_LEN`, `...LAST_READ_OFF` side effects.
+  - `L3/PRIO`: priority argument does not change return/payload semantics.
+  - `FULL`: combined run.
+- Validation (PASS):
+  - `bash tools/run_dvdreadprio_property_test.sh --num-runs=50 --seed=0xC0DEC0DE --op=L0`
+  - `bash tools/run_dvdreadprio_property_test.sh --num-runs=50 --seed=0xC0DEC0DE --op=L1`
+  - `bash tools/run_dvdreadprio_property_test.sh --num-runs=50 --seed=0xC0DEC0DE --op=L2`
+  - `bash tools/run_dvdreadprio_property_test.sh --num-runs=50 --seed=0xC0DEC0DE --op=L3`
+  - `bash tools/run_dvdreadprio_property_test.sh --num-runs=50 --seed=0xC0DEC0DE --op=FULL`
