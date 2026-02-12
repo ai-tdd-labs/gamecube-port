@@ -214,6 +214,14 @@ case "$subsystem" in
     ;;
 esac
 
+case "$subsystem" in
+  ar)
+    port_srcs+=(
+      "$repo_root/src/sdk_port/ar/ar_hw.c"
+    )
+    ;;
+esac
+
 # De-duplicate sources (some union subsystems add the same file via multiple cases).
 # macOS ships Bash 3.2 by default (no associative arrays), so keep this portable.
 if [[ ${#port_srcs[@]} -gt 0 ]]; then
