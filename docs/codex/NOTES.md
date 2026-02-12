@@ -2033,3 +2033,22 @@ Notes:
 - Coverage/todo snapshot updates:
   - `todo/REMAINING_TEST_STRATEGY.md`: trace replay `~72 -> ~71`, GX gap count `18 -> 17`.
   - `todo/SDK_PORT_COVERAGE.md`: GX `104 -> 105`, total ported `~233 -> ~234`.
+
+## 2026-02-12: Merge `origin/claude-win11/remaining-trace-tests` into `codex/integration-all`
+
+- Merge required manual conflict resolution in:
+  - `src/sdk_port/gx/GX.c`
+  - `src/sdk_port/mtx/mtx.c`
+  - `src/sdk_port/sdk_state.h`
+  - `tests/sdk/vi/vi_set_pre_retrace_callback/README.md`
+  - `todo/SDK_PORT_COVERAGE.md`
+- Resolutions applied:
+  - Removed duplicate `GC_SDK_OFF_VI_PRE_CB_*` enum entries in `sdk_state.h`.
+  - Kept a single implementation set for indirect GX APIs (`GXSetNumIndStages`, `GXSetIndTexCoordScale`, `GXSetIndTexOrder`, `GXSetTevDirect`, `GXSetTevIndirect`, `GXSetTevIndWarp`, `GXSetIndTexMtx`) to avoid duplicate symbol/type conflicts.
+  - Kept one `GXPixModeSync` definition and one `GXGetProjectionv` implementation.
+  - Kept `ROMtx` layout as `4x3` (`src/sdk_port/mtx/sdk_port_mtx_types.h`) and removed conflicting duplicate `PSMTX*` block.
+- Validation run after conflict fixes:
+  - `tools/run_host_scenario.sh tests/sdk/gx/gx_texcoordgen/host/gx_texcoordgen_generic_001_scenario.c` ✅
+  - `tools/run_host_scenario.sh tests/sdk/dvd/dvd_cancel/host/dvd_cancel_generic_001_scenario.c` ✅
+  - `tools/run_ar_property_test.sh --num-runs=200 --seed=0x1234` ✅ (`35379/35379 PASS`)
+  - `tools/run_card_dir_property_test.sh --num-runs=200 --seed=0x1234` ✅ (`7800/7800 PASS`)
