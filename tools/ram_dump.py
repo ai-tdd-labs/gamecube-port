@@ -398,8 +398,13 @@ def parse_int(s):
     return int(s, 0)
 
 
-# Default Dolphin path on macOS
-DOLPHIN_BIN = "/Applications/Dolphin.app/Contents/MacOS/Dolphin"
+# Default Dolphin path (platform-dependent)
+if sys.platform == "win32" or os.name == "nt" or "MSYSTEM" in os.environ:
+    # Windows / MSYS2: use local GDB-enabled build
+    DOLPHIN_BIN = r"C:\projects\dolphin-gdb\Binary\x64\Dolphin.exe"
+else:
+    # macOS
+    DOLPHIN_BIN = "/Applications/Dolphin.app/Contents/MacOS/Dolphin"
 
 
 def start_dolphin(exec_path, dolphin_bin=DOLPHIN_BIN, user_dir=None, config_overrides=None, movie_path=None):
