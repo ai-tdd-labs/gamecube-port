@@ -11,7 +11,7 @@ The port currently implements **~224 functions** (plus internal helpers).
 
 | Bucket | Remaining |
 |--------|-----------|
-| Trace replay | **~80** |
+| Trace replay | **~79** |
 | PBT | **~0** |
 | No test needed | **~10** |
 
@@ -21,7 +21,7 @@ The port currently implements **~224 functions** (plus internal helpers).
 | **GX** | 121 | 96 | **79%** | +GXProject, GXCompressZ16, GXDecompressZ16 |
 | **DVD** | 12 | 12 | **100%** | +DVDCancel, dvdqueue port in sdk_port |
 | **PAD** | 8 | 8 | **100%** | +PADClamp |
-| **VI** | 13 | 12 | **92%** | Only VISetPreRetraceCallback missing |
+| **VI** | 13 | 13 | **100%** | VI callback setter pair covered |
 | **SI** | 1 | 1 | **100%** | SISetSamplingRate |
 | **MTX** | 33 | 33 | **100%** | Includes PSMTXReorder, PSMTXROMultVecArray, PSMTXMultVecArray |
 | **CARD** | 23 | 14 | **61%** | FAT internals + Dir ops + Unlock crypto (exnor, bitrev, CARDRand) |
@@ -29,7 +29,7 @@ The port currently implements **~224 functions** (plus internal helpers).
 | **ARQ** | 2 | 2 | **100%** | ARQInit + ARQPostRequest (+ internal helpers) |
 | **AI** | 7 | 0 | **0%** | Audio interface — not started |
 | **THP** | 27 | 0 | **0%** | Video player — not started |
-| **TOTAL** | **~305** | **~224** | **~73%** | |
+| **TOTAL** | **~305** | **~225** | **~74%** | |
 
 ---
 
@@ -83,13 +83,13 @@ DVDClose, DVDRead, DVDReadAsync, DVDReadAsyncPrio, DVDReadPrio, DVDGetCommandBlo
 
 **Missing:** `PADButtonDown` — likely a macro (`(status->button & button) != 0`)
 
-### VI (12/13 = 92%)
+### VI (13/13 = 100%)
 
 **Ported:** VIInit, VIConfigure, VIConfigurePan, VIFlush, VIGetDTVStatus, VIGetNextField,
 VIGetRetraceCount, VIGetTvFormat, VISetBlack, VISetNextFrameBuffer, VISetPostRetraceCallback,
 VIWaitForRetrace
 
-**Missing:** `VISetPreRetraceCallback` — symmetric to VISetPostRetraceCallback
+**Missing:** none.
 
 ### MTX (33/33 = 100%)
 
@@ -233,5 +233,5 @@ All pure-computation functions in the decomp have been PBT-tested. Remaining unt
 
 ### Tier 3 — Nice to have
 11. MTX batch ops (covered)
-12. VISetPreRetraceCallback (minor)
+12. VI callback pair (covered)
 13. OSLink/OSUnlink (ELF module loading — may not be needed for port)

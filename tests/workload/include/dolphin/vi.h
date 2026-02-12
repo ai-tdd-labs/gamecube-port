@@ -17,4 +17,5 @@ u32 VIGetNextField(void);
 void VISetNextFrameBuffer(void *fb);
 void VIFlush(void);
 VIRetraceCallback VISetPostRetraceCallback(VIRetraceCallback cb);
+VIRetraceCallback VISetPreRetraceCallback(VIRetraceCallback cb);
 void VISetBlack(u32 black);

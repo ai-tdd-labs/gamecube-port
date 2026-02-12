@@ -1,0 +1,4 @@
+a51024657eb2224f6c342f65797e7fd8535493bf7e9e49aa676dba306c51ba0d  os_heap_arena_window.bin  addr=0x801D38A0 size=0x80 pc=0x8002EEC0
+9ff618bd071c8f26390c91667c9a46e5d171bd78354ba5d3c6a6e016283d5926  os_arena_hi_window.bin  addr=0x801D42E0 size=0x40 pc=0x8002EEC0
+6631e586f33cbf0a3142ca49a47ffa21c32627d853686fec815b7a8c1104ad45  pad_si_window.bin  addr=0x801D44F0 size=0x180 pc=0x8002EEC0
+602be69e99e93edd15b6d0b0de2e3671a558869be5fb6096ff1b31280bc1712e  bootinfo_window.bin  addr=0x80000020 size=0x40 pc=0x8002EEC0

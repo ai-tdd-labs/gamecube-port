@@ -12,7 +12,7 @@ function is already covered by PBT (18 suites, ~250M+ checks).
 
 | Bucket | Remaining |
 |--------|-----------|
-| Trace replay | **~80** |
+| Trace replay | **~79** |
 | PBT | **~0** |
 | No test needed | **~10** |
 
@@ -48,7 +48,6 @@ These are hardware-coupled and can only be verified against Dolphin ground truth
 | **AI** | 7 | `AIGetDMAStartAddr`, `AIInitDMA`, `AIRegisterDMACallback`, `AISetStreamPlayState`, `AISetStreamVolLeft`, `AISetStreamVolRight`, `AIStartDMA` | Medium — needs audio backend (SDL_audio or similar) |
 | **AR** | 4 | `ARStartDMA` (DMA = memcpy simulation), `ARGetDMAStatus` (hardware reg read), `ARRegisterDMACallback` (callback setter), `ARSetSize` (empty stub in decomp) | Small — ARStartDMA is just memcpy between host ARAM buffer and MEM1 |
 | **DVD** | 1 | `DVDCancel` — cancel in-flight read | Small |
-| **VI** | 1 | `VISetPreRetraceCallback` — symmetric to VISetPostRetraceCallback | Trivial |
 
 ### PBT possible (~0 functions)
 

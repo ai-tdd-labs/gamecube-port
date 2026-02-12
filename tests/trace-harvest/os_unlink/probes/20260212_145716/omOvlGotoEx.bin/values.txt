@@ -1,0 +1,10 @@
+bootinfo:
+  arenaLo=0x00000000
+  arenaHi=0x817FDEA0
+symbols:
+  __OSCurrHeap=0x00000000
+  __OSArenaLo =0x817FDEA0
+  __OSArenaHi =0x817FDEA0
+  __PADSpec   =0x00000000
+  __PADFixBits=0x00000000
+  SamplingRate=0x00000000

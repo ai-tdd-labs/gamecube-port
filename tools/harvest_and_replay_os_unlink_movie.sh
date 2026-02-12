@@ -35,7 +35,7 @@ fi
 
 out_dir="${3:-$repo_root/tests/trace-harvest/os_unlink/mp4_rvz_movie_v1}"
 mkdir -p "$out_dir"
-export DOLPHIN_START_DELAY="${DOLPHIN_START_DELAY:-6}"
+export DOLPHIN_START_DELAY="${DOLPHIN_START_DELAY:-12}"
 
 python3 "$repo_root/tools/trace_pc_entry_exit.py" \
   --rvz "$rvz" \

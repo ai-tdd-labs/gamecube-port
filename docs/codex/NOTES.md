@@ -1831,3 +1831,29 @@ Notes:
   - later probes now connect reliably enough to set breakpoints (`omOvlKill`, `omDLLNumEnd`, `OSUnlink` logs show connected + timeout-no-hit)
   - `omOvlGotoEx` still has startup connection refusal in this run
   - no overlay unload hits yet; DTM trigger input is still required for OSUnlink path.
+
+## 2026-02-12: VISetPreRetraceCallback added with deterministic PPC-vs-host suite
+
+- Added minimal sdk_port implementation:
+  - `src/sdk_port/vi/VI.c`: `VISetPreRetraceCallback`
+  - `src/sdk_port/sdk_state.h`: `GC_SDK_OFF_VI_PRE_CB_PTR`, `GC_SDK_OFF_VI_PRE_CB_SET_CALLS`
+  - `tests/workload/include/dolphin/vi.h`: pre-callback declaration
+- Added test suite:
+  - `tests/sdk/vi/vi_set_pre_retrace_callback/`
+  - DOL test: `dol/mp4/realistic_hupadinit_001`
+  - Host scenario: `host/vi_set_pre_retrace_callback_realistic_hupadinit_001_scenario.c`
+- Validation:
+  - `python3 tools/ram_dump.py --exec tests/sdk/vi/vi_set_pre_retrace_callback/dol/mp4/realistic_hupadinit_001/vi_set_pre_retrace_callback_realistic_hupadinit_001.dol --addr 0x80300000 --size 0x40 --out tests/sdk/vi/vi_set_pre_retrace_callback/expected/vi_set_pre_retrace_callback_realistic_hupadinit_001.bin --run 0.5 --halt`
+  - `bash tools/run_host_scenario.sh tests/sdk/vi/vi_set_pre_retrace_callback/host/vi_set_pre_retrace_callback_realistic_hupadinit_001_scenario.c`
+  - `python3 tools/ram_compare.py tests/sdk/vi/vi_set_pre_retrace_callback/expected/vi_set_pre_retrace_callback_realistic_hupadinit_001.bin tests/sdk/vi/vi_set_pre_retrace_callback/actual/vi_set_pre_retrace_callback_realistic_hupadinit_001.bin`
+  - Result: PASS (bit-exact).
+- Coverage snapshot updated:
+  - VI module now 13/13.
+  - Remaining trace-replay bucket adjusted from ~80 to ~79.
+
+## 2026-02-12: OSUnlink probe defaults tuned
+
+- `tools/probe_os_unlink_overlay_chain.sh` and `tools/harvest_and_replay_os_unlink_movie.sh` default `DOLPHIN_START_DELAY` raised to `12`.
+- Probe evidence:
+  - `tests/trace-harvest/os_unlink/probes/20260212_145716/`
+  - `omOvlGotoEx` now consistently hits with default delay 12; unload path probes (`omOvlKill`/`omDLLNumEnd`/`OSUnlink`) still miss without DTM trigger input.
