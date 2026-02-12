@@ -1,0 +1,13 @@
+diff --git a/src/sdk_port/pad/PAD.c b/src/sdk_port/pad/PAD.c
+index c9f657f..e5b8f0c 100644
+--- a/src/sdk_port/pad/PAD.c
++++ b/src/sdk_port/pad/PAD.c
+@@ -244,7 +244,7 @@ BOOL PADReset(u32 mask) {
+     // - sets ResettingChan = cntlzw(ResettingBits)
+     // - clears the corresponding bit from ResettingBits
+     // We don't emulate the async SITransfer, only these observable globals.
+-    ResettingBits |= mask;
++    ResettingBits = mask;
+     ResettingChan = (ResettingBits == 0) ? 32 : (s32)__builtin_clz(ResettingBits);
+     if (ResettingChan != 32) {
+         u32 chanBit = PAD_CHAN0_BIT >> (u32)ResettingChan;

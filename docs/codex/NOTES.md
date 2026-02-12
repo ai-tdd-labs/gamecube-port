@@ -2229,3 +2229,22 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_pad_set_spec_pbt.sh` → PASS
   - `tools/run_mutation_check.sh tools/mutations/pad_set_spec_spec1_to_spec2.patch -- tools/run_pad_set_spec_pbt.sh` → PASS (mutant fails as expected).
+
+## 2026-02-12: PADReset unified DOL PBT suite (L0-L5)
+
+- Added unified PADReset PBT suite:
+  - `tests/sdk/pad/pad_reset/dol/pbt/pad_reset_pbt_001/*`
+  - `tests/sdk/pad/pad_reset/host/pad_reset_pbt_001_scenario.c`
+  - `tools/run_pad_reset_pbt.sh`
+- Coverage levels in `pad_reset_pbt_001`:
+  - L0 isolated masks (`0, 0x80000000, 0x40000000, 0x20000000, 0x10000000, 0x70000000, 0xffffffff`)
+  - L1 accumulation (two-call mask sequences)
+  - L2 idempotency (same mask twice)
+  - L3 random-start state (deterministic PRNG)
+  - L4 harvest replay (observed retail mask `0x70000000`)
+  - L5 boundary from non-empty pre-state
+- DOL oracle decoupled from host sdk_port for meaningful mutation checks:
+  - `tests/sdk/pad/pad_reset/dol/pbt/pad_reset_pbt_001/oracle_pad_reset.c`
+- Validation:
+  - `tools/run_pad_reset_pbt.sh` → PASS
+  - `tools/run_mutation_check.sh tools/mutations/pad_reset_skip_or_mask.patch -- tools/run_pad_reset_pbt.sh` → PASS (mutant fails as expected).
