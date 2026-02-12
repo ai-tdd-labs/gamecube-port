@@ -23,6 +23,8 @@ MP4 boot-forward chain (bd):
   Evidence: `tests/oracles/mp4_rvz/probes/wipeinit_pc_80041170_hit1/`
 - [x] omMasterInit inventory complete; first unresolved SDK blockers identified.
   Evidence: `docs/sdk/mp4/omMasterInit_blockers.md`
+- [ ] Test layout migration: move to explicit `tests/trace-harvest`, `tests/sdk/callsite`, `tests/sdk/pbt`.
+  Evidence target: `docs/codex/TEST_LAYOUT_MIGRATION.md`
 - [x] Small SDK blocker batch landed: `OSGetTick`, `OSTicksToCalendarTime`, `OSDumpStopwatch`, `DVDCancel`.
   Evidence: `src/sdk_port/os/OSRtc.c`, `src/sdk_port/os/OSStopwatch.c`, `src/sdk_port/dvd/DVD.c`,
   `tests/sdk/os/ostime/property/ostime_sdk_port_unit_test.c`, `tests/sdk/dvd/property/dvdcancel_unit_test.c`

@@ -1543,3 +1543,18 @@ Notes:
   - `bash tools/run_dvdcancel_unit_test.sh`
   - `bash tools/run_ostime_property_test.sh --num-runs=20 --seed=0xC0DEC0DE`
   - `bash tools/run_stopwatch_property_test.sh --num-runs=20 --seed=0xC0DEC0DE`
+
+## 2026-02-12: Replay suite consolidation + test-layout migration scaffold
+
+- Added consolidated replay runner:
+  - `tools/replay_trace_suite.sh` (runs representative replay cases across OS/VI/SI/PAD + OSLink/OSUnlink synth)
+  - updated `tools/run_replay_gate.sh` to call consolidated suite first; harvest scripts optional behind `GC_REPLAY_HARVEST=1`.
+- Verified replay suite smoke (1 case per corpus) PASS:
+  - `GC_REPLAY_MAX_CASES=1 bash tools/replay_trace_suite.sh`
+  - Note: PADSetSpec `mp4_rvz_v1` case lacks `in_pad_spec_shadow.bin`; suite now treats rc=2 as SKIP for non-runnable cases.
+- Started directory migration planning for clearer test semantics:
+  - plan doc: `docs/codex/TEST_LAYOUT_MIGRATION.md`
+  - new scaffold dirs:
+    - `tests/trace-harvest/`
+    - `tests/sdk/callsite/`
+    - `tests/sdk/pbt/`
