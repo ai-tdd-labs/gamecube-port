@@ -271,6 +271,23 @@ int DVDClose(DVDFileInfo *file) {
     return 1;
 }
 
+s32 DVDCancel(DVDCommandBlock *block) {
+    s32 state;
+
+    if (!block) {
+        return -1;
+    }
+
+    state = block->state;
+    if (state == 0 || state == -1 || state == 10) {
+        return 0;
+    }
+
+    // Minimal deterministic port: force canceled state.
+    block->state = 10;
+    return 0;
+}
+
 // -----------------------------------------------------------------------------
 // DVD filesystem path -> entrynum
 //

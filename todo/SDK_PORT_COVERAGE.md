@@ -9,9 +9,9 @@ The port currently implements **~205 functions** (plus internal helpers).
 
 | Module | Game needs | Ported | Coverage | Notes |
 |--------|-----------|--------|----------|-------|
-| **OS** | 48 | 42 | **88%** | Thread/Mutex/Msg via `port_` prefix; some macros (OSTicksToMilliseconds) |
+| **OS** | 48 | 45 | **94%** | Thread/Mutex/Msg via `port_` prefix; some macros (OSTicksToMilliseconds) |
 | **GX** | 121 | 93 | **77%** | Largest module; missing indirect tex, some vertex formats |
-| **DVD** | 12 | 11 | **92%** | Only DVDCancel missing |
+| **DVD** | 12 | 12 | **100%** | Core boot/read/cancel surface covered |
 | **PAD** | 8 | 7 | **88%** | Only PADButtonDown missing (likely macro) |
 | **VI** | 13 | 12 | **92%** | Only VISetPreRetraceCallback missing |
 | **SI** | 1 | 1 | **100%** | SISetSamplingRate |
@@ -44,10 +44,7 @@ The port currently implements **~205 functions** (plus internal helpers).
 - port_OSInitMessageQueue, port_OSSendMessage, port_OSReceiveMessage, port_OSJamMessage
 
 **Missing (game needs but not ported):**
-- `OSGetTick` — simple TBR read; need host equivalent (clock_gettime or similar)
-- `OSTicksToCalendarTime` — PBT tested in oracle; not yet in sdk_port source
 - `OSTicksToMilliseconds` — **macro** (`ticks / (OS_TIMER_CLOCK / 1000)`), just need the define
-- `OSDumpStopwatch` — printf wrapper for stopwatch data, trivial
 - `OSGetSoundMode` — SRAM read, need stub
 - `OSGetResetButtonState` — hardware button, need stub
 - `OSResetSystem` — system reset, need stub
@@ -69,12 +66,12 @@ color/alpha blending, texture objects, projection, viewport, scissor, copy, ligh
 - Texture: `GXInitTexObjCI`, `GXInitTlutObj`, `GXLoadTlut`, `GXSetTexCoordScaleManually`
 - Misc: `GXGetProjectionv`, `GXPixModeSync`, `GXProject`, `GXResetWriteGatherPipe`, `GXNtsc480Prog`
 
-### DVD (11/12 = 92%)
+### DVD (12/12 = 100%)
 
 **Ported:** DVDInit, DVDGetDriveStatus, DVDConvertPathToEntrynum, DVDFastOpen, DVDOpen,
 DVDClose, DVDRead, DVDReadAsync, DVDReadAsyncPrio, DVDReadPrio, DVDGetCommandBlockStatus
 
-**Missing:** `DVDCancel` — cancel in-flight read operation
+**Missing:** none in current MP4-needed DVD set.
 
 ### PAD (7/8 = 88%)
 
@@ -210,5 +207,5 @@ Locked Cache + paired-single (needs host JPEG decoder).
 
 ### Tier 3 — Nice to have
 11. PSMTXMultVecArray/Reorder (batch ops)
-12. DVDCancel, PADButtonDown, VISetPreRetraceCallback (minor)
+12. PADButtonDown, VISetPreRetraceCallback (minor)
 13. OSLink/OSUnlink (ELF module loading — may not be needed for port)
