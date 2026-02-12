@@ -2033,3 +2033,72 @@ Notes:
 - Coverage/todo snapshot updates:
   - `todo/REMAINING_TEST_STRATEGY.md`: trace replay `~72 -> ~71`, GX gap count `18 -> 17`.
   - `todo/SDK_PORT_COVERAGE.md`: GX `104 -> 105`, total ported `~233 -> ~234`.
+
+## 2026-02-12: Merge `origin/claude-win11/remaining-trace-tests` into `codex/integration-all`
+
+- Merge required manual conflict resolution in:
+  - `src/sdk_port/gx/GX.c`
+  - `src/sdk_port/mtx/mtx.c`
+  - `src/sdk_port/sdk_state.h`
+  - `tests/sdk/vi/vi_set_pre_retrace_callback/README.md`
+  - `todo/SDK_PORT_COVERAGE.md`
+- Resolutions applied:
+  - Removed duplicate `GC_SDK_OFF_VI_PRE_CB_*` enum entries in `sdk_state.h`.
+  - Kept a single implementation set for indirect GX APIs (`GXSetNumIndStages`, `GXSetIndTexCoordScale`, `GXSetIndTexOrder`, `GXSetTevDirect`, `GXSetTevIndirect`, `GXSetTevIndWarp`, `GXSetIndTexMtx`) to avoid duplicate symbol/type conflicts.
+  - Kept one `GXPixModeSync` definition and one `GXGetProjectionv` implementation.
+  - Kept `ROMtx` layout as `4x3` (`src/sdk_port/mtx/sdk_port_mtx_types.h`) and removed conflicting duplicate `PSMTX*` block.
+- Validation run after conflict fixes:
+  - `tools/run_host_scenario.sh tests/sdk/gx/gx_texcoordgen/host/gx_texcoordgen_generic_001_scenario.c` ✅
+  - `tools/run_host_scenario.sh tests/sdk/dvd/dvd_cancel/host/dvd_cancel_generic_001_scenario.c` ✅
+  - `tools/run_ar_property_test.sh --num-runs=200 --seed=0x1234` ✅ (`35379/35379 PASS`)
+  - `tools/run_card_dir_property_test.sh --num-runs=200 --seed=0x1234` ✅ (`7800/7800 PASS`)
+
+## 2026-02-12: Validation pass for suites merged from `origin/claude-win11/remaining-trace-tests`
+
+Scope: new host/property suites introduced between `f6c4196..b0555c4` on `codex/integration-all`.
+
+Executed (all PASS):
+- `tools/run_host_scenario.sh tests/sdk/ai/ai_generic/host/ai_generic_001_scenario.c`
+- `tools/run_host_scenario.sh tests/sdk/ar/ar_hw/host/ar_hw_generic_001_scenario.c`
+- `tools/run_host_scenario.sh tests/sdk/dvd/dvd_cancel/host/dvd_cancel_generic_001_scenario.c`
+- `tools/run_host_scenario.sh tests/sdk/gx/gx_light_init/host/gx_light_init_generic_001_scenario.c`
+- `tools/run_host_scenario.sh tests/sdk/gx/gx_misc/host/gx_misc_generic_001_scenario.c`
+- `tools/run_host_scenario.sh tests/sdk/gx/gx_set_tev_indirect/host/gx_set_tev_indirect_generic_001_scenario.c`
+- `tools/run_host_scenario.sh tests/sdk/gx/gx_set_tev_kcolor/host/gx_set_tev_kcolor_generic_001_scenario.c`
+- `tools/run_host_scenario.sh tests/sdk/gx/gx_set_tev_swap_mode/host/gx_set_tev_swap_mode_generic_001_scenario.c`
+- `tools/run_host_scenario.sh tests/sdk/gx/gx_tex_ci_tlut/host/gx_tex_ci_tlut_generic_001_scenario.c`
+- `tools/run_host_scenario.sh tests/sdk/gx/gx_tex_misc/host/gx_tex_misc_generic_001_scenario.c`
+- `tools/run_host_scenario.sh tests/sdk/gx/gx_texcoordgen/host/gx_texcoordgen_generic_001_scenario.c`
+- `tools/run_host_scenario.sh tests/sdk/gx/gx_vert_format/host/gx_vert_format_generic_001_scenario.c`
+- `tools/run_host_scenario.sh tests/sdk/os/os_stopwatch/host/os_stopwatch_generic_001_scenario.c`
+- `tools/run_host_scenario.sh tests/sdk/os/os_sysinfo/host/os_sysinfo_generic_001_scenario.c`
+- `tools/run_host_scenario.sh tests/sdk/os/os_time/host/os_time_generic_001_scenario.c`
+- `tools/run_host_scenario.sh tests/sdk/vi/vi_set_pre_retrace_callback/host/vi_set_pre_retrace_callback_generic_001_scenario.c`
+- `bash tools/run_mtx_batch_property_test.sh --num-runs=200 --seed=0x1234` (`ALL PASS`)
+
+Observed gap (FAIL in compare gate):
+- `ai_generic_001.bin` expected size `128`, host actual size `64`.
+- `os_stopwatch_generic_001.bin` expected size `288`, host actual size `64`.
+- `os_sysinfo_generic_001.bin` expected size `96`, host actual size `64`.
+- `os_time_generic_001.bin` expected size `384`, host actual size `64`.
+
+Root cause: `tools/run_host_scenario.sh` currently always dumps only `0x40` bytes (`0x80300000..0x80300040`), while these new suites write larger buffers.
+
+## 2026-02-12: Fix host runner truncation for remaining-trace-tests generic suites
+
+- Updated `tools/run_host_scenario.sh` to auto-size `GC_HOST_MAIN_DUMP_SIZE` from expected fixture length when available.
+  - Extracts scenario out path via `gc_scenario_out_path()`.
+  - Resolves expected fixture path using:
+    1) `actual -> expected` sibling mapping
+    2) fallback search under suite root (`*/expected/<basename>.bin`).
+- Updated harness docs comment in `tests/harness/gc_host_scenario.h` to reflect non-fixed dump sizing.
+
+Validation:
+- Re-ran all 16 host scenarios added in `f6c4196..b0555c4` via `tools/run_host_scenario.sh` (all build/run pass).
+- Re-checked previous size-mismatch suites with `tools/ram_compare.py`:
+  - `tests/sdk/ai/ai_generic/*` expected vs actual: PASS (128 bytes)
+  - `tests/sdk/os/os_stopwatch/*` expected vs actual: PASS (288 bytes)
+  - `tests/sdk/os/os_sysinfo/*` expected vs actual: PASS (96 bytes)
+  - `tests/sdk/os/os_time/*` expected vs actual: PASS (384 bytes)
+
+Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for these suites.

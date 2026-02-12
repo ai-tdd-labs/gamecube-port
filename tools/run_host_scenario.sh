@@ -11,7 +11,7 @@ set -euo pipefail
 #   gc_scenario_out_path()
 #   gc_scenario_run(GcRam*)
 #
-# The runner dumps 0x80300000..0x80300040 to gc_scenario_out_path().
+# The runner dumps 0x80300000..(size inferred from expected fixture when possible).
 
 SCENARIO_SRC=${1:?scenario .c path required}
 
@@ -23,6 +23,24 @@ fi
 
 scenario_dir="$(cd "$(dirname "$SCENARIO_SRC")" && pwd)"
 scenario_base="$(basename "$SCENARIO_SRC" .c)"
+suite_root="$(cd "$scenario_dir/.." && pwd)"
+
+infer_out_rel() {
+  awk '
+    /gc_scenario_out_path[[:space:]]*[(]/ { in_fn=1 }
+    in_fn && /return[[:space:]]*"/ {
+      match($0, /return[[:space:]]*"[^"]+"/)
+      if (RSTART > 0) {
+        s=substr($0, RSTART, RLENGTH)
+        sub(/^return[[:space:]]*"/, "", s)
+        sub(/"$/, "", s)
+        print s
+        exit 0
+      }
+    }
+    in_fn && /}/ { in_fn=0 }
+  ' "$SCENARIO_SRC" 2>/dev/null | head -n 1
+}
 
 # Keep repo clean: build host executables into an ignored temp build dir,
 # not next to the scenario source.
@@ -214,6 +232,22 @@ case "$subsystem" in
     ;;
 esac
 
+case "$subsystem" in
+  ar)
+    port_srcs+=(
+      "$repo_root/src/sdk_port/ar/ar_hw.c"
+    )
+    ;;
+esac
+
+case "$subsystem" in
+  ai)
+    port_srcs+=(
+      "$repo_root/src/sdk_port/ai/ai.c"
+    )
+    ;;
+esac
+
 # De-duplicate sources (some union subsystems add the same file via multiple cases).
 # macOS ships Bash 3.2 by default (no associative arrays), so keep this portable.
 if [[ ${#port_srcs[@]} -gt 0 ]]; then
@@ -285,6 +319,27 @@ if [[ -n "${GC_PRC_DEBUG:-}" ]]; then
   run_env+=("GC_PRC_DEBUG=$GC_PRC_DEBUG")
 fi
 
+# Auto-size host dump to expected fixture length when available.
+# This prevents truncation for suites that write >0x40 bytes.
+if [[ -z "${GC_HOST_MAIN_DUMP_SIZE:-}" ]]; then
+  out_rel="$(infer_out_rel)"
+  if [[ -n "${out_rel:-}" ]]; then
+    actual_path="$(cd "$scenario_dir" && python3 -c 'import os,sys; print(os.path.abspath(sys.argv[1]))' "$out_rel")"
+    expected_path="$(python3 -c 'import os,sys; p=sys.argv[1]; print(p.replace(os.sep+"actual"+os.sep, os.sep+"expected"+os.sep))' "$actual_path")"
+
+    if [[ ! -f "$expected_path" ]]; then
+      bn="$(basename "$actual_path")"
+      expected_path="$(find "$suite_root" -type f -path "*/expected/$bn" | head -n 1 || true)"
+    fi
+    if [[ -n "${expected_path:-}" && -f "$expected_path" ]]; then
+      expected_size="$(python3 -c 'import os,sys; print(os.path.getsize(sys.argv[1]))' "$expected_path")"
+      if [[ "$expected_size" =~ ^[0-9]+$ && "$expected_size" -gt 0 ]]; then
+        run_env+=("GC_HOST_MAIN_DUMP_SIZE=$expected_size")
+      fi
+    fi
+  fi
+fi
+
 (cd "$scenario_dir" && \
   if [[ "${GC_HOST_LLDB:-0}" == "1" ]]; then
     lldb --batch \
@@ -302,24 +357,7 @@ fi
 # a predicate that fails when output changes. We derive the output/expected paths
 # from the scenario source.
 if [[ "${GC_SCENARIO_COMPARE:-0}" == "1" ]]; then
-  # Extract the literal string returned by gc_scenario_out_path(). Keep this
-  # robust across formatting by scanning forward for the first `return "..."`.
-  out_rel="$(
-    awk '
-      /gc_scenario_out_path[[:space:]]*[(]/ { in_fn=1 }
-      in_fn && /return[[:space:]]*"/ {
-        match($0, /return[[:space:]]*"[^"]+"/)
-        if (RSTART > 0) {
-          s=substr($0, RSTART, RLENGTH)
-          sub(/^return[[:space:]]*"/, "", s)
-          sub(/"$/, "", s)
-          print s
-          exit 0
-        }
-      }
-      in_fn && /}/ { in_fn=0 }
-    ' "$SCENARIO_SRC" 2>/dev/null | head -n 1
-  )"
+  out_rel="$(infer_out_rel)"
   if [[ -z "${out_rel:-}" ]]; then
     echo "fatal: could not infer gc_scenario_out_path() from: $SCENARIO_SRC" >&2
     exit 2
