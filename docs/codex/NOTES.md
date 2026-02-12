@@ -1774,3 +1774,46 @@ Notes:
   - `bash tools/run_host_scenario.sh tests/workload/mp4/mp4_gwinit_001_scenario.c`
 - Result: both scenarios built and executed successfully (reachability PASS).
 - Note: expected host-only pointer-cast/ucontext deprecation warnings remain; no runtime failures.
+
+## 2026-02-12: Workload checkpoint revalidation (mainloop + Hu3DInit slice path)
+
+- Re-ran workload checkpoints:
+  - `bash tools/run_host_scenario.sh tests/workload/mp4/mp4_init_to_viwait_001_scenario.c`
+  - `bash tools/run_host_scenario.sh tests/workload/mp4/mp4_mainloop_one_iter_001_scenario.c`
+  - `bash tools/run_host_scenario.sh tests/workload/mp4/mp4_mainloop_one_iter_tick_001_scenario.c`
+  - `bash tools/run_host_scenario.sh tests/workload/mp4/mp4_mainloop_two_iter_tick_001_scenario.c`
+- Result: all scenarios build+run successfully; reachability through Hu3DInit slice and gcsetjmp/gclongjmp path remains stable.
+- Host warnings remain expected (32-bit pointer casts in decomp code + macOS ucontext deprecation), no runtime regression.
+
+## 2026-02-12: RVZ probe helper revalidation (GWInit semantic compare)
+
+- Re-ran host probe helper on GWInit checkpoint:
+  - `bash tools/dump_actual_host_probe_at_scenario.sh tests/workload/mp4/mp4_gwinit_001_scenario.c tests/oracles/mp4_rvz/probes/host_gwinit_mp4_gwinit_001_v3`
+- Re-ran semantic compare against RVZ probe values:
+  - `python3 tools/helpers/compare_rvz_host_probe_values.py tests/oracles/mp4_rvz/probes/gwinit_pc_800308B8_v2/values.txt tests/oracles/mp4_rvz/probes/host_gwinit_mp4_gwinit_001_v3/values.txt --ignore __PADSpec`
+- Result: all checked fields `OK` (arenaLo/arenaHi/__OSCurrHeap/__OSArenaLo/__OSArenaHi/SamplingRate).
+
+## 2026-02-12: Remote branch scan snapshot
+
+- Refreshed remote heads with `git fetch --all --prune` and recorded latest branch activity.
+- Current newest notable heads:
+  - `origin/codex/tests-next-batch` @ `a1a3918`
+  - `origin/main` @ `80da948`
+  - `origin/claude-win11/dolphin-windows-tooling` @ `35dc47a` (Windows tooling branch, not yet promoted)
+  - `origin/claude-win11/ar-pbt-and-coverage-update` @ `dc95dc4`
+
+## 2026-02-12: MP4 SDK usage vs PBT coverage audit refresh
+
+- Audited property suites under `tests/sdk/**/property/*_property_test.c`.
+- Current PBT suite inventory: 24 suites total.
+  - ar: 2 (`ar_property_test`, `arq_property_test`)
+  - card: 3 (`card_fat`, `card_dir`, `card_unlock`)
+  - dvd: 3 (`dvdfs`, `dvdqueue`, `dvdreadprio`)
+  - gx: 7 (`gxtexture`, `gxproject`, `gxyscale`, `gxz16`, `gxlight`, `gxoverscan`, `mtx44`)
+  - mtx: 2 (`mtx_property`, `psmtx_batch_property`)
+  - os: 5 (`osalloc`, `osthread`, `ostime`, `osalarm`, `stopwatch`)
+  - pad: 1 (`padclamp`)
+  - thp: 1 (`thpaudio`)
+- Coverage interpretation stays aligned with `todo/SDK_PORT_COVERAGE.md`:
+  - pure-computation gaps previously marked for MTX batch are now covered (PSMTX batch suite added)
+  - remaining major gaps are hardware-coupled paths (AI/CARD APIs/THP runtime/parts of GX/DVD/VI) that require trace-replay or integration, not new PBT leaf suites.
