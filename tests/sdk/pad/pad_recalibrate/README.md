@@ -8,3 +8,9 @@ This suite verifies our deterministic `sdk_port` model for `PADRecalibrate`:
 
 Oracle:
 - Dolphin expected (`dol/mp4/...`) vs host actual (`host/...`) on the RAM dump at `0x80300000`.
+
+Unified DOL PBT suite (L0-L5):
+
+```bash
+tools/run_pad_recalibrate_pbt.sh
+```

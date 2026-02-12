@@ -1,0 +1,13 @@
+diff --git a/src/sdk_port/pad/PAD.c b/src/sdk_port/pad/PAD.c
+index 6dc3488..c88728a 100644
+--- a/src/sdk_port/pad/PAD.c
++++ b/src/sdk_port/pad/PAD.c
+@@ -261,7 +261,7 @@ BOOL PADRecalibrate(u32 mask) {
+     RecalibrateBits = mask;
+     gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_RECALIBRATE_MASK, mask);
+     gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_RECALIBRATE_CALLS,
+-                             gc_sdk_state_load_u32_or(GC_SDK_OFF_PAD_RECALIBRATE_CALLS, 0) + 1u);
++                             gc_sdk_state_load_u32_or(GC_SDK_OFF_PAD_RECALIBRATE_CALLS, 0));
+     gc_sdk_state_store_u32be(GC_SDK_OFF_PAD_RECALIBRATE_BITS, RecalibrateBits);
+     return TRUE;
+ }
