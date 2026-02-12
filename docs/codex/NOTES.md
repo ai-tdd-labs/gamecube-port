@@ -1558,3 +1558,8 @@ Notes:
     - `tests/trace-harvest/`
     - `tests/sdk/callsite/`
     - `tests/sdk/pbt/`
+- Completed phase-2 trace move:
+  - moved trace corpora from `tests/traces/*` to `tests/trace-harvest/*`
+  - added compatibility symlink `tests/traces -> trace-harvest`
+  - replay smoke re-run remains PASS:
+    - `GC_REPLAY_MAX_CASES=1 bash tools/replay_trace_suite.sh`
