@@ -1604,3 +1604,22 @@ Notes:
   - `bash tools/run_dvdcancel_unit_test.sh`
   - `bash tools/run_ostime_sdk_port_unit_test.sh`
   - `bash tools/run_ostime_property_test.sh --num-runs=20 --seed=0xC0DEC0DE`
+
+## 2026-02-12: Merged Claude inline migration into integration-all test branch
+
+- Branch merge completed on `codex/integration-all-migration-test`:
+  - merged `origin/claude-win11/pbt-migrate-inline-to-sdk-port`
+- Post-merge validation PASS:
+  - `GC_REPLAY_MAX_CASES=1 bash tools/run_replay_gate.sh`
+  - `bash tools/run_dvdcancel_unit_test.sh`
+  - `bash tools/run_ostime_sdk_port_unit_test.sh`
+  - `bash tools/run_dvdqueue_property_test.sh --num-runs=50 --seed=0xC0DEC0DE`
+  - `bash tools/run_osalarm_property_test.sh --num-runs=50 --seed=0xC0DEC0DE`
+  - `bash tools/run_padclamp_property_test.sh --num-runs=50 --seed=0xC0DEC0DE`
+  - `bash tools/run_gxproject_property_test.sh --num-runs=50 --seed=0xC0DEC0DE`
+  - `bash tools/run_gxz16_property_test.sh --num-runs=50 --seed=0xC0DEC0DE`
+  - `bash tools/run_gxyscale_property_test.sh --num-runs=50 --seed=0xC0DEC0DE`
+  - `bash tools/run_gxtexture_property_test.sh --num-runs=50 --seed=0xC0DEC0DE`
+  - `bash tools/run_ostime_property_test.sh --num-runs=50 --seed=0xC0DEC0DE`
+- Known replay status unchanged:
+  - `pad_set_spec` v1 replay case remains SKIP due to missing `in_pad_spec_shadow.bin` in trace corpus.
