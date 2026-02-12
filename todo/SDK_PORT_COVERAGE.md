@@ -12,7 +12,7 @@ The port currently implements **~224 functions** (plus internal helpers).
 | Bucket | Remaining |
 |--------|-----------|
 | Trace replay | **~80** |
-| PBT | **~3** |
+| PBT | **~0** |
 | No test needed | **~10** |
 
 | Module | Game needs | Ported | Coverage | Notes |
@@ -23,7 +23,7 @@ The port currently implements **~224 functions** (plus internal helpers).
 | **PAD** | 8 | 8 | **100%** | +PADClamp |
 | **VI** | 13 | 12 | **92%** | Only VISetPreRetraceCallback missing |
 | **SI** | 1 | 1 | **100%** | SISetSamplingRate |
-| **MTX** | 33 | 33 | **100%** | All C_MTX* implemented; MTX*/PSMTX* are macros/aliases |
+| **MTX** | 33 | 33 | **100%** | Includes PSMTXReorder, PSMTXROMultVecArray, PSMTXMultVecArray |
 | **CARD** | 23 | 14 | **61%** | FAT internals + Dir ops + Unlock crypto (exnor, bitrev, CARDRand) |
 | **AR** | 10 | 6 | **60%** | ARInit, ARAlloc, ARFree, ARCheckInit, ARGetBaseAddress, ARGetSize |
 | **ARQ** | 2 | 2 | **100%** | ARQInit + ARQPostRequest (+ internal helpers) |
@@ -105,7 +105,7 @@ Distance, SquareDistance, HalfAngle, Reflect.
 
 Plus QUAT (8): Add, Multiply, Normalize, Inverse, Slerp, RotAxisRad, Mtx.
 
-**Still need for game:** `PSMTXMultVecArray`, `PSMTXReorder`, `PSMTXROMultVecArray`
+**Still need for game:** none in current MTX batch set.
 (batch/reorder ops — PPC paired-single ASM, need C loop equivalents)
 
 ### CARD (14/23 = 61%)
@@ -232,6 +232,6 @@ All pure-computation functions in the decomp have been PBT-tested. Remaining unt
 10. Remaining GX functions (GXGetProjectionv, etc.)
 
 ### Tier 3 — Nice to have
-11. PSMTXMultVecArray/Reorder (batch ops)
+11. MTX batch ops (covered)
 12. VISetPreRetraceCallback (minor)
 13. OSLink/OSUnlink (ELF module loading — may not be needed for port)

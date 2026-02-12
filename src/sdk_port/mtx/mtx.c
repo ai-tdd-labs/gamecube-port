@@ -380,3 +380,51 @@ void C_MTXMultVecSR(const Mtx m, const Vec *src, Vec *dst)
     tmp.z = m[2][0]*src->x + m[2][1]*src->y + m[2][2]*src->z;
     *dst = tmp;
 }
+
+/* ================================================================== */
+/*  Paired-single batch helpers (host C parity)                       */
+/* ================================================================== */
+
+void PSMTXReorder(const Mtx src, ROMtx dest)
+{
+    /*
+     * Match the observable mapping from psmtx.s:
+     * convert 3x4 affine matrix into ROMtx 4x3 packed layout.
+     */
+    dest[0][0] = src[0][0];
+    dest[0][1] = src[1][0];
+    dest[0][2] = src[2][0];
+
+    dest[1][0] = src[0][1];
+    dest[1][1] = src[1][1];
+    dest[1][2] = src[2][1];
+
+    dest[2][0] = src[0][2];
+    dest[2][1] = src[1][2];
+    dest[2][2] = src[2][2];
+
+    dest[3][0] = src[0][3];
+    dest[3][1] = src[1][3];
+    dest[3][2] = src[2][3];
+}
+
+void PSMTXROMultVecArray(const ROMtx m, const Vec *srcBase, Vec *dstBase, u32 count)
+{
+    u32 i;
+    for (i = 0; i < count; i++) {
+        Vec tmp;
+        const Vec *src = &srcBase[i];
+        tmp.x = m[0][0]*src->x + m[1][0]*src->y + m[2][0]*src->z + m[3][0];
+        tmp.y = m[0][1]*src->x + m[1][1]*src->y + m[2][1]*src->z + m[3][1];
+        tmp.z = m[0][2]*src->x + m[1][2]*src->y + m[2][2]*src->z + m[3][2];
+        dstBase[i] = tmp;
+    }
+}
+
+void PSMTXMultVecArray(const Mtx m, const Vec *srcBase, Vec *dstBase, u32 count)
+{
+    u32 i;
+    for (i = 0; i < count; i++) {
+        C_MTXMultVec(m, &srcBase[i], &dstBase[i]);
+    }
+}

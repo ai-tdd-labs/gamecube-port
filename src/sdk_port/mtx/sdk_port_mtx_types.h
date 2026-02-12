@@ -12,6 +12,8 @@ typedef int             s32;
 typedef f32 Mtx[3][4];
 typedef f32 (*MtxPtr)[4];
 typedef f32 Mtx44[4][4];
+typedef f32 ROMtx[4][3];
+typedef f32 (*ROMtxPtr)[3];
 
 typedef struct { f32 x, y, z; }       Vec;
 typedef struct { f32 x, y, z, w; }    Quaternion;

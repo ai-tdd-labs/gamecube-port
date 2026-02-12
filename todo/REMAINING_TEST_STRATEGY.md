@@ -13,7 +13,7 @@ function is already covered by PBT (18 suites, ~250M+ checks).
 | Bucket | Remaining |
 |--------|-----------|
 | Trace replay | **~80** |
-| PBT | **~3** |
+| PBT | **~0** |
 | No test needed | **~10** |
 
 ### Test types in this project
@@ -50,14 +50,9 @@ These are hardware-coupled and can only be verified against Dolphin ground truth
 | **DVD** | 1 | `DVDCancel` — cancel in-flight read | Small |
 | **VI** | 1 | `VISetPreRetraceCallback` — symmetric to VISetPostRetraceCallback | Trivial |
 
-### PBT possible (~3 functions)
+### PBT possible (~0 functions)
 
-These are pure computation (C loops replacing PPC paired-single ASM) and can use
-oracle-based PBT like the existing MTX suite.
-
-| Module | Count | Functions |
-|--------|-------|-----------|
-| **MTX** | 3 | `PSMTXMultVecArray`, `PSMTXReorder`, `PSMTXROMultVecArray` — batch matrix-vector ops, C loop equivalents of PPC ASM |
+No remaining pure-computation SDK gaps currently require new PBT.
 
 ### No test needed (~10 functions)
 

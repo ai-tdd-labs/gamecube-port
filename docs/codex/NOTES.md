@@ -1747,3 +1747,30 @@ Notes:
   - `bash tools/run_host_scenario.sh tests/sdk/vi/vi_wait_for_retrace/host/vi_wait_for_retrace_calls_post_cb_hupadinit_001_scenario.c`
   - `python3 tools/ram_compare.py tests/sdk/vi/vi_wait_for_retrace/expected/vi_wait_for_retrace_calls_post_cb_hupadinit_001.bin tests/sdk/vi/vi_wait_for_retrace/actual/vi_wait_for_retrace_calls_post_cb_hupadinit_001.bin`
 - Result: both compares PASS (bit-exact).
+
+## 2026-02-12: PSMTX batch suite added (Reorder / ROMultVecArray / MultVecArray)
+
+- Added sdk_port MTX batch functions in `src/sdk_port/mtx/mtx.c`:
+  - `PSMTXReorder`
+  - `PSMTXROMultVecArray`
+  - `PSMTXMultVecArray`
+- Added shared ROMtx types in `src/sdk_port/mtx/sdk_port_mtx_types.h`.
+- Added oracle parity hooks in `tests/sdk/mtx/property/mtx_oracle.h`.
+- Added new PBT suite + runner:
+  - `tests/sdk/mtx/property/psmtx_batch_property_test.c`
+  - `tools/run_psmtx_batch_property_test.sh`
+- Validation commands (all PASS):
+  - `bash tools/run_psmtx_batch_property_test.sh --op=L0 --num-runs=200 --seed=0xC0DEC0DE`
+  - `bash tools/run_psmtx_batch_property_test.sh --op=L1 --num-runs=200 --steps=64 --seed=0xC0DEC0DE`
+  - `bash tools/run_psmtx_batch_property_test.sh --op=L2 --num-runs=200 --steps=64 --seed=0xC0DEC0DE`
+  - `bash tools/run_psmtx_batch_property_test.sh --op=FULL --num-runs=200 --steps=64 --seed=0xC0DEC0DE`
+- Updated todo snapshots:
+  - Remaining PBT bucket moved from `~3` to `~0` in `todo/REMAINING_TEST_STRATEGY.md` and `todo/SDK_PORT_COVERAGE.md`.
+
+## 2026-02-12: MP4 workload reachability revalidation (HuPrcInit -> GWInit)
+
+- Re-ran host workload scenarios:
+  - `bash tools/run_host_scenario.sh tests/workload/mp4/mp4_huprcinit_001_scenario.c`
+  - `bash tools/run_host_scenario.sh tests/workload/mp4/mp4_gwinit_001_scenario.c`
+- Result: both scenarios built and executed successfully (reachability PASS).
+- Note: expected host-only pointer-cast/ucontext deprecation warnings remain; no runtime failures.

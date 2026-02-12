@@ -33,6 +33,8 @@ typedef int             oracle_s32;
 
 typedef oracle_f32 oracle_Mtx[3][4];
 typedef oracle_f32 (*oracle_MtxPtr)[4];
+typedef oracle_f32 oracle_ROMtx[4][3];
+typedef oracle_f32 (*oracle_ROMtxPtr)[3];
 
 typedef oracle_f32 oracle_Mtx44[4][4];
 
@@ -515,6 +517,48 @@ static void oracle_C_MTXMultVec(const oracle_Mtx m, const oracle_Vec *src, oracl
     tmp.y = m[1][0]*src->x + m[1][1]*src->y + m[1][2]*src->z + m[1][3];
     tmp.z = m[2][0]*src->x + m[2][1]*src->y + m[2][2]*src->z + m[2][3];
     *dst = tmp;
+}
+
+static void oracle_PSMTXReorder(const oracle_Mtx src, oracle_ROMtx dst)
+{
+    dst[0][0] = src[0][0];
+    dst[0][1] = src[1][0];
+    dst[0][2] = src[2][0];
+
+    dst[1][0] = src[0][1];
+    dst[1][1] = src[1][1];
+    dst[1][2] = src[2][1];
+
+    dst[2][0] = src[0][2];
+    dst[2][1] = src[1][2];
+    dst[2][2] = src[2][2];
+
+    dst[3][0] = src[0][3];
+    dst[3][1] = src[1][3];
+    dst[3][2] = src[2][3];
+}
+
+static void oracle_PSMTXROMultVecArray(const oracle_ROMtx m, const oracle_Vec *srcBase,
+                                       oracle_Vec *dstBase, oracle_u32 count)
+{
+    oracle_u32 i;
+    for (i = 0; i < count; i++) {
+        oracle_Vec tmp;
+        const oracle_Vec *src = &srcBase[i];
+        tmp.x = m[0][0]*src->x + m[1][0]*src->y + m[2][0]*src->z + m[3][0];
+        tmp.y = m[0][1]*src->x + m[1][1]*src->y + m[2][1]*src->z + m[3][1];
+        tmp.z = m[0][2]*src->x + m[1][2]*src->y + m[2][2]*src->z + m[3][2];
+        dstBase[i] = tmp;
+    }
+}
+
+static void oracle_PSMTXMultVecArray(const oracle_Mtx m, const oracle_Vec *srcBase,
+                                     oracle_Vec *dstBase, oracle_u32 count)
+{
+    oracle_u32 i;
+    for (i = 0; i < count; i++) {
+        oracle_C_MTXMultVec(m, &srcBase[i], &dstBase[i]);
+    }
 }
 
 static void oracle_C_MTXMultVecSR(const oracle_Mtx m, const oracle_Vec *src, oracle_Vec *dst)
