@@ -77,6 +77,8 @@ float gc_gx_vp_farz;
 u32 gc_gx_su_scis0;
 u32 gc_gx_su_scis1;
 u32 gc_gx_su_ts0[8];
+u32 gc_gx_su_ts1[8];
+u32 gc_gx_tcs_man_enab;
 u32 gc_gx_lp_size;
 u32 gc_gx_scissor_box_offset_reg;
 u32 gc_gx_clip_mode;
@@ -252,6 +254,10 @@ u32 gc_gx_tex_load_image0_last;
 u32 gc_gx_tex_load_image1_last;
 u32 gc_gx_tex_load_image2_last;
 u32 gc_gx_tex_load_image3_last;
+
+// TLUT load observable state (GXLoadTlut writes 2 BP regs).
+u32 gc_gx_tlut_load0_last;
+u32 gc_gx_tlut_load1_last;
 
 // GXLight observable state (we mirror "last loaded" light object fields by index).
 u32 gc_gx_light_loaded_mask;
@@ -568,6 +574,29 @@ static GXTexRegionCallback gc_gx_tex_region_cb;
 void GXInitTexCacheRegion(GXTexRegion *region, u8 is_32b_mipmap, u32 tmem_even, u32 size_even, u32 tmem_odd, u32 size_odd);
 static GXTexRegion *gc__gx_default_tex_region_cb(GXTexObj *t_obj, u32 unused);
 
+// Internal GXTlutObj layout (matches __GXTlutObjInt in GXTexture.c).
+typedef struct {
+    u32 tlut;
+    u32 loadTlut0;
+    u16 numEntries;
+    u16 _pad;
+} GXTlutObj;
+
+// Internal GXTlutRegion layout (matches __GXTlutRegionInt in GXTexture.c).
+typedef struct {
+    u32 loadTlut1;
+    GXTlutObj tlutObj;
+} GXTlutRegion;
+
+static const u16 gc_gx_tlut_size_table[10] = { 1, 2, 4, 8, 16, 32, 64, 128, 256, 512 };
+static GXTlutRegion gc_gx_tlut_regions[20];
+
+typedef GXTlutRegion *(*GXTlutRegionCallback)(u32 tlut_name);
+static GXTlutRegionCallback gc_gx_tlut_region_cb;
+
+void GXInitTlutRegion(GXTlutRegion *region, u32 tmem_addr, u8 tlut_sz);
+static GXTlutRegion *gc__gx_default_tlut_region_cb(u32 tlut_name);
+
 static const u8 gc_gx_tex_mode0_ids[8] = { 0x80, 0x81, 0x82, 0x83, 0xA0, 0xA1, 0xA2, 0xA3 };
 static const u8 gc_gx_tex_mode1_ids[8] = { 0x84, 0x85, 0x86, 0x87, 0xA4, 0xA5, 0xA6, 0xA7 };
 static const u8 gc_gx_tex_image0_ids[8] = { 0x88, 0x89, 0x8A, 0x8B, 0xA8, 0xA9, 0xAA, 0xAB };
@@ -632,7 +661,9 @@ GXFifoObj *GXInit(void *base, u32 size) {
     gc_gx_mat_idx_b = 0;
     for (i = 0; i < 8; i++) {
         gc_gx_su_ts0[i] = 0;
+        gc_gx_su_ts1[i] = 0;
     }
+    gc_gx_tcs_man_enab = 0;
     gc_gx_lp_size = 0;
     gc_gx_scissor_box_offset_reg = 0;
     gc_gx_clip_mode = 0;
@@ -658,6 +689,17 @@ GXFifoObj *GXInit(void *base, u32 size) {
     gc_gx_tex_load_image1_last = 0;
     gc_gx_tex_load_image2_last = 0;
     gc_gx_tex_load_image3_last = 0;
+
+    // TLUT region defaults (GXInit.c).
+    gc_gx_tlut_region_cb = gc__gx_default_tlut_region_cb;
+    for (i = 0; i < 16; i++) {
+        GXInitTlutRegion(&gc_gx_tlut_regions[i], 0xC0000u + 0x2000u * i, 4);
+    }
+    for (i = 0; i < 4; i++) {
+        GXInitTlutRegion(&gc_gx_tlut_regions[16 + i], 0xE0000u + 0x8000u * i, 9);
+    }
+    gc_gx_tlut_load0_last = 0;
+    gc_gx_tlut_load1_last = 0;
 
     return &s_fifo_obj;
 }
@@ -1469,6 +1511,72 @@ void GXLoadTexObj(GXTexObj *obj, u32 id) {
     if (!gc_gx_tex_region_cb) gc_gx_tex_region_cb = gc__gx_default_tex_region_cb;
     GXTexRegion *r = gc_gx_tex_region_cb(obj, id);
     GXLoadTexObjPreLoaded(obj, r, id);
+}
+
+void GXInitTexObjCI(GXTexObj *obj, void *image_ptr, u16 width, u16 height, u32 format, u32 wrap_s, u32 wrap_t, u8 mipmap, u32 tlut_name) {
+    // Mirror GXTexture.c:GXInitTexObjCI: call GXInitTexObj, clear CI flag, set tlutName.
+    GXInitTexObj(obj, image_ptr, width, height, format, wrap_s, wrap_t, mipmap);
+    obj->flags &= ~2u;
+    obj->tlutName = tlut_name;
+}
+
+void GXInitTlutRegion(GXTlutRegion *region, u32 tmem_addr, u8 tlut_sz) {
+    // Mirror GXTexture.c:GXInitTlutRegion: pack loadTlut1 with TMEM addr, size, BP ID 0x65.
+    if (!region) return;
+    if (tlut_sz > 9) tlut_sz = 9;
+    region->loadTlut1 = 0;
+    region->loadTlut1 = set_field(region->loadTlut1, 10, 0, tmem_addr >> 9);
+    region->loadTlut1 = set_field(region->loadTlut1, 11, 10, (u32)gc_gx_tlut_size_table[tlut_sz]);
+    region->loadTlut1 = set_field(region->loadTlut1, 8, 24, 0x65u);
+}
+
+static GXTlutRegion *gc__gx_default_tlut_region_cb(u32 tlut_name) {
+    if (tlut_name >= 20) return &gc_gx_tlut_regions[0];
+    return &gc_gx_tlut_regions[tlut_name];
+}
+
+void GXInitTlutObj(GXTlutObj *tlut_obj, void *lut, u32 fmt, u16 n_entries) {
+    // Mirror GXTexture.c:GXInitTlutObj: pack tlut format and lut address.
+    if (!tlut_obj) return;
+    tlut_obj->tlut = 0;
+    tlut_obj->tlut = set_field(tlut_obj->tlut, 2, 10, fmt);
+    tlut_obj->loadTlut0 = 0;
+    tlut_obj->loadTlut0 = set_field(tlut_obj->loadTlut0, 21, 0, ((u32)((uintptr_t)lut) & 0x3FFFFFFFu) >> 5);
+    tlut_obj->loadTlut0 = set_field(tlut_obj->loadTlut0, 8, 24, 0x64u);
+    tlut_obj->numEntries = n_entries;
+}
+
+void GXLoadTlut(GXTlutObj *tlut_obj, u32 tlut_name) {
+    // Mirror GXTexture.c:GXLoadTlut: get region via callback, write BP regs, copy tlut obj.
+    if (!tlut_obj) return;
+    if (!gc_gx_tlut_region_cb) gc_gx_tlut_region_cb = gc__gx_default_tlut_region_cb;
+    GXTlutRegion *r = gc_gx_tlut_region_cb(tlut_name);
+    if (!r) return;
+
+    gx_write_ras_reg(gc_gx_bp_mask);
+    gx_write_ras_reg(tlut_obj->loadTlut0);
+    gx_write_ras_reg(r->loadTlut1);
+    gx_write_ras_reg(gc_gx_bp_mask);
+
+    gc_gx_tlut_load0_last = tlut_obj->loadTlut0;
+    gc_gx_tlut_load1_last = r->loadTlut1;
+
+    u32 tlut_offset = r->loadTlut1 & 0x3FFu;
+    tlut_obj->tlut = set_field(tlut_obj->tlut, 10, 0, tlut_offset);
+    r->tlutObj = *tlut_obj;
+}
+
+void GXSetTexCoordScaleManually(u32 coord, u8 enable, u16 ss, u16 ts) {
+    // Mirror GXTexture.c:GXSetTexCoordScaleManually.
+    if (coord >= 8) return;
+    gc_gx_tcs_man_enab = (gc_gx_tcs_man_enab & ~(1u << coord)) | ((u32)(enable != 0) << coord);
+    if (enable != 0) {
+        gc_gx_su_ts0[coord] = set_field(gc_gx_su_ts0[coord], 16, 0, (u32)(u16)(ss - 1u));
+        gc_gx_su_ts1[coord] = set_field(gc_gx_su_ts1[coord], 16, 0, (u32)(u16)(ts - 1u));
+        gx_write_ras_reg(gc_gx_su_ts0[coord]);
+        gx_write_ras_reg(gc_gx_su_ts1[coord]);
+        gc_gx_bp_sent_not = 0;
+    }
 }
 
 static void get_image_tile_count(u32 fmt, u16 wd, u16 ht, u32 *rowTiles, u32 *colTiles, u32 *cmpTiles) {
