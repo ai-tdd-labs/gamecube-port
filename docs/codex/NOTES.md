@@ -1284,6 +1284,23 @@ Notes:
   - Trigger-path memo saved at:
     - `docs/sdk/mp4/OSUnlink_trigger_path.md`
 
+## 2026-02-12: OSUnlink replay harness added (ready for real trace cases)
+- Added replay harness script:
+  - `tools/replay_trace_case_os_unlink.sh`
+- Added host scenario:
+  - `tests/sdk/os/os_unlink/host/os_unlink_rvz_trace_replay_001_scenario.c`
+- Replay contract mirrors OSLink flow:
+  - Reads `in_*`/`out_*` trace blobs (`module_info`, `os_module_list`, regs)
+  - Seeds queue/link state from `in_*` nullability and `head/tail == oldModule` flags
+  - Calls `OSUnlink`, compares return + post-state nullability/ownership flags
+  - Writes marker `0xDEADBEEF` on pass.
+- Validation:
+  - Synthetic case replay PASS:
+    `GC_ALLOW_DIRTY=1 tools/replay_trace_case_os_unlink.sh tests/traces/os_unlink/synth_case_001`
+  - Harvest script smoke run:
+    `GC_MAX_UNIQUE=1 GC_MAX_HITS=5 GC_TIMEOUT=30 tools/harvest_and_replay_os_unlink.sh`
+    completed with `unique=0` (no real RVZ hits yet), so replay-on-real-case remains blocked on trigger-path capture.
+
 ## 2026-02-11: DVDReadPrio MP4 suite added and passing
 - Added suite:
   - DOL: `tests/sdk/dvd/dvd_read_prio/dol/mp4/dvd_read_prio_mp4_init_mem_001/`

@@ -135,8 +135,13 @@ PBT matrix baseline:
     Target: `tests/traces/os_unlink/mp4_rvz_v1/`
     Prereq: reproducible later-game trigger path for objdll unload.
     Extra signal: `omOvlKill` (`0x8002F014`) also not hit in 180s boot-window probe.
-   - [ ] Build `OSUnlink` trace replay harness and pass harvested case(s) bit-exact on host.
-     Target: host replay script to be added under `tools/` (not present yet)
+   - [x] Build `OSUnlink` trace replay harness.
+     Evidence:
+      - `tools/replay_trace_case_os_unlink.sh`
+      - `tests/sdk/os/os_unlink/host/os_unlink_rvz_trace_replay_001_scenario.c`
+      - synthetic validation case: `tests/traces/os_unlink/synth_case_001` (marker `0xDEADBEEF`)
+   - [ ] Pass harvested `OSUnlink` case(s) bit-exact on host.
+     Current status: harvest script runs, but no real `OSUnlink` hits captured yet.
   - [ ] Re-run omMaster-adjacent checkpoint after both replay harnesses pass.
 
 5. DVD path expansion (MP4)
