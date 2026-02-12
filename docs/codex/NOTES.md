@@ -1644,3 +1644,6 @@ Notes:
     - `omcurovl` (`0x801D3CE0`) = `-1`
     - `omovlhisidx` (`0x801D3CD8`) = `0`
   - Decomp-consistent conclusion: first `omOvlGotoEx` does not call `omOvlKill` because `omcurovl < 0`; we need a later overlay transition (DTM-driven path) to reach `OSUnlink`.
+- Additional long-window probe:
+  - `DOLPHIN_START_DELAY=6 bash tools/dump_expected_rvz_probe_at_pc.sh "<MP4_RVZ>" 0x8002F014 tests/trace-harvest/os_unlink/probes/omovlkill_long_001 180 1`
+  - Result: `omOvlKill` not hit within 180s boot-only run (timeout, hits=0).
