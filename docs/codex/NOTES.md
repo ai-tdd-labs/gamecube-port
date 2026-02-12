@@ -2210,3 +2210,22 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/replay_trace_guided_pad_control_motor.sh --oracle dolphin --dolphin-suite pbt_001` → PASS
   - `tools/run_mutation_check.sh tools/mutations/pad_control_motor_zero_cmd.patch -- tools/replay_trace_guided_pad_control_motor.sh --oracle dolphin --dolphin-suite pbt_001` → PASS (mutant fails as expected).
+
+## 2026-02-12: PADSetSpec unified DOL PBT suite (L0-L5)
+
+- Added unified PADSetSpec PBT suite:
+  - `tests/sdk/pad/pad_set_spec/dol/pbt/pad_set_spec_pbt_001/*`
+  - `tests/sdk/pad/pad_set_spec/host/pad_set_spec_pbt_001_scenario.c`
+  - `tools/run_pad_set_spec_pbt.sh`
+- Coverage levels in `pad_set_spec_pbt_001`:
+  - L0 isolated specs (`0,1,2,3,4,5,0xffffffff`)
+  - L1 accumulation (two-call sequences)
+  - L2 overwrite/idempotency (same spec twice)
+  - L3 random-start state (deterministic PRNG)
+  - L4 harvest replay (`spec=5` sequence from RVZ traces)
+  - L5 boundary transitions (`0,1,2,0xffffffff`)
+- DOL oracle is decoupled from host sdk_port for meaningful mutation checks:
+  - `tests/sdk/pad/pad_set_spec/dol/pbt/pad_set_spec_pbt_001/oracle_pad_set_spec.c`
+- Validation:
+  - `tools/run_pad_set_spec_pbt.sh` → PASS
+  - `tools/run_mutation_check.sh tools/mutations/pad_set_spec_spec1_to_spec2.patch -- tools/run_pad_set_spec_pbt.sh` → PASS (mutant fails as expected).
