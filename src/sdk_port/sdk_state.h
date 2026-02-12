@@ -178,6 +178,10 @@ enum {
   // PAD motor commands (minimal subset for HuPadInit)
   GC_SDK_OFF_PAD_MOTOR_CMD_BASE = 0x3B0,    // 4 * u32
 
+  // VI pre-retrace callback (symmetric to post-retrace).
+  GC_SDK_OFF_VI_PRE_CB_PTR = 0x210,         // u32 (function pointer)
+  GC_SDK_OFF_VI_PRE_CB_SET_CALLS = 0x214,   // u32
+
   // SI trace-replay seeds (used by SIGetResponse retail replay).
   // These model the minimal MMIO-derived inputs needed to reproduce SIGetResponseRaw().
   GC_SDK_OFF_SI_STATUS_BASE = 0x3C0,        // 4 * u32 (chan 0..3)

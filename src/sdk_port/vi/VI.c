@@ -32,6 +32,8 @@ typedef void (*VIRetraceCallback)(u32 retraceCount);
 
 static u32 gc_vi_post_cb_ptr;
 static VIRetraceCallback gc_vi_post_cb_fn;
+static u32 gc_vi_pre_cb_ptr;
+static VIRetraceCallback gc_vi_pre_cb_fn;
 
 // For determinism in host MEM1 dumps, never store raw host function pointers in
 // RAM-backed sdk_state. Host pointers are ASLR-dependent and will differ run to
@@ -90,6 +92,23 @@ VIRetraceCallback VISetPostRetraceCallback(VIRetraceCallback callback) {
 
     // Return the previous callback (host-safe; doesn't truncate pointers).
     // For our deterministic dumps we still store the pointer token in sdk_state.
+    (void)old;
+    return old_fn;
+}
+
+VIRetraceCallback VISetPreRetraceCallback(VIRetraceCallback callback) {
+    u32 old = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_PRE_CB_PTR, gc_vi_pre_cb_ptr);
+    VIRetraceCallback old_fn = gc_vi_pre_cb_fn;
+
+    int lvl = VI_DisableInterrupts();
+    gc_vi_pre_cb_fn = callback;
+    gc_vi_pre_cb_ptr = vi_cb_tokenize(callback);
+    gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_PRE_CB_PTR, &gc_vi_pre_cb_ptr, gc_vi_pre_cb_ptr);
+    u32 calls = gc_sdk_state_load_u32_or(GC_SDK_OFF_VI_PRE_CB_SET_CALLS, 0);
+    calls++;
+    gc_sdk_state_store_u32_mirror(GC_SDK_OFF_VI_PRE_CB_SET_CALLS, 0, calls);
+    VI_RestoreInterrupts(lvl);
+
     (void)old;
     return old_fn;
 }
