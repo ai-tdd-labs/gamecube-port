@@ -3,10 +3,23 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 
-rvz="${1:-}"
-dtm="${2:-}"
+default_rvz="$(python3 - <<'PY'
+from pathlib import Path
+p = Path("docs/sdk/mp4/MP4_assets.md")
+if p.exists():
+    for line in p.read_text().splitlines():
+        if line.strip().startswith("- Path:"):
+            print(line.split(":", 1)[1].strip().replace(chr(96), ""))
+            break
+PY
+)"
+default_dtm="$repo_root/tests/trace-harvest/os_unlink/inputs/mp4_overlay_trigger_001.dtm"
+
+rvz="${1:-$default_rvz}"
+dtm="${2:-$default_dtm}"
 if [[ -z "$rvz" || -z "$dtm" ]]; then
-  echo "usage: $0 /path/to/Mario\\ Party\\ 4\\ \\(USA\\).rvz /path/to/overlay_trigger.dtm [out_dir]" >&2
+  echo "usage: $0 [/path/to/Mario\\ Party\\ 4\\ \\(USA\\).rvz] [/path/to/overlay_trigger.dtm] [out_dir]" >&2
+  echo "defaults: rvz=docs/sdk/mp4/MP4_assets.md, dtm=tests/trace-harvest/os_unlink/inputs/mp4_overlay_trigger_001.dtm" >&2
   exit 2
 fi
 
@@ -16,11 +29,13 @@ if [[ ! -f "$rvz" ]]; then
 fi
 if [[ ! -f "$dtm" ]]; then
   echo "fatal: dtm not found: $dtm" >&2
+  echo "record one via docs/sdk/mp4/Dolphin_input_automation.md and retry." >&2
   exit 2
 fi
 
 out_dir="${3:-$repo_root/tests/trace-harvest/os_unlink/mp4_rvz_movie_v1}"
 mkdir -p "$out_dir"
+export DOLPHIN_START_DELAY="${DOLPHIN_START_DELAY:-6}"
 
 python3 "$repo_root/tools/trace_pc_entry_exit.py" \
   --rvz "$rvz" \

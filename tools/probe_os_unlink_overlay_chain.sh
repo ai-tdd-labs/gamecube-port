@@ -29,11 +29,15 @@ stamp="$(date +%Y%m%d_%H%M%S)"
 run_dir="$out_root/$stamp"
 mkdir -p "$run_dir"
 
+# RVZ cold boot can take longer before GDB stub is reachable.
+export DOLPHIN_START_DELAY="${DOLPHIN_START_DELAY:-6}"
+
 declare -a names=("omOvlGotoEx" "omOvlKill" "omDLLNumEnd" "OSUnlink")
 declare -a pcs=("0x8002EEC0" "0x8002F014" "0x80031FA0" "0x800B8180")
 
 echo "[info] RVZ: $rvz"
 echo "[info] timeout: ${timeout_s}s"
+echo "[info] dolphin_start_delay: ${DOLPHIN_START_DELAY}s"
 echo "[info] out: $run_dir"
 
 for i in "${!names[@]}"; do

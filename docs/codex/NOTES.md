@@ -1623,3 +1623,24 @@ Notes:
   - `bash tools/run_ostime_property_test.sh --num-runs=50 --seed=0xC0DEC0DE`
 - Known replay status unchanged:
   - `pad_set_spec` v1 replay case remains SKIP due to missing `in_pad_spec_shadow.bin` in trace corpus.
+
+## 2026-02-12: OSUnlink trigger-path progress (RVZ probes + omOvlGotoEx analysis)
+
+- Updated trigger tooling:
+  - `tools/probe_os_unlink_overlay_chain.sh` now defaults `DOLPHIN_START_DELAY=6` for RVZ boot stability.
+  - `tools/harvest_and_replay_os_unlink_movie.sh` now supports zero-arg defaults:
+    - RVZ from `docs/sdk/mp4/MP4_assets.md`
+    - DTM from `tests/trace-harvest/os_unlink/inputs/mp4_overlay_trigger_001.dtm`
+  - Added `tests/trace-harvest/os_unlink/inputs/README.md`.
+- Probe result with delay fix:
+  - `bash tools/probe_os_unlink_overlay_chain.sh \"\" 20`
+  - `omOvlGotoEx` (`0x8002EEC0`) now hits in boot window.
+  - `omOvlKill` (`0x8002F014`), `omDLLNumEnd` (`0x80031FA0`), `OSUnlink` (`0x800B8180`) still not hit in boot window.
+  - Evidence: `tests/trace-harvest/os_unlink/probes/20260212_113053/`.
+- `omOvlGotoEx` trace capture/analysis:
+  - Captured: `tests/trace-harvest/os_unlink/omovlgotoex_boot_v2/` and `.../omovlgotoex_boot_v3/`.
+  - Entry regs at first boot hit: `r3=1`, `r4=1`, `r5=0`, `r6=0`.
+  - `objmain` globals dump (`0x801D3CC0:0x40`) shows:
+    - `omcurovl` (`0x801D3CE0`) = `-1`
+    - `omovlhisidx` (`0x801D3CD8`) = `0`
+  - Decomp-consistent conclusion: first `omOvlGotoEx` does not call `omOvlKill` because `omcurovl < 0`; we need a later overlay transition (DTM-driven path) to reach `OSUnlink`.
