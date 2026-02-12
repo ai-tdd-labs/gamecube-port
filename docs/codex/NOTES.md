@@ -1676,3 +1676,36 @@ Notes:
   - `actual_bins` `0 -> 1`
   - `pass_bins` `0 -> 1`
   - `covered` now `y`
+
+## 2026-02-12: DVDFS leaf-level property ops revalidated
+
+- Re-ran DVDFS property suite across per-leaf ops + full mix:
+  - `bash tools/run_property_dvdfs.sh --op=L0 --seed=0xDEADBEEF --num-runs=200`
+  - `bash tools/run_property_dvdfs.sh --op=L1 --seed=0xDEADBEEF --num-runs=200 --steps=200`
+  - `bash tools/run_property_dvdfs.sh --op=L2 --seed=0xDEADBEEF --num-runs=200 --steps=200`
+  - `bash tools/run_property_dvdfs.sh --op=L3 --seed=0xDEADBEEF --num-runs=200 --steps=200`
+  - `bash tools/run_property_dvdfs.sh --op=L4 --seed=0xDEADBEEF --num-runs=200 --steps=200`
+  - `bash tools/run_property_dvdfs.sh --op=FULL --seed=0xDEADBEEF --num-runs=200 --steps=200`
+- Result: all runs completed successfully (exit 0) with current `src/sdk_port/dvd/DVD.c` DVDFS behavior.
+
+## 2026-02-12: Remote push scan snapshot
+
+- Latest noteworthy remote heads:
+  - `origin/claude-win11/ar-pbt-and-coverage-update` @ `3b71775` (CARD directory chain PBT + coverage update)
+  - `origin/claude-win11/pbt-migrate-inline-to-sdk-port` @ `d67e0c3` (now includes merge from `origin/main`)
+  - `origin/main` and `origin/codex/integration-all` aligned at `04a4724`.
+
+## 2026-02-12: Integrated AR + CARD directory PBT coverage branch
+
+- Merged `origin/claude-win11/ar-pbt-and-coverage-update` into `codex/osunlink-groundtruth-next`.
+- Added sdk_port modules:
+  - `src/sdk_port/ar/ar.c`, `src/sdk_port/ar/ar.h`
+  - `src/sdk_port/card/card_dir.c`, `src/sdk_port/card/card_dir.h`
+- Added property suites/runners:
+  - `tests/sdk/ar/property/ar_property_test.c`
+  - `tests/sdk/card/property/card_dir_property_test.c`
+  - `tools/run_ar_property_test.sh`
+  - `tools/run_card_dir_property_test.sh`
+- Validation (PASS):
+  - `bash tools/run_ar_property_test.sh --num-runs=50 --seed=0xC0DEC0DE`
+  - `bash tools/run_card_dir_property_test.sh --num-runs=50 --seed=0xC0DEC0DE`
