@@ -2546,6 +2546,34 @@ void GXSetTevKAlphaSel(u32 stage, u32 sel) {
     gc_gx_bp_sent_not = 0;
 }
 
+void GXSetTevSwapMode(u32 stage, u32 ras_sel, u32 tex_sel) {
+    if (stage >= 16u) return;
+    gc_gx_teva[stage] = set_field(gc_gx_teva[stage], 2, 0, ras_sel);
+    gc_gx_teva[stage] = set_field(gc_gx_teva[stage], 2, 2, tex_sel);
+    gx_write_ras_reg(gc_gx_teva[stage]);
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXSetTevSwapModeTable(u32 table, u32 red, u32 green, u32 blue, u32 alpha) {
+    if (table >= 4u) return;
+    u32 idx0 = table * 2u;
+    u32 idx1 = table * 2u + 1u;
+    gc_gx_tev_ksel[idx0] = set_field(gc_gx_tev_ksel[idx0], 2, 0, red);
+    gc_gx_tev_ksel[idx0] = set_field(gc_gx_tev_ksel[idx0], 2, 2, green);
+    gc_sdk_state_store_u32_mirror(
+        GC_SDK_OFF_GX_TEV_KSEL_BASE + idx0 * 4u,
+        &gc_gx_tev_ksel[idx0], gc_gx_tev_ksel[idx0]);
+    gx_write_ras_reg(gc_gx_tev_ksel[idx0]);
+
+    gc_gx_tev_ksel[idx1] = set_field(gc_gx_tev_ksel[idx1], 2, 0, blue);
+    gc_gx_tev_ksel[idx1] = set_field(gc_gx_tev_ksel[idx1], 2, 2, alpha);
+    gc_sdk_state_store_u32_mirror(
+        GC_SDK_OFF_GX_TEV_KSEL_BASE + idx1 * 4u,
+        &gc_gx_tev_ksel[idx1], gc_gx_tev_ksel[idx1]);
+    gx_write_ras_reg(gc_gx_tev_ksel[idx1]);
+    gc_gx_bp_sent_not = 0;
+}
+
 void GXSetTevOrder(u32 stage, u32 coord, u32 map, u32 color) {
     static const int c2r[] = { 0, 1, 0, 1, 0, 1, 7, 5, 6 };
     if (stage >= 16) return;
