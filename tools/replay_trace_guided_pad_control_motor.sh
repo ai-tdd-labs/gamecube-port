@@ -8,18 +8,20 @@ set -euo pipefail
 # - dolphin oracle: expected dumped from DOL batch in Dolphin
 #
 # Usage:
-#   tools/replay_trace_guided_pad_control_motor.sh [--seed 0xC0DE1234] [--count 128] [--oracle synthetic|dolphin]
+#   tools/replay_trace_guided_pad_control_motor.sh [--seed 0xC0DE1234] [--count 128] [--oracle synthetic|dolphin] [--dolphin-suite trace_guided_batch_001|trace_guided_batch_002|exhaustive_matrix_001|max]
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 seed="0xC0DE1234"
 count="128"
 oracle="synthetic"
+dolphin_suite="trace_guided_batch_001"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --seed) seed="$2"; shift 2 ;;
     --count) count="$2"; shift 2 ;;
     --oracle) oracle="$2"; shift 2 ;;
+    --dolphin-suite) dolphin_suite="$2"; shift 2 ;;
     *) echo "unknown arg: $1" >&2; exit 2 ;;
   esac
 done
@@ -99,28 +101,67 @@ PY
 fi
 
 if [[ "$oracle" == "dolphin" ]]; then
-  if [[ "$seed" != "0xC0DE1234" || "$count" != "64" ]]; then
-    echo "fatal: dolphin batch currently supports fixed seed/count only (seed=0xC0DE1234, count=64)" >&2
-    exit 2
+  run_one_dolphin_suite() {
+    local suite="$1"
+    local dol_dir=""
+    local dol_elf=""
+    local expected_bin=""
+    local actual_bin=""
+    local host_batch_scenario=""
+    local dump_size=0
+    local run_sec="0.7"
+
+    case "$suite" in
+      trace_guided_batch_001)
+        [[ "$seed" == "0xC0DE1234" && "$count" == "64" ]] || { echo "fatal: $suite requires seed=0xC0DE1234 count=64" >&2; exit 2; }
+        dol_dir="$repo_root/tests/sdk/pad/pad_control_motor/dol/generic/trace_guided_batch_001"
+        dol_elf="$dol_dir/pad_control_motor_trace_guided_batch_001.dol"
+        expected_bin="$expected_dir/pad_control_motor_trace_guided_batch_001.bin"
+        actual_bin="$actual_dir/pad_control_motor_trace_guided_batch_001.bin"
+        host_batch_scenario="$repo_root/tests/sdk/pad/pad_control_motor/host/pad_control_motor_trace_guided_batch_001_scenario.c"
+        dump_size=$(( (4 + 64*8) * 4 ))
+        ;;
+      trace_guided_batch_002)
+        [[ "$seed" == "0xC0DE1234" && "$count" == "2048" ]] || { echo "fatal: $suite requires seed=0xC0DE1234 count=2048" >&2; exit 2; }
+        dol_dir="$repo_root/tests/sdk/pad/pad_control_motor/dol/generic/trace_guided_batch_002"
+        dol_elf="$dol_dir/pad_control_motor_trace_guided_batch_002.dol"
+        expected_bin="$expected_dir/pad_control_motor_trace_guided_batch_002.bin"
+        actual_bin="$actual_dir/pad_control_motor_trace_guided_batch_002.bin"
+        host_batch_scenario="$repo_root/tests/sdk/pad/pad_control_motor/host/pad_control_motor_trace_guided_batch_002_scenario.c"
+        dump_size=$(( (4 + 2048*8) * 4 ))
+        run_sec="1.0"
+        ;;
+      exhaustive_matrix_001)
+        dol_dir="$repo_root/tests/sdk/pad/pad_control_motor/dol/generic/exhaustive_matrix_001"
+        dol_elf="$dol_dir/pad_control_motor_exhaustive_matrix_001.dol"
+        expected_bin="$expected_dir/pad_control_motor_exhaustive_matrix_001.bin"
+        actual_bin="$actual_dir/pad_control_motor_exhaustive_matrix_001.bin"
+        host_batch_scenario="$repo_root/tests/sdk/pad/pad_control_motor/host/pad_control_motor_exhaustive_matrix_001_scenario.c"
+        dump_size=$(( (4 + 40*8) * 4 ))
+        ;;
+      *)
+        echo "fatal: unsupported dolphin suite: $suite" >&2
+        exit 2
+        ;;
+    esac
+
+    make -C "$dol_dir" clean >/dev/null
+    make -C "$dol_dir" >/dev/null
+    "$repo_root/tools/dump_expected.sh" "$dol_elf" "$expected_bin" 0x80300000 "$dump_size" "$run_sec" >/dev/null
+    "$repo_root/tools/run_host_scenario.sh" "$host_batch_scenario" >/dev/null
+    "$repo_root/tools/diff_bins.sh" "$expected_bin" "$actual_bin" >/dev/null
+    echo "PASS: PADControlMotor dolphin suite $suite"
+  }
+
+  if [[ "$dolphin_suite" == "max" ]]; then
+    seed="0xC0DE1234"; count="64"; run_one_dolphin_suite trace_guided_batch_001
+    run_one_dolphin_suite exhaustive_matrix_001
+    seed="0xC0DE1234"; count="2048"; run_one_dolphin_suite trace_guided_batch_002
+    echo "PASS: PADControlMotor dolphin suite max"
+    exit 0
   fi
 
-  dol_dir="$repo_root/tests/sdk/pad/pad_control_motor/dol/generic/trace_guided_batch_001"
-  dol_elf="$dol_dir/pad_control_motor_trace_guided_batch_001.dol"
-  expected_bin="$expected_dir/pad_control_motor_trace_guided_batch_001.bin"
-  actual_bin="$actual_dir/pad_control_motor_trace_guided_batch_001.bin"
-  host_batch_scenario="$repo_root/tests/sdk/pad/pad_control_motor/host/pad_control_motor_trace_guided_batch_001_scenario.c"
-  dump_size=$(( (4 + 64*8) * 4 ))
-
-  make -C "$dol_dir" clean >/dev/null
-  make -C "$dol_dir" >/dev/null
-
-  "$repo_root/tools/dump_expected.sh" \
-    "$dol_elf" "$expected_bin" 0x80300000 "$dump_size" 0.7 >/dev/null
-
-  "$repo_root/tools/run_host_scenario.sh" "$host_batch_scenario" >/dev/null
-  "$repo_root/tools/diff_bins.sh" "$expected_bin" "$actual_bin" >/dev/null
-
-  echo "PASS: PADControlMotor trace-guided dolphin batch (seed=$seed count=$count)"
+  run_one_dolphin_suite "$dolphin_suite"
   exit 0
 fi
 
