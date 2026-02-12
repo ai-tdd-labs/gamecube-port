@@ -210,34 +210,12 @@ static void port_GXGetTexTileShift(uint32_t fmt, uint32_t *rowTileS, uint32_t *c
     }
 }
 
-static uint32_t port_GXGetTexBufferSize(uint16_t width, uint16_t height,
-                                         uint32_t format, uint8_t mipmap, uint8_t max_lod) {
-    uint32_t tileShiftX, tileShiftY;
-    uint32_t tileBytes;
-    uint32_t bufferSize;
-    uint32_t nx, ny;
-    uint32_t level;
-
-    port_GXGetTexTileShift(format, &tileShiftX, &tileShiftY);
-    tileBytes = (format == GX_TF_RGBA8 || format == GX_TF_Z24X8) ? 64 : 32;
-
-    if (mipmap == 1) {
-        bufferSize = 0;
-        for (level = 0; level < max_lod; level++) {
-            nx = (width + (1 << tileShiftX) - 1) >> tileShiftX;
-            ny = (height + (1 << tileShiftY) - 1) >> tileShiftY;
-            bufferSize += tileBytes * (nx * ny);
-            if (width == 1 && height == 1) break;
-            width = (width > 1) ? width >> 1 : 1;
-            height = (height > 1) ? height >> 1 : 1;
-        }
-    } else {
-        nx = (width + (1 << tileShiftX) - 1) >> tileShiftX;
-        ny = (height + (1 << tileShiftY) - 1) >> tileShiftY;
-        bufferSize = nx * ny * tileBytes;
-    }
-    return bufferSize;
-}
+/* port_GXGetTexBufferSize — linked from src/sdk_port/gx/GX.c */
+typedef uint32_t u32_gx;
+typedef uint16_t u16_gx;
+typedef uint8_t u8_gx;
+u32_gx GXGetTexBufferSize(u16_gx width, u16_gx height, u32_gx format, u8_gx mipmap, u8_gx max_lod);
+#define port_GXGetTexBufferSize(w, h, fmt, mm, ml) GXGetTexBufferSize((w), (h), (fmt), (mm), (ml))
 
 static void port_GetImageTileCount(uint32_t fmt, uint16_t wd, uint16_t ht,
                                     uint32_t *rowTiles, uint32_t *colTiles, uint32_t *cmpTiles) {

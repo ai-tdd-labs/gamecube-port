@@ -40,17 +40,26 @@ static const PADClampRegion DefaultClampRegion = {
     15, 59, 31,     /* right stick */
 };
 
+/* Stub for PAD.c dependency — PADClamp doesn't use SI, but PAD.c
+ * has other functions (PADInit) that reference it. */
+void SIRefreshSamplingRate(void) {}
+
 #define PAD_ERR_NONE 0
 #define PAD_CHANMAX  4
 
+/* Must match sdk_port/pad/PAD.c PADStatus layout */
+typedef uint16_t u16;
 typedef struct {
-    u8  err;
+    u16 button;
     s8  stickX;
     s8  stickY;
     s8  substickX;
     s8  substickY;
     u8  triggerL;
     u8  triggerR;
+    u8  analogA;
+    u8  analogB;
+    s8  err;
 } PADStatus;
 
 /* ════════════════════════════════════════════════════════════════════
@@ -156,61 +165,32 @@ static void oracle_PADClamp(PADStatus *status)
 }
 
 /* ════════════════════════════════════════════════════════════════════
- *  Port: identical logic (simulates sdk_port version)
+ *  Port: linked from src/sdk_port/pad/PAD.c
+ *  ClampStick/ClampTrigger are static in decomp, so we keep test-local
+ *  copies for L0/L1/L2 sub-function testing. PADClamp comes from PAD.c.
  * ════════════════════════════════════════════════════════════════════ */
 
+/* Test-local copies of internal helpers (for L0/L1/L2 sub-function tests) */
 static void port_ClampStick(s8 *px, s8 *py, s8 max, s8 xy, s8 min)
 {
     int x = *px;
     int y = *py;
-    int signX;
-    int signY;
-    int d;
+    int signX, signY, d;
 
-    if (0 <= x) {
-        signX = 1;
-    } else {
-        signX = -1;
-        x = -x;
-    }
+    if (0 <= x) { signX = 1; } else { signX = -1; x = -x; }
+    if (0 <= y) { signY = 1; } else { signY = -1; y = -y; }
+    if (x <= min) { x = 0; } else { x -= min; }
+    if (y <= min) { y = 0; } else { y -= min; }
 
-    if (0 <= y) {
-        signY = 1;
-    } else {
-        signY = -1;
-        y = -y;
-    }
-
-    if (x <= min) {
-        x = 0;
-    } else {
-        x -= min;
-    }
-    if (y <= min) {
-        y = 0;
-    } else {
-        y -= min;
-    }
-
-    if (x == 0 && y == 0) {
-        *px = *py = 0;
-        return;
-    }
+    if (x == 0 && y == 0) { *px = *py = 0; return; }
 
     if (xy * y <= xy * x) {
         d = xy * x + (max - xy) * y;
-        if (xy * max < d) {
-            x = (s8)(xy * max * x / d);
-            y = (s8)(xy * max * y / d);
-        }
+        if (xy * max < d) { x = (s8)(xy * max * x / d); y = (s8)(xy * max * y / d); }
     } else {
         d = xy * y + (max - xy) * x;
-        if (xy * max < d) {
-            x = (s8)(xy * max * x / d);
-            y = (s8)(xy * max * y / d);
-        }
+        if (xy * max < d) { x = (s8)(xy * max * x / d); y = (s8)(xy * max * y / d); }
     }
-
     *px = (s8)(signX * x);
     *py = (s8)(signY * y);
 }
@@ -220,41 +200,14 @@ static void port_ClampTrigger(u8 *trigger, u8 min, u8 max)
     if (*trigger <= min) {
         *trigger = 0;
     } else {
-        if (max < *trigger) {
-            *trigger = max;
-        }
+        if (max < *trigger) { *trigger = max; }
         *trigger -= min;
     }
 }
 
-static void port_PADClamp(PADStatus *status)
-{
-    int i;
-    for (i = 0; i < PAD_CHANMAX; i++, status++) {
-        if (status->err != PAD_ERR_NONE) continue;
-
-        port_ClampStick(&status->stickX, &status->stickY,
-            DefaultClampRegion.maxStick, DefaultClampRegion.xyStick,
-            DefaultClampRegion.minStick);
-        port_ClampStick(&status->substickX, &status->substickY,
-            DefaultClampRegion.maxSubstick, DefaultClampRegion.xySubstick,
-            DefaultClampRegion.minSubstick);
-        if (status->triggerL <= DefaultClampRegion.minTrigger) {
-            status->triggerL = 0;
-        } else {
-            if (DefaultClampRegion.maxTrigger < status->triggerL)
-                status->triggerL = DefaultClampRegion.maxTrigger;
-            status->triggerL -= DefaultClampRegion.minTrigger;
-        }
-        if (status->triggerR <= DefaultClampRegion.minTrigger) {
-            status->triggerR = 0;
-        } else {
-            if (DefaultClampRegion.maxTrigger < status->triggerR)
-                status->triggerR = DefaultClampRegion.maxTrigger;
-            status->triggerR -= DefaultClampRegion.minTrigger;
-        }
-    }
-}
+/* PADClamp — linked from sdk_port/pad/PAD.c */
+void PADClamp(PADStatus *status);
+#define port_PADClamp PADClamp
 
 /* ── PRNG ── */
 static uint32_t g_rng;
@@ -480,6 +433,7 @@ static int test_padclamp_full(uint32_t seed)
         int ch;
 
         /* Generate random PADStatus for all 4 channels */
+        memset(oracle_pads, 0, sizeof(oracle_pads));
         for (ch = 0; ch < PAD_CHANMAX; ch++) {
             oracle_pads[ch].err = (xorshift32() % 4 == 0) ? 1 : PAD_ERR_NONE;
             oracle_pads[ch].stickX = (s8)(xorshift32() & 0xFF);

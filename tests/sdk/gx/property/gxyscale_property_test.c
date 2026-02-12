@@ -111,68 +111,29 @@ static float oracle_GXGetYScaleFactor(uint16_t efbHeight, uint16_t xfbHeight)
 }
 
 /* ═══════════════════════════════════════════════════════════════════
- * PORT — identical implementation
+ * PORT — linked from src/sdk_port/gx/GX.c
  * ═══════════════════════════════════════════════════════════════════ */
 
+typedef uint32_t u32_gx;
+typedef uint16_t u16_gx;
+float GXGetYScaleFactor(u16_gx efbHeight, u16_gx xfbHeight);
+
+/* __GXGetNumXfbLines is static in GX.c, so we keep a local copy for
+ * sub-function level testing.  The main parity test uses GXGetYScaleFactor. */
 static uint32_t port_GXGetNumXfbLines(uint32_t efbHt, uint32_t iScale)
 {
-    uint32_t count;
-    uint32_t realHt;
-    uint32_t iScaleD;
-
-    count = (efbHt - 1) * 0x100;
-    realHt = (count / iScale) + 1;
-
-    iScaleD = iScale;
-
+    uint32_t count = (efbHt - 1) * 0x100;
+    uint32_t realHt = (count / iScale) + 1;
+    uint32_t iScaleD = iScale;
     if (iScaleD > 0x80 && iScaleD < 0x100) {
-        while (iScaleD % 2 == 0) {
-            iScaleD /= 2;
-        }
-
-        if (efbHt % iScaleD == 0) {
-            realHt++;
-        }
+        while (iScaleD % 2 == 0) iScaleD /= 2;
+        if (efbHt % iScaleD == 0) realHt++;
     }
-
-    if (realHt > 0x400) {
-        realHt = 0x400;
-    }
-
+    if (realHt > 0x400) realHt = 0x400;
     return realHt;
 }
 
-static float port_GXGetYScaleFactor(uint16_t efbHeight, uint16_t xfbHeight)
-{
-    float fScale;
-    float yScale;
-    uint32_t iScale;
-    uint32_t tgtHt;
-    uint32_t realHt;
-
-    tgtHt = xfbHeight;
-    yScale = (float)xfbHeight / (float)efbHeight;
-    iScale = (uint32_t)(256.0f / yScale) & 0x1FF;
-    realHt = port_GXGetNumXfbLines(efbHeight, iScale);
-
-    while (realHt > xfbHeight) {
-        tgtHt--;
-        yScale = (float)tgtHt / (float)efbHeight;
-        iScale = (uint32_t)(256.0f / yScale) & 0x1FF;
-        realHt = port_GXGetNumXfbLines(efbHeight, iScale);
-    }
-
-    fScale = yScale;
-    while (realHt < xfbHeight) {
-        fScale = yScale;
-        tgtHt++;
-        yScale = (float)tgtHt / (float)efbHeight;
-        iScale = (uint32_t)(256.0f / yScale) & 0x1FF;
-        realHt = port_GXGetNumXfbLines(efbHeight, iScale);
-    }
-
-    return fScale;
-}
+#define port_GXGetYScaleFactor(efb, xfb) GXGetYScaleFactor((efb), (xfb))
 
 /* ═══════════════════════════════════════════════════════════════════
  * Helpers

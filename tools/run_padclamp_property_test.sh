@@ -3,12 +3,17 @@ set -euo pipefail
 
 # Property-style parity test runner for PADClamp.
 #
+# Oracle: exact copy of decomp inlined in test file.
+# Port:   linked from src/sdk_port/pad/PAD.c.
+#
 # Usage:
 #   tools/run_padclamp_property_test.sh [--seed=N] [--num-runs=N] [-v]
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 build_dir="$repo_root/tests/build/padclamp_property"
 test_src="$repo_root/tests/sdk/pad/property"
+port_src="$repo_root/src/sdk_port/pad"
+gc_mem_src="$repo_root/src/sdk_port"
 
 mkdir -p "$build_dir"
 
@@ -48,7 +53,11 @@ echo "[padclamp-property-build] CC=$CC"
 "$CC" "${opt_flags[@]}" -ffunction-sections -fdata-sections \
   -D_XOPEN_SOURCE=700 -D_CRT_SECURE_NO_WARNINGS \
   -Wno-implicit-function-declaration \
+  -I"$port_src" \
+  -I"$gc_mem_src" \
   "$test_src/padclamp_property_test.c" \
+  "$port_src/PAD.c" \
+  "$gc_mem_src/gc_mem.c" \
   "${ld_gc_flags[@]}" \
   -o "$build_dir/padclamp_property_test"
 

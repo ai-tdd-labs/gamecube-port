@@ -189,80 +189,12 @@ static uint32_t oracle_GXDecompressZ16(uint32_t z16, uint32_t zfmt)
 }
 
 /* ═══════════════════════════════════════════════════════════════════
- * PORT — identical pure-integer implementation
+ * PORT — linked from src/sdk_port/gx/GX.c
  * ═══════════════════════════════════════════════════════════════════ */
 
-static uint32_t port_GXCompressZ16(uint32_t z24, uint32_t zfmt)
-{
-    uint32_t z16;
-    uint32_t z24n;
-    int32_t exp;
-    int32_t shift;
-    int32_t temp;
-
-    z24n = ~(z24 << 8);
-    temp = (int32_t)my_cntlzw(z24n);
-    switch (zfmt) {
-        case GX_ZC_LINEAR:
-            z16 = (z24 >> 8) & 0xFFFF;
-            break;
-        case GX_ZC_NEAR:
-            exp = (temp > 3) ? 3 : temp;
-            shift = (exp == 3) ? 7 : (9 - exp);
-            z16 = ((z24 >> shift) & 0x3FFF) | (exp << 14);
-            break;
-        case GX_ZC_MID:
-            exp = (temp > 7) ? 7 : temp;
-            shift = (exp == 7) ? 4 : (10 - exp);
-            z16 = ((z24 >> shift) & 0x1FFF) | (exp << 13);
-            break;
-        case GX_ZC_FAR:
-            exp = (temp > 12) ? 12 : temp;
-            shift = (exp == 12) ? 0 : (11 - exp);
-            z16 = ((z24 >> shift) & 0xFFF) | (exp << 12);
-            break;
-        default:
-            z16 = 0;
-            break;
-    }
-    return z16;
-}
-
-static uint32_t port_GXDecompressZ16(uint32_t z16, uint32_t zfmt)
-{
-    uint32_t z24;
-    uint32_t cb1;
-    int32_t exp;
-    int32_t shift;
-
-    switch (zfmt) {
-        case GX_ZC_LINEAR:
-            z24 = (z16 << 8) & 0xFFFF00;
-            break;
-        case GX_ZC_NEAR:
-            exp = (z16 >> 14) & 3;
-            shift = (exp == 3) ? 7 : (9 - exp);
-            cb1 = (uint32_t)((int32_t)-1 << (24 - exp));
-            z24 = (cb1 | ((z16 & 0x3FFF) << shift)) & 0xFFFFFF;
-            break;
-        case GX_ZC_MID:
-            exp = (z16 >> 13) & 7;
-            shift = (exp == 7) ? 4 : (10 - exp);
-            cb1 = (uint32_t)((int32_t)-1 << (24 - exp));
-            z24 = (cb1 | ((z16 & 0x1FFF) << shift)) & 0xFFFFFF;
-            break;
-        case GX_ZC_FAR:
-            exp = (z16 >> 12) & 0xF;
-            shift = (exp == 12) ? 0 : (11 - exp);
-            cb1 = (uint32_t)((int32_t)-1 << (24 - exp));
-            z24 = (cb1 | ((z16 & 0xFFF) << shift)) & 0xFFFFFF;
-            break;
-        default:
-            z24 = 0;
-            break;
-    }
-    return z24;
-}
+typedef uint32_t u32;
+u32 GXCompressZ16(u32 z24, u32 zfmt);
+u32 GXDecompressZ16(u32 z16, u32 zfmt);
 
 /* ═══════════════════════════════════════════════════════════════════
  * Random z24 value (24 bits)
@@ -289,7 +221,7 @@ static int test_L0_parity(void) {
         uint32_t z24 = rand_z24();
         uint32_t fmt = rand_fmt();
         uint32_t oc  = oracle_GXCompressZ16(z24, fmt);
-        uint32_t pc  = port_GXCompressZ16(z24, fmt);
+        uint32_t pc  = GXCompressZ16(z24, fmt);
 
         CHECK(oc == pc,
               "L0 compress parity: z24=0x%06X fmt=%u oracle=0x%04X port=0x%04X",
@@ -299,7 +231,7 @@ static int test_L0_parity(void) {
         uint32_t z16 = rand_z16();
         uint32_t fmt = rand_fmt();
         uint32_t od  = oracle_GXDecompressZ16(z16, fmt);
-        uint32_t pd  = port_GXDecompressZ16(z16, fmt);
+        uint32_t pd  = GXDecompressZ16(z16, fmt);
 
         CHECK(od == pd,
               "L0 decompress parity: z16=0x%04X fmt=%u oracle=0x%06X port=0x%06X",
@@ -408,11 +340,11 @@ static int test_L5_random_integration(void) {
         uint32_t z24 = rand_z24();
         uint32_t fmt = rand_fmt();
         uint32_t oc  = oracle_GXCompressZ16(z24, fmt);
-        uint32_t pc  = port_GXCompressZ16(z24, fmt);
+        uint32_t pc  = GXCompressZ16(z24, fmt);
         uint32_t od  = oracle_GXDecompressZ16(oc, fmt);
-        uint32_t pd  = port_GXDecompressZ16(pc, fmt);
+        uint32_t pd  = GXDecompressZ16(pc, fmt);
         uint32_t oc2 = oracle_GXCompressZ16(od, fmt);
-        uint32_t pc2 = port_GXCompressZ16(pd, fmt);
+        uint32_t pc2 = GXCompressZ16(pd, fmt);
 
         /* Parity at every step */
         CHECK(oc == pc,

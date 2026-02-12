@@ -1544,36 +1544,55 @@ void GXCopyTex(void *dest, u32 clear) {
     gc_gx_bp_sent_not = 0;
 }
 
+/* Mirror decomp __GXGetTexTileShift — full tile shift table for all GX formats.
+ * Format values use SDK encoding: base | _GX_TF_ZTF(0x10) | _GX_TF_CTF(0x20). */
+static void __GXGetTexTileShift(u32 fmt, u32 *rowTileS, u32 *colTileS) {
+    switch (fmt) {
+    case 0x0:   /* GX_TF_I4 */
+    case 0x8:   /* GX_TF_C4 */
+    case 0xE:   /* GX_TF_CMPR */
+    case 0x20:  /* GX_CTF_R4 */
+    case 0x30:  /* GX_CTF_Z4 */
+        *rowTileS = 3; *colTileS = 3; break;
+    case 0x1:   /* GX_TF_I8 */
+    case 0x2:   /* GX_TF_IA4 */
+    case 0x9:   /* GX_TF_C8 */
+    case 0x11:  /* GX_TF_Z8 */
+    case 0x22:  /* GX_CTF_RA4 */
+    case 0x27:  /* GX_TF_A8 */
+    case 0x28:  /* GX_CTF_R8 */
+    case 0x29:  /* GX_CTF_G8 */
+    case 0x2A:  /* GX_CTF_B8 */
+    case 0x39:  /* GX_CTF_Z8M */
+    case 0x3A:  /* GX_CTF_Z8L */
+        *rowTileS = 3; *colTileS = 2; break;
+    case 0x3:   /* GX_TF_IA8 */
+    case 0x4:   /* GX_TF_RGB565 */
+    case 0x5:   /* GX_TF_RGB5A3 */
+    case 0x6:   /* GX_TF_RGBA8 */
+    case 0xA:   /* GX_TF_C14X2 */
+    case 0x13:  /* GX_TF_Z16 */
+    case 0x16:  /* GX_TF_Z24X8 */
+    case 0x23:  /* GX_CTF_RA8 */
+    case 0x2B:  /* GX_CTF_RG8 */
+    case 0x2C:  /* GX_CTF_GB8 */
+    case 0x3C:  /* GX_CTF_Z16L */
+        *rowTileS = 2; *colTileS = 2; break;
+    default:
+        *rowTileS = *colTileS = 0; break;
+    }
+}
+
 u32 GXGetTexBufferSize(u16 width, u16 height, u32 format, u8 mipmap, u8 max_lod) {
     // Mirror decomp_mario_party_4/src/dolphin/gx/GXTexture.c:GXGetTexBufferSize.
-    // Evidence-driven: MP4 currently uses GX_TF_RGB565 with mipmap=0 in WipeCrossFade.
-    u32 tileShiftX = 0;
-    u32 tileShiftY = 0;
+    u32 tileShiftX, tileShiftY;
     u32 tileBytes;
     u32 bufferSize;
 
-    // Tile shifts from __GXGetTexTileShift (subset).
-    switch (format & 0x3Fu) {
-    case GX_TF_RGB565:
-        tileShiftX = 2;
-        tileShiftY = 2;
-        break;
-    case GX_TF_RGBA8:
-        tileShiftX = 2;
-        tileShiftY = 2;
-        break;
-    default:
-        // Extend when new formats are observed in callsites.
-        tileShiftX = 0;
-        tileShiftY = 0;
-        break;
-    }
-
-    tileBytes = ((format & 0x3Fu) == GX_TF_RGBA8) ? 64u : 32u;
+    __GXGetTexTileShift(format, &tileShiftX, &tileShiftY);
+    tileBytes = (format == 0x6u || format == 0x16u) ? 64u : 32u; /* RGBA8 or Z24X8 */
 
     if (mipmap == 1) {
-        // Match SDK behavior: for mipmapped textures, sum levels up to max_lod.
-        // We intentionally skip SDK assertions; callers are expected to be valid.
         u32 level;
         bufferSize = 0;
         for (level = 0; level < (u32)max_lod; level++) {
@@ -2462,4 +2481,142 @@ void GXSetTevOrder(u32 stage, u32 coord, u32 map, u32 color) {
 
     gc_gx_bp_sent_not = 0;
     gc_gx_dirty_state |= 1u;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ * GXProject — 3D projection math (GXTransform.c)
+ *
+ * Source: external/mp4-decomp/src/dolphin/gx/GXTransform.c
+ * Pure computation: modelview × projection × viewport transform.
+ * ═══════════════════════════════════════════════════════════════════ */
+
+void GXProject(f32 x, f32 y, f32 z,
+               const f32 mtx[3][4], const f32 *pm, const f32 *vp,
+               f32 *sx, f32 *sy, f32 *sz)
+{
+    f32 peye_x, peye_y, peye_z;
+    f32 xc, yc, zc, wc;
+
+    peye_x = mtx[0][3] + ((mtx[0][2] * z) + ((mtx[0][0] * x) + (mtx[0][1] * y)));
+    peye_y = mtx[1][3] + ((mtx[1][2] * z) + ((mtx[1][0] * x) + (mtx[1][1] * y)));
+    peye_z = mtx[2][3] + ((mtx[2][2] * z) + ((mtx[2][0] * x) + (mtx[2][1] * y)));
+
+    if (pm[0] == 0.0f) {
+        xc = (peye_x * pm[1]) + (peye_z * pm[2]);
+        yc = (peye_y * pm[3]) + (peye_z * pm[4]);
+        zc = pm[6] + (peye_z * pm[5]);
+        wc = 1.0f / -peye_z;
+    } else {
+        xc = pm[2] + (peye_x * pm[1]);
+        yc = pm[4] + (peye_y * pm[3]);
+        zc = pm[6] + (peye_z * pm[5]);
+        wc = 1.0f;
+    }
+
+    *sx = (vp[2] / 2.0f) + (vp[0] + (wc * (xc * vp[2] / 2.0f)));
+    *sy = (vp[3] / 2.0f) + (vp[1] + (wc * (-yc * vp[3] / 2.0f)));
+    *sz = vp[5] + (wc * (zc * (vp[5] - vp[4])));
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ * __cntlzw — portable count-leading-zeros (replaces PPC __cntlzw)
+ * ═══════════════════════════════════════════════════════════════════ */
+
+static u32 __cntlzw(u32 x) {
+    if (x == 0) return 32;
+#if defined(__GNUC__) || defined(__clang__)
+    return (u32)__builtin_clz(x);
+#else
+    u32 n = 0;
+    if (x <= 0x0000FFFFu) { n += 16; x <<= 16; }
+    if (x <= 0x00FFFFFFu) { n += 8;  x <<= 8;  }
+    if (x <= 0x0FFFFFFFu) { n += 4;  x <<= 4;  }
+    if (x <= 0x3FFFFFFFu) { n += 2;  x <<= 2;  }
+    if (x <= 0x7FFFFFFFu) { n += 1; }
+    return n;
+#endif
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ * GXCompressZ16 / GXDecompressZ16 — Z-depth 24↔16 bit encoding
+ *
+ * Source: external/mp4-decomp/src/dolphin/gx/GXMisc.c
+ * Pure computation (no hardware dependencies).
+ * ═══════════════════════════════════════════════════════════════════ */
+
+#define GX_ZC_LINEAR  0
+#define GX_ZC_NEAR    1
+#define GX_ZC_MID     2
+#define GX_ZC_FAR     3
+
+u32 GXCompressZ16(u32 z24, u32 zfmt)
+{
+    u32 z16;
+    u32 z24n;
+    s32 exp;
+    s32 shift;
+    s32 temp;
+
+    z24n = ~(z24 << 8);
+    temp = (s32)__cntlzw(z24n);
+    switch (zfmt) {
+        case GX_ZC_LINEAR:
+            z16 = (z24 >> 8) & 0xFFFF;
+            break;
+        case GX_ZC_NEAR:
+            exp = (temp > 3) ? 3 : temp;
+            shift = (exp == 3) ? 7 : (9 - exp);
+            z16 = ((z24 >> shift) & 0x3FFF) | ((u32)exp << 14);
+            break;
+        case GX_ZC_MID:
+            exp = (temp > 7) ? 7 : temp;
+            shift = (exp == 7) ? 4 : (10 - exp);
+            z16 = ((z24 >> shift) & 0x1FFF) | ((u32)exp << 13);
+            break;
+        case GX_ZC_FAR:
+            exp = (temp > 12) ? 12 : temp;
+            shift = (exp == 12) ? 0 : (11 - exp);
+            z16 = ((z24 >> shift) & 0xFFF) | ((u32)exp << 12);
+            break;
+        default:
+            z16 = 0;
+            break;
+    }
+    return z16;
+}
+
+u32 GXDecompressZ16(u32 z16, u32 zfmt)
+{
+    u32 z24;
+    u32 cb1;
+    s32 exp;
+    s32 shift;
+
+    switch (zfmt) {
+        case GX_ZC_LINEAR:
+            z24 = (z16 << 8) & 0xFFFF00;
+            break;
+        case GX_ZC_NEAR:
+            exp = (s32)((z16 >> 14) & 3);
+            shift = (exp == 3) ? 7 : (9 - exp);
+            cb1 = (u32)((s32)-1 << (24 - exp));
+            z24 = (cb1 | ((z16 & 0x3FFF) << shift)) & 0xFFFFFF;
+            break;
+        case GX_ZC_MID:
+            exp = (s32)((z16 >> 13) & 7);
+            shift = (exp == 7) ? 4 : (10 - exp);
+            cb1 = (u32)((s32)-1 << (24 - exp));
+            z24 = (cb1 | ((z16 & 0x1FFF) << shift)) & 0xFFFFFF;
+            break;
+        case GX_ZC_FAR:
+            exp = (s32)((z16 >> 12) & 0xF);
+            shift = (exp == 12) ? 0 : (11 - exp);
+            cb1 = (u32)((s32)-1 << (24 - exp));
+            z24 = (cb1 | ((z16 & 0xFFF) << shift)) & 0xFFFFFF;
+            break;
+        default:
+            z24 = 0;
+            break;
+    }
+    return z24;
 }

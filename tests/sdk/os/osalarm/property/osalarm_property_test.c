@@ -2,7 +2,7 @@
  * osalarm_property_test.c — Property-based parity test for OSAlarm.c
  *
  * Oracle: exact copy of decomp InsertAlarm/CancelAlarm/fire logic (native ptrs)
- * Port:   reimplemented with big-endian gc_mem-style access (u32 addresses)
+ * Port:   linked from src/sdk_port/os/OSAlarm.c (gc_mem big-endian access)
  *
  * Levels:
  *   L0 — InsertAlarm parity: insert alarms with random fire times, compare list
@@ -16,6 +16,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+
+/* sdk_port headers */
+#include "OSAlarm.h"
+#include "gc_mem.h"
 
 /* ── xorshift32 PRNG ────────────────────────────────────────────── */
 static uint32_t g_rng;
@@ -176,188 +180,51 @@ static void oracle_OSCreateAlarm(oracle_OSAlarm *alarm) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
- * PORT — big-endian gc_mem-style reimplementation
+ * PORT — linked from sdk_port/os/OSAlarm.c (gc_mem big-endian)
  * ═══════════════════════════════════════════════════════════════════ */
 
-/*
- * OSAlarm layout in gc_mem (all big-endian):
- *   offset 0:  handler (u32, non-zero = active)
- *   offset 4:  fire_hi (s32)
- *   offset 8:  fire_lo (u32)     — fire = (fire_hi << 32) | fire_lo
- *   offset 12: prev (u32, GC addr or 0)
- *   offset 16: next (u32, GC addr or 0)
- *   offset 20: period_hi (s32)
- *   offset 24: period_lo (u32)
- *   offset 28: start_hi (s32)
- *   offset 32: start_lo (u32)
- *   offset 36: id (u32)
- *   Total: 40 bytes
- */
+#define PORT_MAX_ALARMS ORACLE_MAX_ALARMS
 
-#define PORT_ALARM_HANDLER   0
-#define PORT_ALARM_FIRE_HI   4
-#define PORT_ALARM_FIRE_LO   8
-#define PORT_ALARM_PREV     12
-#define PORT_ALARM_NEXT     16
-#define PORT_ALARM_PERIOD_HI 20
-#define PORT_ALARM_PERIOD_LO 24
-#define PORT_ALARM_START_HI  28
-#define PORT_ALARM_START_LO  32
-#define PORT_ALARM_ID        36
-#define PORT_ALARM_SIZE      40
+/* gc_mem backing buffer for alarm structs */
+#define GC_ALARM_BASE  0x80001000u
+static uint8_t gc_alarm_backing[PORT_MAX_ALARMS * PORT_ALARM_SIZE];
 
-#define PORT_MAX_ALARMS 32
+#define ALARM_ADDR(i) (GC_ALARM_BASE + (uint32_t)(i) * PORT_ALARM_SIZE)
 
-/* Memory layout:
- *   offset 0:   queue head (u32)
- *   offset 4:   queue tail (u32)
- *   offset 8:   alarm pool = 32 * 40 = 1280 bytes
- *   Total: 1288 bytes
- */
-#define PORT_QUEUE_HEAD  0
-#define PORT_QUEUE_TAIL  4
-#define PORT_ALARMS_OFF  8
-#define PORT_TOTAL_SIZE  (PORT_ALARMS_OFF + PORT_MAX_ALARMS * PORT_ALARM_SIZE)
+/* Host-side alarm queue state */
+static port_OSAlarmState port_state;
 
-static uint8_t port_mem[PORT_TOTAL_SIZE];
-
-static uint32_t be_get32(uint8_t *base, int off) {
-    uint8_t *p = base + off;
+/* BE helpers for test reads (compare/init) */
+static uint32_t test_load_u32be(uint32_t addr) {
+    uint8_t *p = gc_mem_ptr(addr, 4);
     return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) |
-           ((uint32_t)p[2] << 8) | (uint32_t)p[3];
+           ((uint32_t)p[2] << 8)  | (uint32_t)p[3];
 }
-static void be_set32(uint8_t *base, int off, uint32_t val) {
-    uint8_t *p = base + off;
+
+static void test_store_u32be(uint32_t addr, uint32_t val) {
+    uint8_t *p = gc_mem_ptr(addr, 4);
     p[0] = (uint8_t)(val >> 24);
     p[1] = (uint8_t)(val >> 16);
     p[2] = (uint8_t)(val >> 8);
     p[3] = (uint8_t)val;
 }
 
-#define pr32(off)      be_get32(port_mem, (off))
-#define pw32(off, v)   be_set32(port_mem, (off), (v))
-
-#define PORT_ALARM_ADDR(i) (PORT_ALARMS_OFF + (i) * PORT_ALARM_SIZE)
-
-static int64_t port_get64(uint32_t addr, int field_hi) {
-    int32_t hi = (int32_t)pr32(addr + field_hi);
-    uint32_t lo = pr32(addr + field_hi + 4);
+static int64_t test_load_s64be(uint32_t addr) {
+    int32_t hi = (int32_t)test_load_u32be(addr);
+    uint32_t lo = test_load_u32be(addr + 4);
     return ((int64_t)hi << 32) | (uint64_t)lo;
 }
 
-static void port_set64(uint32_t addr, int field_hi, int64_t val) {
-    pw32(addr + field_hi, (uint32_t)(val >> 32));
-    pw32(addr + field_hi + 4, (uint32_t)(val & 0xFFFFFFFFu));
+static void test_store_s64be(uint32_t addr, int64_t val) {
+    test_store_u32be(addr, (uint32_t)(val >> 32));
+    test_store_u32be(addr + 4, (uint32_t)(val & 0xFFFFFFFFu));
 }
 
-static int64_t port_SystemTime;
-
-static void port_InsertAlarm(uint32_t alarm, int64_t fire, uint32_t handler) {
-    uint32_t next_a;
-    uint32_t prev_a;
-
-    if (0 < port_get64(alarm, PORT_ALARM_PERIOD_HI)) {
-        int64_t time = port_SystemTime;
-        int64_t start = port_get64(alarm, PORT_ALARM_START_HI);
-        int64_t period = port_get64(alarm, PORT_ALARM_PERIOD_HI);
-        fire = start;
-        if (start < time) {
-            fire += period * ((time - start) / period + 1);
-        }
-    }
-
-    pw32(alarm + PORT_ALARM_HANDLER, handler);
-    port_set64(alarm, PORT_ALARM_FIRE_HI, fire);
-
-    for (next_a = pr32(PORT_QUEUE_HEAD); next_a != 0; next_a = pr32(next_a + PORT_ALARM_NEXT)) {
-        int64_t next_fire = port_get64(next_a, PORT_ALARM_FIRE_HI);
-        if (next_fire <= fire) {
-            continue;
-        }
-        /* Insert before next_a */
-        prev_a = pr32(next_a + PORT_ALARM_PREV);
-        pw32(alarm + PORT_ALARM_PREV, prev_a);
-        pw32(next_a + PORT_ALARM_PREV, alarm);
-        pw32(alarm + PORT_ALARM_NEXT, next_a);
-        if (prev_a) {
-            pw32(prev_a + PORT_ALARM_NEXT, alarm);
-        } else {
-            pw32(PORT_QUEUE_HEAD, alarm);
-        }
-        return;
-    }
-
-    /* Insert at tail */
-    pw32(alarm + PORT_ALARM_NEXT, 0);
-    prev_a = pr32(PORT_QUEUE_TAIL);
-    pw32(PORT_QUEUE_TAIL, alarm);
-    pw32(alarm + PORT_ALARM_PREV, prev_a);
-    if (prev_a) {
-        pw32(prev_a + PORT_ALARM_NEXT, alarm);
-    } else {
-        pw32(PORT_QUEUE_HEAD, alarm);
-        pw32(PORT_QUEUE_TAIL, alarm);
-    }
-}
-
-static void port_OSSetAlarm(uint32_t alarm, int64_t tick) {
-    port_set64(alarm, PORT_ALARM_PERIOD_HI, 0);
-    port_InsertAlarm(alarm, port_SystemTime + tick, 1);
-}
-
-static void port_OSSetPeriodicAlarm(uint32_t alarm, int64_t start, int64_t period) {
-    port_set64(alarm, PORT_ALARM_PERIOD_HI, period);
-    port_set64(alarm, PORT_ALARM_START_HI, start);
-    port_InsertAlarm(alarm, 0, 1);
-}
-
-static void port_OSCancelAlarm(uint32_t alarm) {
-    uint32_t next_a;
-
-    if (pr32(alarm + PORT_ALARM_HANDLER) == 0) return;
-
-    next_a = pr32(alarm + PORT_ALARM_NEXT);
-    if (next_a == 0) {
-        pw32(PORT_QUEUE_TAIL, pr32(alarm + PORT_ALARM_PREV));
-    } else {
-        pw32(next_a + PORT_ALARM_PREV, pr32(alarm + PORT_ALARM_PREV));
-    }
-    if (pr32(alarm + PORT_ALARM_PREV)) {
-        uint32_t prev_a = pr32(alarm + PORT_ALARM_PREV);
-        pw32(prev_a + PORT_ALARM_NEXT, next_a);
-    } else {
-        pw32(PORT_QUEUE_HEAD, next_a);
-    }
-    pw32(alarm + PORT_ALARM_HANDLER, 0);
-}
-
+/* Wrapper: fire head and return alarm id (or -1) */
 static int port_FireHead(void) {
-    uint32_t alarm = pr32(PORT_QUEUE_HEAD);
-    uint32_t next_a;
-    uint32_t handler;
-
-    if (alarm == 0) return -1;
-    if (port_SystemTime < port_get64(alarm, PORT_ALARM_FIRE_HI)) return -1;
-
-    next_a = pr32(alarm + PORT_ALARM_NEXT);
-    pw32(PORT_QUEUE_HEAD, next_a);
-    if (next_a == 0) {
-        pw32(PORT_QUEUE_TAIL, 0);
-    } else {
-        pw32(next_a + PORT_ALARM_PREV, 0);
-    }
-
-    handler = pr32(alarm + PORT_ALARM_HANDLER);
-    pw32(alarm + PORT_ALARM_HANDLER, 0);
-    if (0 < port_get64(alarm, PORT_ALARM_PERIOD_HI)) {
-        port_InsertAlarm(alarm, 0, handler);
-    }
-
-    return (int)pr32(alarm + PORT_ALARM_ID);
-}
-
-static void port_OSCreateAlarm(uint32_t alarm) {
-    pw32(alarm + PORT_ALARM_HANDLER, 0);
+    uint32_t fired = port_OSAlarmFireHead(&port_state);
+    if (fired == 0) return -1;
+    return (int)test_load_u32be(fired + PORT_ALARM_TAG);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -374,10 +241,9 @@ static void init_both(void) {
     oracle_AlarmQueue.tail = NULL;
     oracle_SystemTime = 1000;
 
-    memset(port_mem, 0, sizeof(port_mem));
-    pw32(PORT_QUEUE_HEAD, 0);
-    pw32(PORT_QUEUE_TAIL, 0);
-    port_SystemTime = 1000;
+    memset(gc_alarm_backing, 0, sizeof(gc_alarm_backing));
+    port_OSAlarmInit(&port_state);
+    port_state.systemTime = 1000;
 
     for (i = 0; i < ORACLE_MAX_ALARMS; i++) {
         oracle_OSCreateAlarm(&oracle_AlarmPool[i]);
@@ -387,12 +253,12 @@ static void init_both(void) {
         oracle_AlarmPool[i].period = 0;
         oracle_AlarmPool[i].start = 0;
 
-        port_OSCreateAlarm(PORT_ALARM_ADDR(i));
-        pw32(PORT_ALARM_ADDR(i) + PORT_ALARM_ID, (uint32_t)i);
-        pw32(PORT_ALARM_ADDR(i) + PORT_ALARM_PREV, 0);
-        pw32(PORT_ALARM_ADDR(i) + PORT_ALARM_NEXT, 0);
-        port_set64(PORT_ALARM_ADDR(i), PORT_ALARM_PERIOD_HI, 0);
-        port_set64(PORT_ALARM_ADDR(i), PORT_ALARM_START_HI, 0);
+        port_OSCreateAlarm(ALARM_ADDR(i));
+        test_store_u32be(ALARM_ADDR(i) + PORT_ALARM_TAG, (uint32_t)i);
+        test_store_u32be(ALARM_ADDR(i) + PORT_ALARM_PREV, 0);
+        test_store_u32be(ALARM_ADDR(i) + PORT_ALARM_NEXT, 0);
+        test_store_s64be(ALARM_ADDR(i) + PORT_ALARM_PERIOD, 0);
+        test_store_s64be(ALARM_ADDR(i) + PORT_ALARM_START, 0);
 
         alarm_active[i] = INACTIVE;
     }
@@ -405,22 +271,22 @@ static int compare_queues(const char *label) {
     int count = 0;
 
     oa = oracle_AlarmQueue.head;
-    pa = pr32(PORT_QUEUE_HEAD);
+    pa = port_state.queueHead;
 
     while (oa != NULL || pa != 0) {
         int oid = oa ? oa->id : -1;
-        int pid = (pa != 0) ? (int)pr32(pa + PORT_ALARM_ID) : -1;
+        int pid = (pa != 0) ? (int)test_load_u32be(pa + PORT_ALARM_TAG) : -1;
         CHECK(oid == pid, "%s: queue mismatch at pos %d: oracle=%d port=%d", label, count, oid, pid);
 
         if (oa) {
             int64_t of = oa->fire;
-            int64_t pf = port_get64(pa, PORT_ALARM_FIRE_HI);
+            int64_t pf = test_load_s64be(pa + PORT_ALARM_FIRE);
             CHECK(of == pf, "%s: fire mismatch alarm %d: oracle=%lld port=%lld",
                   label, oid, (long long)of, (long long)pf);
         }
 
         oa = oa ? oa->next : NULL;
-        pa = (pa != 0) ? pr32(pa + PORT_ALARM_NEXT) : 0;
+        pa = (pa != 0) ? test_load_u32be(pa + PORT_ALARM_NEXT) : 0;
         count++;
     }
 
@@ -441,7 +307,7 @@ static int test_insert(uint32_t seed) {
     for (i = 0; i < n; i++) {
         int64_t tick = (int64_t)(xorshift32() % 10000) + 1;
         oracle_OSSetAlarm(&oracle_AlarmPool[i], tick);
-        port_OSSetAlarm(PORT_ALARM_ADDR(i), tick);
+        port_OSSetAlarm(&port_state, ALARM_ADDR(i), tick);
         alarm_active[i] = ACTIVE;
     }
 
@@ -477,7 +343,7 @@ static int test_cancel(uint32_t seed) {
     for (i = 0; i < n; i++) {
         int64_t tick = (int64_t)(xorshift32() % 10000) + 1;
         oracle_OSSetAlarm(&oracle_AlarmPool[i], tick);
-        port_OSSetAlarm(PORT_ALARM_ADDR(i), tick);
+        port_OSSetAlarm(&port_state, ALARM_ADDR(i), tick);
         alarm_active[i] = ACTIVE;
     }
 
@@ -486,7 +352,7 @@ static int test_cancel(uint32_t seed) {
     for (i = 0; i < num_cancel; i++) {
         int idx = (int)(xorshift32() % (uint32_t)n);
         oracle_OSCancelAlarm(&oracle_AlarmPool[idx]);
-        port_OSCancelAlarm(PORT_ALARM_ADDR(idx));
+        port_OSCancelAlarm(&port_state, ALARM_ADDR(idx));
         alarm_active[idx] = INACTIVE;
     }
 
@@ -497,7 +363,7 @@ static int test_cancel(uint32_t seed) {
         int idx = (int)(xorshift32() % (uint32_t)n);
         if (!alarm_active[idx]) {
             oracle_OSCancelAlarm(&oracle_AlarmPool[idx]);
-            port_OSCancelAlarm(PORT_ALARM_ADDR(idx));
+            port_OSCancelAlarm(&port_state, ALARM_ADDR(idx));
             if (!compare_queues("L1-CancelIdem")) return 0;
         }
     }
@@ -520,7 +386,7 @@ static int test_fire(uint32_t seed) {
     for (i = 0; i < n; i++) {
         int64_t tick = (int64_t)(xorshift32() % 5000) + 100;
         oracle_OSSetAlarm(&oracle_AlarmPool[i], tick);
-        port_OSSetAlarm(PORT_ALARM_ADDR(i), tick);
+        port_OSSetAlarm(&port_state, ALARM_ADDR(i), tick);
         alarm_active[i] = ACTIVE;
     }
 
@@ -530,7 +396,7 @@ static int test_fire(uint32_t seed) {
         /* Advance time to first alarm's fire time */
         if (oracle_AlarmQueue.head) {
             oracle_SystemTime = oracle_AlarmQueue.head->fire;
-            port_SystemTime = oracle_SystemTime;
+            port_state.systemTime = oracle_SystemTime;
         }
 
         {
@@ -557,7 +423,7 @@ static int test_periodic(uint32_t seed) {
         int64_t start = oracle_SystemTime + 100;
         int64_t period = (int64_t)(xorshift32() % 500) + 50;
         oracle_OSSetPeriodicAlarm(&oracle_AlarmPool[0], start, period);
-        port_OSSetPeriodicAlarm(PORT_ALARM_ADDR(0), start, period);
+        port_OSSetPeriodicAlarm(&port_state, ALARM_ADDR(0), start, period);
         alarm_active[0] = ACTIVE;
     }
 
@@ -565,7 +431,7 @@ static int test_periodic(uint32_t seed) {
     for (i = 1; i < 6; i++) {
         int64_t tick = (int64_t)(xorshift32() % 3000) + 50;
         oracle_OSSetAlarm(&oracle_AlarmPool[i], tick);
-        port_OSSetAlarm(PORT_ALARM_ADDR(i), tick);
+        port_OSSetAlarm(&port_state, ALARM_ADDR(i), tick);
         alarm_active[i] = ACTIVE;
     }
 
@@ -575,7 +441,7 @@ static int test_periodic(uint32_t seed) {
     for (i = 0; i < 10; i++) {
         if (oracle_AlarmQueue.head) {
             oracle_SystemTime = oracle_AlarmQueue.head->fire;
-            port_SystemTime = oracle_SystemTime;
+            port_state.systemTime = oracle_SystemTime;
         } else {
             break;
         }
@@ -611,7 +477,7 @@ static int test_integration(uint32_t seed) {
             if (next_alarm < ORACLE_MAX_ALARMS) {
                 int64_t tick = (int64_t)(xorshift32() % 10000) + 1;
                 oracle_OSSetAlarm(&oracle_AlarmPool[next_alarm], tick);
-                port_OSSetAlarm(PORT_ALARM_ADDR(next_alarm), tick);
+                port_OSSetAlarm(&port_state, ALARM_ADDR(next_alarm), tick);
                 alarm_active[next_alarm] = ACTIVE;
                 next_alarm++;
             }
@@ -622,7 +488,7 @@ static int test_integration(uint32_t seed) {
                 int64_t start = oracle_SystemTime + (int64_t)(xorshift32() % 1000);
                 int64_t period = (int64_t)(xorshift32() % 500) + 10;
                 oracle_OSSetPeriodicAlarm(&oracle_AlarmPool[next_alarm], start, period);
-                port_OSSetPeriodicAlarm(PORT_ALARM_ADDR(next_alarm), start, period);
+                port_OSSetPeriodicAlarm(&port_state, ALARM_ADDR(next_alarm), start, period);
                 alarm_active[next_alarm] = ACTIVE;
                 next_alarm++;
             }
@@ -633,7 +499,7 @@ static int test_integration(uint32_t seed) {
                 int idx = (int)(xorshift32() % (uint32_t)next_alarm);
                 if (alarm_active[idx]) {
                     oracle_OSCancelAlarm(&oracle_AlarmPool[idx]);
-                    port_OSCancelAlarm(PORT_ALARM_ADDR(idx));
+                    port_OSCancelAlarm(&port_state, ALARM_ADDR(idx));
                     alarm_active[idx] = INACTIVE;
                 }
             }
@@ -642,7 +508,7 @@ static int test_integration(uint32_t seed) {
         case 3: /* Fire head */
             if (oracle_AlarmQueue.head) {
                 oracle_SystemTime = oracle_AlarmQueue.head->fire;
-                port_SystemTime = oracle_SystemTime;
+                port_state.systemTime = oracle_SystemTime;
 
                 {
                     int oid = oracle_FireHead();
@@ -656,7 +522,7 @@ static int test_integration(uint32_t seed) {
             {
                 int64_t advance = (int64_t)(xorshift32() % 2000);
                 oracle_SystemTime += advance;
-                port_SystemTime += advance;
+                port_state.systemTime += advance;
             }
             break;
         }
@@ -667,12 +533,12 @@ static int test_integration(uint32_t seed) {
     /* Drain all by firing */
     while (oracle_AlarmQueue.head) {
         oracle_SystemTime = oracle_AlarmQueue.head->fire;
-        port_SystemTime = oracle_SystemTime;
+        port_state.systemTime = oracle_SystemTime;
 
         /* Cancel periodic alarms to avoid infinite loop */
         if (oracle_AlarmQueue.head->period > 0) {
             oracle_OSCancelAlarm(oracle_AlarmQueue.head);
-            port_OSCancelAlarm(pr32(PORT_QUEUE_HEAD));
+            port_OSCancelAlarm(&port_state, port_state.queueHead);
         } else {
             int oid = oracle_FireHead();
             int pid = port_FireHead();
@@ -680,7 +546,7 @@ static int test_integration(uint32_t seed) {
         }
     }
 
-    CHECK(pr32(PORT_QUEUE_HEAD) == 0, "L4: port queue not empty after drain");
+    CHECK(port_state.queueHead == 0, "L4: port queue not empty after drain");
     return 1;
 }
 
@@ -734,6 +600,9 @@ int main(int argc, char **argv) {
             return 2;
         }
     }
+
+    /* Set up gc_mem backing for alarm structs */
+    gc_mem_set(GC_ALARM_BASE, sizeof(gc_alarm_backing), gc_alarm_backing);
 
     printf("\n=== OSAlarm Property Test ===\n");
 

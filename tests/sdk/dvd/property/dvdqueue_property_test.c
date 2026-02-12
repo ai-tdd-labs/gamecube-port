@@ -2,7 +2,7 @@
  * dvdqueue_property_test.c — Property-based parity test for dvdqueue.c
  *
  * Oracle: exact copy of decomp dvdqueue.c (pointer-based, native structs)
- * Port:   reimplemented with gc_mem big-endian access (u32 GC addresses)
+ * Port:   linked from src/sdk_port/dvd/dvdqueue.c (gc_mem big-endian access)
  *
  * Levels:
  *   L0 — Push/Pop parity: push random blocks, pop in priority order, compare
@@ -16,6 +16,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+
+/* sdk_port headers */
+#include "dvdqueue.h"
+#include "gc_mem.h"
 
 /* ── xorshift32 PRNG ────────────────────────────────────────────── */
 static uint32_t g_rng;
@@ -138,147 +142,37 @@ static int oracle_DVDIsBlockInWaitingQueue(oracle_DVDCommandBlock *block) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════
- * PORT — gc_mem big-endian reimplementation
+ * PORT — linked from sdk_port/dvd/dvdqueue.c (gc_mem big-endian)
  * ═══════════════════════════════════════════════════════════════════ */
 
-/*
- * Memory layout (big-endian u32 fields):
- *
- * DVDQueue:        next(4) prev(4) = 8 bytes
- * DVDCommandBlock: next(4) prev(4) id(4) = 12 bytes
- *
- * Layout in gc_mem:
- *   offset 0:    DVDQueue[4]          = 4 * 8 = 32 bytes
- *   offset 32:   DVDCommandBlock[32]  = 32 * 12 = 384 bytes
- *   Total: 416 bytes
- */
+#define PORT_MAX_QUEUES  ORACLE_MAX_QUEUES
+#define PORT_MAX_BLOCKS  ORACLE_MAX_BLOCKS
 
-#define PORT_QUEUE_SIZE    8
-#define PORT_BLOCK_SIZE   12
-#define PORT_BLOCK_NEXT    0
-#define PORT_BLOCK_PREV    4
-#define PORT_BLOCK_ID      8
-#define PORT_MAX_QUEUES    4
-#define PORT_MAX_BLOCKS   32
+/* gc_mem layout: 4 queue sentinels + 32 blocks */
+#define GC_QUEUES_BASE  0x80001000u
+#define GC_BLOCKS_BASE  (GC_QUEUES_BASE + PORT_MAX_QUEUES * PORT_DVD_QUEUE_SIZE)
+#define GC_TOTAL_SIZE   (PORT_MAX_QUEUES * PORT_DVD_QUEUE_SIZE + PORT_MAX_BLOCKS * PORT_DVD_BLOCK_SIZE)
 
-/* Base offset must be > 0 so no valid address equals 0 (our NULL sentinel) */
-#define PORT_BASE_OFFSET    4
-#define PORT_QUEUES_OFFSET  PORT_BASE_OFFSET
-#define PORT_BLOCKS_OFFSET  (PORT_QUEUES_OFFSET + PORT_MAX_QUEUES * PORT_QUEUE_SIZE)
-#define PORT_TOTAL_SIZE     (PORT_BLOCKS_OFFSET + PORT_MAX_BLOCKS * PORT_BLOCK_SIZE)
+static uint8_t gc_dvd_backing[GC_TOTAL_SIZE];
 
-static uint8_t port_mem[PORT_TOTAL_SIZE];
+#define BLOCK_ADDR(i) (GC_BLOCKS_BASE + (uint32_t)(i) * PORT_DVD_BLOCK_SIZE)
 
-/* Big-endian read/write */
-static uint32_t be_get32(uint8_t *base, int off) {
-    uint8_t *p = base + off;
+/* Host-side queue state */
+static port_DVDQueueState dvd_state;
+
+/* BE helpers for test reads */
+static uint32_t test_load_u32be(uint32_t addr) {
+    uint8_t *p = gc_mem_ptr(addr, 4);
     return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) |
-           ((uint32_t)p[2] << 8) | (uint32_t)p[3];
+           ((uint32_t)p[2] << 8)  | (uint32_t)p[3];
 }
-static void be_set32(uint8_t *base, int off, uint32_t val) {
-    uint8_t *p = base + off;
+
+static void test_store_u32be(uint32_t addr, uint32_t val) {
+    uint8_t *p = gc_mem_ptr(addr, 4);
     p[0] = (uint8_t)(val >> 24);
     p[1] = (uint8_t)(val >> 16);
     p[2] = (uint8_t)(val >> 8);
     p[3] = (uint8_t)val;
-}
-
-/* GC address helpers — we use offsets within port_mem as "GC addresses" */
-#define PORT_QUEUE_ADDR(i)  (PORT_QUEUES_OFFSET + (i) * PORT_QUEUE_SIZE)
-#define PORT_BLOCK_ADDR(i)  (PORT_BLOCKS_OFFSET + (i) * PORT_BLOCK_SIZE)
-
-/* Access helpers for the port memory */
-#define qr32(addr, field)        be_get32(port_mem, (addr) + (field))
-#define qw32(addr, field, val)   be_set32(port_mem, (addr) + (field), (val))
-
-static void port_DVDClearWaitingQueue(void) {
-    uint32_t i;
-    for (i = 0; i < PORT_MAX_QUEUES; i++) {
-        uint32_t q = PORT_QUEUE_ADDR(i);
-        qw32(q, PORT_BLOCK_NEXT, q);
-        qw32(q, PORT_BLOCK_PREV, q);
-    }
-}
-
-static int port_DVDPushWaitingQueue(int32_t prio, uint32_t block_addr) {
-    uint32_t q = PORT_QUEUE_ADDR(prio);
-    uint32_t q_prev = qr32(q, PORT_BLOCK_PREV);
-
-    /* q->prev->next = block */
-    qw32(q_prev, PORT_BLOCK_NEXT, block_addr);
-    /* block->prev = q->prev */
-    qw32(block_addr, PORT_BLOCK_PREV, q_prev);
-    /* block->next = q */
-    qw32(block_addr, PORT_BLOCK_NEXT, q);
-    /* q->prev = block */
-    qw32(q, PORT_BLOCK_PREV, block_addr);
-
-    return 1;
-}
-
-static uint32_t port_PopWaitingQueuePrio(int32_t prio) {
-    uint32_t q = PORT_QUEUE_ADDR(prio);
-    uint32_t tmp = qr32(q, PORT_BLOCK_NEXT);
-    uint32_t tmp_next = qr32(tmp, PORT_BLOCK_NEXT);
-
-    /* q->next = tmp->next */
-    qw32(q, PORT_BLOCK_NEXT, tmp_next);
-    /* tmp->next->prev = q */
-    qw32(tmp_next, PORT_BLOCK_PREV, q);
-
-    /* tmp->next = NULL, tmp->prev = NULL */
-    qw32(tmp, PORT_BLOCK_NEXT, 0);
-    qw32(tmp, PORT_BLOCK_PREV, 0);
-
-    return tmp;
-}
-
-static uint32_t port_DVDPopWaitingQueue(void) {
-    uint32_t i;
-    for (i = 0; i < PORT_MAX_QUEUES; i++) {
-        uint32_t q = PORT_QUEUE_ADDR(i);
-        if (qr32(q, PORT_BLOCK_NEXT) != q) {
-            return port_PopWaitingQueuePrio((int32_t)i);
-        }
-    }
-    return 0; /* NULL */
-}
-
-static int port_DVDCheckWaitingQueue(void) {
-    uint32_t i;
-    for (i = 0; i < PORT_MAX_QUEUES; i++) {
-        uint32_t q = PORT_QUEUE_ADDR(i);
-        if (qr32(q, PORT_BLOCK_NEXT) != q) return 1;
-    }
-    return 0;
-}
-
-static int port_DVDDequeueWaitingQueue(uint32_t block_addr) {
-    uint32_t prev = qr32(block_addr, PORT_BLOCK_PREV);
-    uint32_t next = qr32(block_addr, PORT_BLOCK_NEXT);
-
-    if (prev == 0 || next == 0) return 0;
-
-    /* prev->next = next */
-    qw32(prev, PORT_BLOCK_NEXT, next);
-    /* next->prev = prev */
-    qw32(next, PORT_BLOCK_PREV, prev);
-
-    return 1;
-}
-
-static int port_DVDIsBlockInWaitingQueue(uint32_t block_addr) {
-    uint32_t i;
-    for (i = 0; i < PORT_MAX_QUEUES; i++) {
-        uint32_t start = PORT_QUEUE_ADDR(i);
-        if (qr32(start, PORT_BLOCK_NEXT) != start) {
-            uint32_t q;
-            for (q = qr32(start, PORT_BLOCK_NEXT); q != start; q = qr32(q, PORT_BLOCK_NEXT)) {
-                if (q == block_addr) return 1;
-            }
-        }
-    }
-    return 0;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -289,23 +183,6 @@ static int port_DVDIsBlockInWaitingQueue(uint32_t block_addr) {
 #define IN_NONE   (-1)
 static int block_queue[ORACLE_MAX_BLOCKS]; /* which prio queue, or IN_NONE */
 
-static void init_both(void) {
-    int i;
-    oracle_DVDClearWaitingQueue();
-    memset(port_mem, 0, sizeof(port_mem));
-    port_DVDClearWaitingQueue();
-
-    for (i = 0; i < ORACLE_MAX_BLOCKS; i++) {
-        oracle_BlockPool[i].next = NULL;
-        oracle_BlockPool[i].prev = NULL;
-        oracle_BlockPool[i].id   = i;
-        qw32(PORT_BLOCK_ADDR(i), PORT_BLOCK_NEXT, 0);
-        qw32(PORT_BLOCK_ADDR(i), PORT_BLOCK_PREV, 0);
-        qw32(PORT_BLOCK_ADDR(i), PORT_BLOCK_ID,   (uint32_t)i);
-        block_queue[i] = IN_NONE;
-    }
-}
-
 /* Map oracle block pointer to block index */
 static int oracle_block_id(oracle_DVDCommandBlock *b) {
     if (!b) return -1;
@@ -315,7 +192,25 @@ static int oracle_block_id(oracle_DVDCommandBlock *b) {
 /* Map port block address to block index */
 static int port_block_id(uint32_t addr) {
     if (addr == 0) return -1;
-    return (int)((addr - PORT_BLOCKS_OFFSET) / PORT_BLOCK_SIZE);
+    return (int)((addr - GC_BLOCKS_BASE) / PORT_DVD_BLOCK_SIZE);
+}
+
+static void init_both(void) {
+    int i;
+    oracle_DVDClearWaitingQueue();
+    memset(gc_dvd_backing, 0, sizeof(gc_dvd_backing));
+    dvd_state.queuesBase = GC_QUEUES_BASE;
+    port_DVDClearWaitingQueue(&dvd_state);
+
+    for (i = 0; i < ORACLE_MAX_BLOCKS; i++) {
+        oracle_BlockPool[i].next = NULL;
+        oracle_BlockPool[i].prev = NULL;
+        oracle_BlockPool[i].id   = i;
+        test_store_u32be(BLOCK_ADDR(i) + PORT_DVD_BLOCK_NEXT, 0);
+        test_store_u32be(BLOCK_ADDR(i) + PORT_DVD_BLOCK_PREV, 0);
+        test_store_u32be(BLOCK_ADDR(i) + PORT_DVD_BLOCK_COMMAND, (uint32_t)i);
+        block_queue[i] = IN_NONE;
+    }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -332,21 +227,21 @@ static int test_push_pop(uint32_t seed) {
     for (i = 0; i < num_ops && i < ORACLE_MAX_BLOCKS; i++) {
         int32_t prio = (int32_t)(xorshift32() % ORACLE_MAX_QUEUES);
         oracle_DVDPushWaitingQueue(prio, &oracle_BlockPool[i]);
-        port_DVDPushWaitingQueue(prio, PORT_BLOCK_ADDR(i));
+        port_DVDPushWaitingQueue(&dvd_state, prio, BLOCK_ADDR(i));
         block_queue[i] = prio;
     }
 
     /* Check parity */
     {
         int oc = oracle_DVDCheckWaitingQueue();
-        int pc = port_DVDCheckWaitingQueue();
+        int pc = port_DVDCheckWaitingQueue(&dvd_state);
         CHECK(oc == pc, "CheckWaitingQueue: oracle=%d port=%d", oc, pc);
     }
 
     /* Pop all and compare order */
     for (;;) {
         oracle_DVDCommandBlock *ob = oracle_DVDPopWaitingQueue();
-        uint32_t pb = port_DVDPopWaitingQueue();
+        uint32_t pb = port_DVDPopWaitingQueue(&dvd_state);
         int oid = oracle_block_id(ob);
         int pid = port_block_id(pb);
         CHECK(oid == pid, "PopWaitingQueue: oracle=%d port=%d", oid, pid);
@@ -355,7 +250,7 @@ static int test_push_pop(uint32_t seed) {
 
     /* Both should be empty now */
     CHECK(!oracle_DVDCheckWaitingQueue(), "oracle not empty after drain");
-    CHECK(!port_DVDCheckWaitingQueue(), "port not empty after drain");
+    CHECK(!port_DVDCheckWaitingQueue(&dvd_state), "port not empty after drain");
 
     return 1;
 }
@@ -375,7 +270,7 @@ static int test_dequeue(uint32_t seed) {
     for (i = 0; i < num_push; i++) {
         int32_t prio = (int32_t)(xorshift32() % ORACLE_MAX_QUEUES);
         oracle_DVDPushWaitingQueue(prio, &oracle_BlockPool[i]);
-        port_DVDPushWaitingQueue(prio, PORT_BLOCK_ADDR(i));
+        port_DVDPushWaitingQueue(&dvd_state, prio, BLOCK_ADDR(i));
         block_queue[i] = (int)prio;
     }
 
@@ -389,7 +284,7 @@ static int test_dequeue(uint32_t seed) {
         if (block_queue[idx] == IN_NONE) continue; /* skip already-dequeued */
         {
             int or_result = oracle_DVDDequeueWaitingQueue(&oracle_BlockPool[idx]);
-            int pr_result = port_DVDDequeueWaitingQueue(PORT_BLOCK_ADDR(idx));
+            int pr_result = port_DVDDequeueWaitingQueue(BLOCK_ADDR(idx));
             CHECK(or_result == pr_result,
                   "Dequeue block %d: oracle=%d port=%d", idx, or_result, pr_result);
             if (or_result) {
@@ -402,7 +297,7 @@ static int test_dequeue(uint32_t seed) {
     /* Drain remaining and compare */
     for (;;) {
         oracle_DVDCommandBlock *ob = oracle_DVDPopWaitingQueue();
-        uint32_t pb = port_DVDPopWaitingQueue();
+        uint32_t pb = port_DVDPopWaitingQueue(&dvd_state);
         int oid = oracle_block_id(ob);
         int pid = port_block_id(pb);
         CHECK(oid == pid, "Pop after dequeue: oracle=%d port=%d", oid, pid);
@@ -427,7 +322,7 @@ static int test_is_in_queue(uint32_t seed) {
     for (i = 0; i < num_push; i++) {
         int32_t prio = (int32_t)(xorshift32() % ORACLE_MAX_QUEUES);
         oracle_DVDPushWaitingQueue(prio, &oracle_BlockPool[i]);
-        port_DVDPushWaitingQueue(prio, PORT_BLOCK_ADDR(i));
+        port_DVDPushWaitingQueue(&dvd_state, prio, BLOCK_ADDR(i));
         block_queue[i] = (int)prio;
     }
 
@@ -436,14 +331,14 @@ static int test_is_in_queue(uint32_t seed) {
         int idx = (int)(xorshift32() % (uint32_t)num_push);
         if (block_queue[idx] == IN_NONE) continue;
         oracle_DVDDequeueWaitingQueue(&oracle_BlockPool[idx]);
-        port_DVDDequeueWaitingQueue(PORT_BLOCK_ADDR(idx));
+        port_DVDDequeueWaitingQueue(BLOCK_ADDR(idx));
         block_queue[idx] = IN_NONE;
     }
 
     /* Check membership for ALL blocks (pushed and not-pushed) */
     for (i = 0; i < ORACLE_MAX_BLOCKS; i++) {
         int ov = oracle_DVDIsBlockInWaitingQueue(&oracle_BlockPool[i]);
-        int pv = port_DVDIsBlockInWaitingQueue(PORT_BLOCK_ADDR(i));
+        int pv = port_DVDIsBlockInWaitingQueue(&dvd_state, BLOCK_ADDR(i));
         CHECK(ov == pv, "IsBlockInQueue(%d): oracle=%d port=%d", i, ov, pv);
     }
 
@@ -467,7 +362,7 @@ static int test_properties(uint32_t seed) {
     for (i = 0; i < n; i++) {
         int32_t prio = (int32_t)(xorshift32() % ORACLE_MAX_QUEUES);
         oracle_DVDPushWaitingQueue(prio, &oracle_BlockPool[i]);
-        port_DVDPushWaitingQueue(prio, PORT_BLOCK_ADDR(i));
+        port_DVDPushWaitingQueue(&dvd_state, prio, BLOCK_ADDR(i));
         push_order[i] = i;
         push_prio[i] = (int)prio;
         block_queue[i] = (int)prio;
@@ -481,7 +376,7 @@ static int test_properties(uint32_t seed) {
 
         for (i = 0; i < n; i++) {
             oracle_DVDCommandBlock *ob = oracle_DVDPopWaitingQueue();
-            uint32_t pb = port_DVDPopWaitingQueue();
+            uint32_t pb = port_DVDPopWaitingQueue(&dvd_state);
             int oid = oracle_block_id(ob);
             int pid = port_block_id(pb);
 
@@ -530,7 +425,7 @@ static int test_integration(uint32_t seed) {
             if (next_block < ORACLE_MAX_BLOCKS) {
                 int32_t prio = (int32_t)(xorshift32() % ORACLE_MAX_QUEUES);
                 oracle_DVDPushWaitingQueue(prio, &oracle_BlockPool[next_block]);
-                port_DVDPushWaitingQueue(prio, PORT_BLOCK_ADDR(next_block));
+                port_DVDPushWaitingQueue(&dvd_state, prio, BLOCK_ADDR(next_block));
                 block_queue[next_block] = (int)prio;
                 next_block++;
                 enqueued++;
@@ -540,7 +435,7 @@ static int test_integration(uint32_t seed) {
         case 1: /* Pop */
         {
             oracle_DVDCommandBlock *ob = oracle_DVDPopWaitingQueue();
-            uint32_t pb = port_DVDPopWaitingQueue();
+            uint32_t pb = port_DVDPopWaitingQueue(&dvd_state);
             int oid = oracle_block_id(ob);
             int pid = port_block_id(pb);
             CHECK(oid == pid, "Integration Pop: oracle=%d port=%d", oid, pid);
@@ -554,7 +449,7 @@ static int test_integration(uint32_t seed) {
         case 2: /* CheckWaitingQueue */
         {
             int oc = oracle_DVDCheckWaitingQueue();
-            int pc = port_DVDCheckWaitingQueue();
+            int pc = port_DVDCheckWaitingQueue(&dvd_state);
             CHECK(oc == pc, "Integration Check: oracle=%d port=%d", oc, pc);
             break;
         }
@@ -564,7 +459,7 @@ static int test_integration(uint32_t seed) {
                 int idx = (int)(xorshift32() % (uint32_t)next_block);
                 if (block_queue[idx] != IN_NONE) {
                     int or_result = oracle_DVDDequeueWaitingQueue(&oracle_BlockPool[idx]);
-                    int pr_result = port_DVDDequeueWaitingQueue(PORT_BLOCK_ADDR(idx));
+                    int pr_result = port_DVDDequeueWaitingQueue(BLOCK_ADDR(idx));
                     CHECK(or_result == pr_result,
                           "Integration Dequeue(%d): oracle=%d port=%d", idx, or_result, pr_result);
                     if (or_result) {
@@ -579,21 +474,21 @@ static int test_integration(uint32_t seed) {
             if (next_block > 0) {
                 int idx = (int)(xorshift32() % (uint32_t)next_block);
                 int ov = oracle_DVDIsBlockInWaitingQueue(&oracle_BlockPool[idx]);
-                int pv = port_DVDIsBlockInWaitingQueue(PORT_BLOCK_ADDR(idx));
+                int pv = port_DVDIsBlockInWaitingQueue(&dvd_state, BLOCK_ADDR(idx));
                 CHECK(ov == pv, "Integration IsIn(%d): oracle=%d port=%d", idx, ov, pv);
             }
             break;
 
         case 5: /* Clear + reinit */
             oracle_DVDClearWaitingQueue();
-            port_DVDClearWaitingQueue();
+            port_DVDClearWaitingQueue(&dvd_state);
             {
                 int j;
                 for (j = 0; j < next_block; j++) {
                     oracle_BlockPool[j].next = NULL;
                     oracle_BlockPool[j].prev = NULL;
-                    qw32(PORT_BLOCK_ADDR(j), PORT_BLOCK_NEXT, 0);
-                    qw32(PORT_BLOCK_ADDR(j), PORT_BLOCK_PREV, 0);
+                    test_store_u32be(BLOCK_ADDR(j) + PORT_DVD_BLOCK_NEXT, 0);
+                    test_store_u32be(BLOCK_ADDR(j) + PORT_DVD_BLOCK_PREV, 0);
                     block_queue[j] = IN_NONE;
                 }
             }
@@ -606,7 +501,7 @@ static int test_integration(uint32_t seed) {
     /* Final drain — compare */
     for (;;) {
         oracle_DVDCommandBlock *ob = oracle_DVDPopWaitingQueue();
-        uint32_t pb = port_DVDPopWaitingQueue();
+        uint32_t pb = port_DVDPopWaitingQueue(&dvd_state);
         int oid = oracle_block_id(ob);
         int pid = port_block_id(pb);
         CHECK(oid == pid, "Integration drain: oracle=%d port=%d", oid, pid);
@@ -666,6 +561,9 @@ int main(int argc, char **argv) {
             return 2;
         }
     }
+
+    /* Set up gc_mem backing for queue sentinels + blocks */
+    gc_mem_set(GC_QUEUES_BASE, sizeof(gc_dvd_backing), gc_dvd_backing);
 
     printf("\n=== dvdqueue Property Test ===\n");
 
