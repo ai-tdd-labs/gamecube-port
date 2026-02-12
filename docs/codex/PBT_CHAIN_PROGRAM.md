@@ -69,7 +69,7 @@ For each subsystem, keep these artifacts up to date:
 
 - Coverage matrix file under `docs/sdk/`.
 - Property harness and commands under `tests/` and `tools/`.
-- Oracle fixtures/traces under `tests/oracles/` or `tests/traces/`.
+- Oracle fixtures/traces under `tests/oracles/` or `tests/trace-harvest/`.
 - Facts in `docs/codex/NOTES.md`.
 
 ## Status table

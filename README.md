@@ -82,7 +82,7 @@ RVZ/ISO without modifying the game:
 Tool:
 - `tools/trace_pc_entry_exit.py`
 
-These traces are local-only (`tests/traces/**` is gitignored). We then:
+These traces are local-only (`tests/trace-harvest/**` is gitignored). We then:
 - derive invariants (e.g. MSR bits and return values for `OSDisableInterrupts`)
 - and/or convert representative cases into deterministic PPC-vs-host unit tests
 
@@ -98,7 +98,7 @@ to ensure tests fail when we introduce a small intentional bug.
 
 Example (SITransfer mutant, must FAIL under the mutant):
 ```bash
-tools/mutations/si_transfer_fire_plus1.sh tests/traces/si_transfer/mp4_rvz_v4/hit_000002_pc_800D9CC4_lr_800DA26C
+tools/mutations/si_transfer_fire_plus1.sh tests/trace-harvest/si_transfer/mp4_rvz_v4/hit_000002_pc_800D9CC4_lr_800DA26C
 ```
 
 ## Quickstart (Run One Test)

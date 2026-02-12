@@ -23,6 +23,16 @@ MP4 boot-forward chain (bd):
   Evidence: `tests/oracles/mp4_rvz/probes/wipeinit_pc_80041170_hit1/`
 - [x] omMasterInit inventory complete; first unresolved SDK blockers identified.
   Evidence: `docs/sdk/mp4/omMasterInit_blockers.md`
+- [ ] Test layout migration: move to explicit `tests/trace-harvest`, `tests/sdk/callsite`, `tests/sdk/pbt`.
+  Evidence target: `docs/codex/TEST_LAYOUT_MIGRATION.md`
+  Progress:
+  - [x] Phase 2 complete: trace corpora moved to `tests/trace-harvest`; legacy `tests/traces` removed.
+  - [x] Phase 3 complete: `tests/sdk/callsite` mirrors legacy SDK suite paths via symlinks.
+  - [x] Phase 4 complete: `tests/sdk/pbt` mirrors legacy `tests/pbt` + sdk property suites via symlinks.
+  - [x] Phase 5 complete: replay/harvest docs+scripts retargeted to `tests/trace-harvest`.
+- [x] Small SDK blocker batch landed: `OSGetTick`, `OSTicksToCalendarTime`, `OSDumpStopwatch`, `DVDCancel`.
+  Evidence: `src/sdk_port/os/OSRtc.c`, `src/sdk_port/os/OSStopwatch.c`, `src/sdk_port/dvd/DVD.c`,
+  `tests/sdk/os/ostime/property/ostime_sdk_port_unit_test.c`, `tests/sdk/dvd/property/dvdcancel_unit_test.c`
 
 Oracle exactness hardening (new):
 - [ ] Add tier tag to each oracle (`STRICT_DECOMP`, `DECOMP_ADAPTED`, `MODEL_OR_SYNTHETIC`) and print in test output.
@@ -125,18 +135,23 @@ PBT matrix baseline:
 
 4. MP4 omMaster blockers (OSLink / OSUnlink)
   - [x] Harvest first retail `OSLink` case from RVZ (`0x800B7D24`) with module/global windows.
-     Evidence: `tests/traces/os_link/mp4_rvz_v1/hit_000001_pc_800B7D24_lr_8003222C/`
+     Evidence: `tests/trace-harvest/os_link/mp4_rvz_v1/hit_000001_pc_800B7D24_lr_8003222C/`
   - [x] Build `OSLink` trace replay harness and pass harvested case(s) on host.
     Evidence:
       - `tools/replay_trace_case_os_link.sh`
       - `tests/sdk/os/os_link/host/os_link_rvz_trace_replay_001_scenario.c`
   - [ ] Harvest `OSUnlink` RVZ cases (`0x800B8180`) with same window layout.
     Current status: 0 hits in 60s + 240s boot-window runs.
-    Target: `tests/traces/os_unlink/mp4_rvz_v1/`
+    Target: `tests/trace-harvest/os_unlink/mp4_rvz_v1/`
     Prereq: reproducible later-game trigger path for objdll unload.
     Extra signal: `omOvlKill` (`0x8002F014`) also not hit in 180s boot-window probe.
-   - [ ] Build `OSUnlink` trace replay harness and pass harvested case(s) bit-exact on host.
-     Target: host replay script to be added under `tools/` (not present yet)
+   - [x] Build `OSUnlink` trace replay harness.
+     Evidence:
+      - `tools/replay_trace_case_os_unlink.sh`
+      - `tests/sdk/os/os_unlink/host/os_unlink_rvz_trace_replay_001_scenario.c`
+      - synthetic validation case: `tests/trace-harvest/os_unlink/synth_case_001` (marker `0xDEADBEEF`)
+   - [ ] Pass harvested `OSUnlink` case(s) bit-exact on host.
+     Current status: harvest script runs, but no real `OSUnlink` hits captured yet.
   - [ ] Re-run omMaster-adjacent checkpoint after both replay harnesses pass.
 
 5. DVD path expansion (MP4)

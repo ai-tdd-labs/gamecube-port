@@ -30,10 +30,15 @@ run_if_exists() {
   fi
 }
 
-# These scripts already exist in this repo and are used for replay parity.
-run_if_exists "tools/harvest_and_replay_os_disable_interrupts.sh"
-run_if_exists "tools/harvest_and_replay_vi_set_post_retrace_callback.sh"
-run_if_exists "tools/harvest_and_replay_si_set_sampling_rate.sh"
+# Fast local replay parity over existing harvested traces.
 run_if_exists "tools/replay_trace_suite.sh"
+
+# Optional refresh from Dolphin/RVZ (disabled by default because it needs
+# external assets and is slower).
+if [[ "${GC_REPLAY_HARVEST:-0}" == "1" ]]; then
+  run_if_exists "tools/harvest_and_replay_os_disable_interrupts.sh"
+  run_if_exists "tools/harvest_and_replay_vi_set_post_retrace_callback.sh"
+  run_if_exists "tools/harvest_and_replay_si_set_sampling_rate.sh"
+fi
 
 echo "[replay-gate] PASS"

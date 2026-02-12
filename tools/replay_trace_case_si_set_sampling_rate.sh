@@ -22,7 +22,7 @@ fi
 #
 # Example:
 #   tools/replay_trace_case_si_set_sampling_rate.sh \
-#     tests/traces/si_set_sampling_rate/mp4_rvz_si_ctrl/hit_000001_pc_800DA3C8_lr_800D961C
+#     tests/trace-harvest/si_set_sampling_rate/mp4_rvz_si_ctrl/hit_000001_pc_800DA3C8_lr_800D961C
 
 case_dir=${1:?trace case directory required}
 

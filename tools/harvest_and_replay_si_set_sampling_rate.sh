@@ -8,7 +8,7 @@ repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 # We keep the harvested traces local-only (gitignored) and focus this script on
 # replaying the existing trace corpus deterministically.
 
-trace_dir="${1:-$repo_root/tests/traces/si_set_sampling_rate/mp4_rvz_si_ctrl}"
+trace_dir="${1:-$repo_root/tests/trace-harvest/si_set_sampling_rate/mp4_rvz_si_ctrl}"
 
 if [[ "$trace_dir" != /* ]]; then
   trace_dir="$repo_root/$trace_dir"
