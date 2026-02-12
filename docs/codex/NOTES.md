@@ -1709,3 +1709,10 @@ Notes:
 - Validation (PASS):
   - `bash tools/run_ar_property_test.sh --num-runs=50 --seed=0xC0DEC0DE`
   - `bash tools/run_card_dir_property_test.sh --num-runs=50 --seed=0xC0DEC0DE`
+
+## 2026-02-12: todo snapshot refreshed
+
+- Updated `todo/REMAINING_TEST_STRATEGY.md` and `todo/SDK_PORT_COVERAGE.md` with current remaining test bucket counts:
+  - Trace replay: ~80
+  - PBT: ~3
+  - No test needed: ~10

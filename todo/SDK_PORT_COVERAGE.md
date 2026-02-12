@@ -7,6 +7,14 @@ Last updated: 2026-02-12
 The game calls **~305 unique SDK functions** across 13 modules.
 The port currently implements **~219 functions** (plus internal helpers).
 
+## Remaining test workload snapshot
+
+| Bucket | Remaining |
+|--------|-----------|
+| Trace replay | **~80** |
+| PBT | **~3** |
+| No test needed | **~10** |
+
 | Module | Game needs | Ported | Coverage | Notes |
 |--------|-----------|--------|----------|-------|
 | **OS** | 48 | 47 | **98%** | Thread/Mutex/Msg; +OSTicksToCalendarTime, OSGetTick, OSDumpStopwatch, OSAlarm |

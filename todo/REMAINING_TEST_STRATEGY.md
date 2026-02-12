@@ -1,12 +1,20 @@
 # Remaining Functions — Test Strategy
 
-Last updated: 2026-02-12
+Last updated: 2026-02-12 (pm)
 
 ## Context
 
 The game needs **~305 SDK functions**. Currently **~205 are ported**.
 The remaining **~93 functions** are all hardware-coupled — every pure-computation
 function is already covered by PBT (18 suites, ~250M+ checks).
+
+## Remaining test workload snapshot
+
+| Bucket | Remaining |
+|--------|-----------|
+| Trace replay | **~80** |
+| PBT | **~3** |
+| No test needed | **~10** |
 
 ### Test types in this project
 
