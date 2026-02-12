@@ -2191,3 +2191,12 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Mutation gate:
   - `tools/run_mutation_check.sh tools/mutations/pad_control_motor_zero_cmd.patch -- tools/replay_trace_guided_pad_control_motor.sh --oracle dolphin --dolphin-suite pbt_001` → expected FAIL, observed SURVIVED (both DOL and host use mutated sdk_port in this mode).
   - `tools/run_mutation_check.sh tools/mutations/pad_control_motor_zero_cmd.patch -- tools/replay_trace_guided_pad_control_motor.sh --seed 0xC0DE1234 --count 128 --oracle synthetic` → PASS (mutant fails as expected).
+
+## 2026-02-12: beads repo-id mismatch repaired
+
+- Fixed `bd` database mismatch for this clone by running:
+  - `bd migrate --update-repo-id` (repo ID updated `536ef5b9 -> abcc26e3`)
+- Verified normal operation without override env:
+  - `bd ready` → lists ready tasks, no mismatch warning
+  - `bd sync` → export succeeds, no mismatch warning
+- Added permanent recovery procedure to `docs/codex/WORKFLOW.md`.

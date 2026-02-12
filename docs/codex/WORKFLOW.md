@@ -51,6 +51,20 @@ Tip (per-game only):
 7) Notes
 - Write confirmed behaviors to docs/codex/NOTES.md (facts only, with evidence).
 
+## beads / bd repo-id mismatch recovery
+
+If `bd` prints `DATABASE MISMATCH DETECTED!`:
+
+1) Check current warning values (database repo ID vs current repo ID).
+2) If this clone is the same repo (URL changed/canonicalization update), run:
+   - `bd migrate --update-repo-id`
+3) Verify `bd` works without overrides:
+   - `bd ready`
+   - `bd sync`
+4) Commit updated `.beads/issues.jsonl` so all clones pick up consistent metadata.
+
+Do not run day-to-day commands with `BEADS_IGNORE_REPO_MISMATCH=1` as a permanent workaround.
+
 ## Property-Based Testing (Optional)
 
 Snapshot tests (DOL expected vs host actual, and retail RVZ trace replays) are the primary oracle.
