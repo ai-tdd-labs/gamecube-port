@@ -2146,3 +2146,25 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Mutation gate:
   - `tools/run_mutation_check.sh tools/mutations/pad_control_motor_zero_cmd.patch -- tools/replay_trace_guided_pad_control_motor.sh --seed 0xC0DE1234 --count 64 --oracle synthetic`
   - Result: PASS (mutant fails suite as expected; non-trivial assertion path confirmed).
+
+## 2026-02-12: PADControlMotor max-coverage Dolphin golden expansion
+
+- Added two more Dolphin-oracle suites for broader coverage:
+  - `tests/sdk/pad/pad_control_motor/dol/generic/exhaustive_matrix_001/`
+    - exhaustive matrix over channels `{-2,-1,0,1,2,3,4,5}` and commands `{0,1,2,3,0xffffffff}`.
+  - `tests/sdk/pad/pad_control_motor/dol/generic/trace_guided_batch_002/`
+    - deterministic trace-guided stress batch, seed `0xC0DE1234`, count `2048`.
+- Added host mirrors:
+  - `tests/sdk/pad/pad_control_motor/host/pad_control_motor_exhaustive_matrix_001_scenario.c`
+  - `tests/sdk/pad/pad_control_motor/host/pad_control_motor_trace_guided_batch_002_scenario.c`
+- Runner now supports explicit suite selection and full run:
+  - `tools/replay_trace_guided_pad_control_motor.sh --oracle dolphin --dolphin-suite exhaustive_matrix_001`
+  - `tools/replay_trace_guided_pad_control_motor.sh --oracle dolphin --dolphin-suite trace_guided_batch_002 --seed 0xC0DE1234 --count 2048`
+  - `tools/replay_trace_guided_pad_control_motor.sh --oracle dolphin --dolphin-suite max`
+- Validation:
+  - `tools/replay_trace_guided_pad_control_motor.sh --seed 0xC0DE1234 --count 128 --oracle synthetic` → PASS
+  - `tools/replay_trace_guided_pad_control_motor.sh --oracle dolphin --dolphin-suite exhaustive_matrix_001` → PASS
+  - `tools/replay_trace_guided_pad_control_motor.sh --oracle dolphin --dolphin-suite trace_guided_batch_002 --seed 0xC0DE1234 --count 2048` → PASS
+- Mutation gate:
+  - `tools/run_mutation_check.sh tools/mutations/pad_control_motor_zero_cmd.patch -- tools/replay_trace_guided_pad_control_motor.sh --seed 0xC0DE1234 --count 128 --oracle synthetic`
+  - Result: PASS (mutant fails suite as expected).
