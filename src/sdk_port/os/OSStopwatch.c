@@ -13,6 +13,11 @@ typedef struct OSStopwatch {
     u64 max;
 } OSStopwatch;
 
+#define OS_TIMER_CLOCK (162000000u / 4u)
+#define OSTicksToMicroseconds(ticks) (((ticks) * 8) / ((long long)OS_TIMER_CLOCK / 125000ll))
+
+int OSReport(const char *msg, ...);
+
 // Deterministic OSGetTime() for host scenarios.
 // We intentionally do not model TB frequency here; this is sufficient for
 // MP4 perf bookkeeping and for bit-exact deterministic tests.
@@ -63,4 +68,17 @@ long long OSCheckStopwatch(OSStopwatch *sw) {
 
 void OSResetStopwatch(OSStopwatch *sw) {
     OSInitStopwatch(sw, sw->name);
+}
+
+void OSDumpStopwatch(OSStopwatch *sw) {
+    OSReport("Stopwatch [%s]\t:\n", sw->name);
+    OSReport("\tTotal= %lld us\n", OSTicksToMicroseconds((long long)sw->total));
+    OSReport("\tHits = %d \n", sw->hits);
+    OSReport("\tMin  = %lld us\n", OSTicksToMicroseconds((long long)sw->min));
+    OSReport("\tMax  = %lld us\n", OSTicksToMicroseconds((long long)sw->max));
+    if (sw->hits == 0) {
+        OSReport("\tMean = 0 us\n");
+    } else {
+        OSReport("\tMean = %lld us\n", OSTicksToMicroseconds((long long)(sw->total / sw->hits)));
+    }
 }

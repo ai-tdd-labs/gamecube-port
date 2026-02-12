@@ -1527,3 +1527,19 @@ Notes:
   - `tools/run_gxz16_property_test.sh --num-runs=10 --seed=0xC0DEC0DE --op=L5`
   - `tools/run_gxyscale_property_test.sh --num-runs=10 --seed=0xC0DEC0DE --op=L5`
   - `tools/run_thpaudio_property_test.sh --num-runs=10 --seed=0xC0DEC0DE --op=L4`
+
+## 2026-02-12: Small SDK blockers batch (OSGetTick / OSTicksToCalendarTime / OSDumpStopwatch / DVDCancel)
+
+- Added missing sdk_port implementations:
+  - `src/sdk_port/os/OSRtc.c`: `OSGetTick` (deterministic +1ms step per call), `OSTicksToCalendarTime` (ported from decomp math/date conversion).
+  - `src/sdk_port/os/OSStopwatch.c`: `OSDumpStopwatch` formatting via `OSReport`.
+  - `src/sdk_port/dvd/DVD.c`: `DVDCancel` minimal deterministic cancel semantics.
+- Added deterministic unit checks:
+  - `tests/sdk/os/ostime/property/ostime_sdk_port_unit_test.c`
+  - `tests/sdk/dvd/property/dvdcancel_unit_test.c`
+  - runners: `tools/run_ostime_sdk_port_unit_test.sh`, `tools/run_dvdcancel_unit_test.sh`
+- Validation run (PASS):
+  - `bash tools/run_ostime_sdk_port_unit_test.sh`
+  - `bash tools/run_dvdcancel_unit_test.sh`
+  - `bash tools/run_ostime_property_test.sh --num-runs=20 --seed=0xC0DEC0DE`
+  - `bash tools/run_stopwatch_property_test.sh --num-runs=20 --seed=0xC0DEC0DE`
