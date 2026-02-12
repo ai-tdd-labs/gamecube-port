@@ -1665,3 +1665,14 @@ Notes:
   - `bash tools/run_dvdreadprio_property_test.sh --num-runs=50 --seed=0xC0DEC0DE --op=L2`
   - `bash tools/run_dvdreadprio_property_test.sh --num-runs=50 --seed=0xC0DEC0DE --op=L3`
   - `bash tools/run_dvdreadprio_property_test.sh --num-runs=50 --seed=0xC0DEC0DE --op=FULL`
+
+## 2026-02-12: GXInitTexObjLOD chain coverage reconciled
+
+- Revalidated MP4 `pfDrawFonts -> GXInitTexObjLOD` suite:
+  - `python3 tools/ram_compare.py tests/sdk/gx/gx_init_tex_obj_lod/expected/gx_init_tex_obj_lod_mp4_pfdrawfonts_001.bin tests/sdk/gx/gx_init_tex_obj_lod/actual/gx_init_tex_obj_lod_mp4_pfdrawfonts_001.bin`
+  - Result: `PASS: files are identical`
+- Updated chain row in `docs/sdk/mp4/MP4_chain_all.csv`:
+  - `tests_exp_act` `0/1 -> 1/1`
+  - `actual_bins` `0 -> 1`
+  - `pass_bins` `0 -> 1`
+  - `covered` now `y`
