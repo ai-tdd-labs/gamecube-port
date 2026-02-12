@@ -4,15 +4,15 @@ Last updated: 2026-02-12 (pm)
 
 ## Context
 
-The game needs **~305 SDK functions**. Currently **~208 are ported**.
-The remaining **~90 functions** are all hardware-coupled — every pure-computation
+The game needs **~305 SDK functions**. Currently **~213 are ported**.
+The remaining **~85 functions** are all hardware-coupled — every pure-computation
 function is already covered by PBT (18 suites, ~250M+ checks).
 
 ## Remaining test workload snapshot
 
 | Bucket | Remaining |
 |--------|-----------|
-| Trace replay | **~76** |
+| Trace replay | **~71** |
 | PBT | **~0** |
 | No test needed | **~10** |
 
@@ -34,7 +34,7 @@ against decomp interpretation).
 
 ---
 
-## Remaining ~90 functions by test method
+## Remaining ~85 functions by test method
 
 ### Trace replay needed (~80 functions)
 
@@ -42,7 +42,7 @@ These are hardware-coupled and can only be verified against Dolphin ground truth
 
 | Module | Count | Functions | Complexity |
 |--------|-------|-----------|------------|
-| **GX** | 22 | Indirect tex (6): `GXSetIndTexCoordScale`, `GXSetIndTexMtx`, `GXSetIndTexOrder`, `GXSetTevDirect`, `GXSetTevIndTile`, `GXSetTevIndWarp`. TEV konstant (4): `GXSetTevKAlphaSel`, `GXSetTevKColor`, `GXSetTevKColorSel`, `GXSetTevColorS10`. TEV swap (2): `GXSetTevSwapMode`, `GXSetTevSwapModeTable`. Vertex formats (6): `GXColor1x16`, `GXColor4u8`, `GXNormal1x16`, `GXNormal3s16`, `GXTexCoord1x16`, `GXTexCoord2s16`. Texture (4): `GXInitTexObjCI`, `GXInitTlutObj`, `GXLoadTlut`, `GXSetTexCoordScaleManually` | Medium — register packing, SET_REG_FIELD macros |
+| **GX** | 17 | Indirect tex (1): `GXSetTevIndTile`. TEV konstant (4): `GXSetTevKAlphaSel`, `GXSetTevKColor`, `GXSetTevKColorSel`, `GXSetTevColorS10`. TEV swap (2): `GXSetTevSwapMode`, `GXSetTevSwapModeTable`. Vertex formats (6): `GXColor1x16`, `GXColor4u8`, `GXNormal1x16`, `GXNormal3s16`, `GXTexCoord1x16`, `GXTexCoord2s16`. Texture (4): `GXInitTexObjCI`, `GXInitTlutObj`, `GXLoadTlut`, `GXSetTexCoordScaleManually` | Medium — register packing, SET_REG_FIELD macros |
 | **CARD** | 19 | `CARDInit`, `CARDMount`, `CARDUnmount`, `CARDOpen`, `CARDClose`, `CARDCreate`, `CARDDelete`, `CARDRead`, `CARDWrite`, `CARDFormat`, `CARDCheck`, `CARDFreeBlocks`, `CARDGetSectorSize`, `CARDProbeEx`, `CARDGetSerialNo`, `CARDGetStatus`, `CARDSetStatus`, `CARDSetBannerFormat`, `CARDSetCommentAddress`+ icon setters | Large — needs EXI simulation, host filesystem backend |
 | **THP** | 27 | `THPInit`, `THPVideoDecode`, `THPSimpleOpen/Close/Decode/PreLoad/LoadStop/Init/Quit`, `THPSimpleSetBuffer/SetVolume/CalcNeedMemory`, `THPSimpleAudioStart/Stop`, `THPSimpleGetTotalFrame/GetVideoInfo/DrawCurrentFrame`, `THPGXYuv2RgbSetup/Draw`, `THPGXRestore`, `THPAudioMixCallback`, `THPDecodeFunc`, `THPViewFunc/ViewSprFunc`, `THPTestProc`, `THPSimpleInlineFunc` | Large — JPEG codec + ADPCM + locked cache emulation |
 | **AI** | 7 | `AIGetDMAStartAddr`, `AIInitDMA`, `AIRegisterDMACallback`, `AISetStreamPlayState`, `AISetStreamVolLeft`, `AISetStreamVolRight`, `AIStartDMA` | Medium — needs audio backend (SDL_audio or similar) |
@@ -93,7 +93,7 @@ across GX (109), OS (50), VI (20), PAD (14), DVD (11), SI (4), MTX (2).
 
 ## Priority order
 
-1. **GX gaps** (22) — blocking MP4 board rendering (indirect tex, TEV konstant/swap, vertex formats)
+1. **GX gaps** (17) — blocking MP4 board rendering (indirect tex, TEV konstant/swap, vertex formats)
 2. **AR hardware** (4) — ARStartDMA needed for ARAM data loading
 3. **CARD** (19) — save/load game data
 4. **AI** (7) — audio playback

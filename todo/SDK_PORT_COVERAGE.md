@@ -5,20 +5,20 @@ Last updated: 2026-02-12
 ## Summary
 
 The game calls **~305 unique SDK functions** across 13 modules.
-The port currently implements **~228 functions** (plus internal helpers).
+The port currently implements **~233 functions** (plus internal helpers).
 
 ## Remaining test workload snapshot
 
 | Bucket | Remaining |
 |--------|-----------|
-| Trace replay | **~76** |
+| Trace replay | **~71** |
 | PBT | **~0** |
 | No test needed | **~10** |
 
 | Module | Game needs | Ported | Coverage | Notes |
 |--------|-----------|--------|----------|-------|
 | **OS** | 48 | 47 | **98%** | Thread/Mutex/Msg; +OSTicksToCalendarTime, OSGetTick, OSDumpStopwatch, OSAlarm |
-| **GX** | 121 | 100 | **83%** | +GXProject, GXCompressZ16, GXDecompressZ16, GXPixModeSync, GXGetProjectionv, GXResetWriteGatherPipe, GXSetNumIndStages |
+| **GX** | 121 | 105 | **87%** | +GXProject, GXCompressZ16, GXDecompressZ16, GXPixModeSync, GXGetProjectionv, GXResetWriteGatherPipe, GXSetNumIndStages, GXSetIndTexCoordScale, GXSetIndTexOrder, GXSetTevDirect, GXSetIndTexMtx, GXSetTevIndWarp |
 | **DVD** | 12 | 12 | **100%** | +DVDCancel, dvdqueue port in sdk_port |
 | **PAD** | 8 | 8 | **100%** | +PADClamp |
 | **VI** | 13 | 13 | **100%** | VI callback setter pair covered |
@@ -29,7 +29,7 @@ The port currently implements **~228 functions** (plus internal helpers).
 | **ARQ** | 2 | 2 | **100%** | ARQInit + ARQPostRequest (+ internal helpers) |
 | **AI** | 7 | 0 | **0%** | Audio interface — not started |
 | **THP** | 27 | 0 | **0%** | Video player — not started |
-| **TOTAL** | **~305** | **~229** | **~75%** | |
+| **TOTAL** | **~305** | **~234** | **~76%** | |
 
 ---
 
@@ -56,14 +56,14 @@ The port currently implements **~228 functions** (plus internal helpers).
 **Missing (1 function):**
 - `OSTicksToMilliseconds` — **macro** (`ticks / (OS_TIMER_CLOCK / 1000)`), just need the define
 
-### GX (100/121 = 83%)
+### GX (105/121 = 87%)
 
 **Ported (93 functions in GX.c):**
 All core GX functions for rendering pipeline: Begin/End, vertex formats, TEV stages,
 color/alpha blending, texture objects, projection, viewport, scissor, copy, lights, etc.
 
-**Missing (21 functions):**
-- Indirect texturing: `GXSetIndTexCoordScale`, `GXSetIndTexMtx`, `GXSetIndTexOrder`, `GXSetTevDirect`, `GXSetTevIndTile`, `GXSetTevIndWarp`
+**Missing (16 functions):**
+- Indirect texturing: `GXSetTevIndTile`
 - TEV Konstant: `GXSetTevKAlphaSel`, `GXSetTevKColor`, `GXSetTevKColorSel`, `GXSetTevColorS10`
 - TEV Swap: `GXSetTevSwapMode`, `GXSetTevSwapModeTable`
 - Vertex formats: `GXColor1x16`, `GXColor4u8`, `GXNormal1x16`, `GXNormal3s16`, `GXTexCoord1x16`, `GXTexCoord2s16`

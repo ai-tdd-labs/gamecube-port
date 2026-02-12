@@ -1932,3 +1932,104 @@ Notes:
 - Coverage/todo snapshot updates:
   - `todo/REMAINING_TEST_STRATEGY.md`: trace replay `~77 -> ~76`, GX gap count `23 -> 22`.
   - `todo/SDK_PORT_COVERAGE.md`: GX `99 -> 100`, total ported `~228 -> ~229`.
+
+## 2026-02-12: GXSetIndTexCoordScale added + deterministic PPC-vs-host suite
+
+- Added sdk_port function in `src/sdk_port/gx/GX.c`:
+  - `GXSetIndTexCoordScale(ind_state, scale_s, scale_t)` mirrors `GXBump.c` packing:
+    - stage0/1 -> `gc_gx_ind_tex_scale0`, BP id `0x25`
+    - stage2/3 -> `gc_gx_ind_tex_scale1`, BP id `0x26`
+    - writes BP reg and clears `gc_gx_bp_sent_not`.
+- Added deterministic suite:
+  - `tests/sdk/gx/gx_set_ind_tex_coord_scale/dol/mp4/gx_set_ind_tex_coord_scale_mp4_init_gx_001/`
+  - `tests/sdk/gx/gx_set_ind_tex_coord_scale/host/gx_set_ind_tex_coord_scale_mp4_init_gx_001_scenario.c`
+- Validation commands:
+  - `cd tests/sdk/gx/gx_set_ind_tex_coord_scale/dol/mp4/gx_set_ind_tex_coord_scale_mp4_init_gx_001 && make clean && make`
+  - `python3 tools/ram_dump.py --exec tests/sdk/gx/gx_set_ind_tex_coord_scale/dol/mp4/gx_set_ind_tex_coord_scale_mp4_init_gx_001/gx_set_ind_tex_coord_scale_mp4_init_gx_001.dol --addr 0x80300000 --size 0x40 --out tests/sdk/gx/gx_set_ind_tex_coord_scale/expected/gx_set_ind_tex_coord_scale_mp4_init_gx_001.bin --run 0.5 --halt`
+  - `tools/run_host_scenario.sh tests/sdk/gx/gx_set_ind_tex_coord_scale/host/gx_set_ind_tex_coord_scale_mp4_init_gx_001_scenario.c`
+  - `python3 tools/ram_compare.py tests/sdk/gx/gx_set_ind_tex_coord_scale/expected/gx_set_ind_tex_coord_scale_mp4_init_gx_001.bin tests/sdk/gx/gx_set_ind_tex_coord_scale/actual/gx_set_ind_tex_coord_scale_mp4_init_gx_001.bin`
+- Result: PASS (bit-exact).
+- Coverage/todo snapshot updates:
+  - `todo/REMAINING_TEST_STRATEGY.md`: trace replay `~76 -> ~75`, GX gap count `22 -> 21`.
+  - `todo/SDK_PORT_COVERAGE.md`: GX `100 -> 101`, total ported `~229 -> ~230`.
+
+## 2026-02-12: GXSetIndTexOrder added + deterministic PPC-vs-host suite
+
+- Added sdk_port function in `src/sdk_port/gx/GX.c`:
+  - `GXSetIndTexOrder(ind_stage, tex_coord, tex_map)` mirrors `GXBump.c`:
+    - updates `gc_gx_iref` per-stage field pairs
+    - writes BP reg
+    - `gc_gx_dirty_state |= 3`
+    - clears `gc_gx_bp_sent_not`.
+- Added deterministic suite:
+  - `tests/sdk/gx/gx_set_ind_tex_order/dol/mp4/gx_set_ind_tex_order_mp4_init_gx_001/`
+  - `tests/sdk/gx/gx_set_ind_tex_order/host/gx_set_ind_tex_order_mp4_init_gx_001_scenario.c`
+- Validation commands:
+  - `cd tests/sdk/gx/gx_set_ind_tex_order/dol/mp4/gx_set_ind_tex_order_mp4_init_gx_001 && make clean && make`
+  - `python3 tools/ram_dump.py --exec tests/sdk/gx/gx_set_ind_tex_order/dol/mp4/gx_set_ind_tex_order_mp4_init_gx_001/gx_set_ind_tex_order_mp4_init_gx_001.dol --addr 0x80300000 --size 0x40 --out tests/sdk/gx/gx_set_ind_tex_order/expected/gx_set_ind_tex_order_mp4_init_gx_001.bin --run 0.5 --halt`
+  - `tools/run_host_scenario.sh tests/sdk/gx/gx_set_ind_tex_order/host/gx_set_ind_tex_order_mp4_init_gx_001_scenario.c`
+  - `python3 tools/ram_compare.py tests/sdk/gx/gx_set_ind_tex_order/expected/gx_set_ind_tex_order_mp4_init_gx_001.bin tests/sdk/gx/gx_set_ind_tex_order/actual/gx_set_ind_tex_order_mp4_init_gx_001.bin`
+- Result: PASS (bit-exact).
+- Coverage/todo snapshot updates:
+  - `todo/REMAINING_TEST_STRATEGY.md`: trace replay `~75 -> ~74`, GX gap count `21 -> 20`.
+  - `todo/SDK_PORT_COVERAGE.md`: GX `101 -> 102`, total ported `~230 -> ~231`.
+
+## 2026-02-12: GXSetTevDirect added + deterministic PPC-vs-host suite
+
+- Added sdk_port function in `src/sdk_port/gx/GX.c`:
+  - `GXSetTevDirect(tev_stage)` writes packed TEV indirect BP reg for direct defaults
+    (`reg id = tev_stage + 16`) and clears `gc_gx_bp_sent_not`.
+- Added deterministic suite:
+  - `tests/sdk/gx/gx_set_tev_direct/dol/mp4/gx_set_tev_direct_mp4_init_gx_001/`
+  - `tests/sdk/gx/gx_set_tev_direct/host/gx_set_tev_direct_mp4_init_gx_001_scenario.c`
+- Validation commands:
+  - `cd tests/sdk/gx/gx_set_tev_direct/dol/mp4/gx_set_tev_direct_mp4_init_gx_001 && make clean && make`
+  - `python3 tools/ram_dump.py --exec tests/sdk/gx/gx_set_tev_direct/dol/mp4/gx_set_tev_direct_mp4_init_gx_001/gx_set_tev_direct_mp4_init_gx_001.dol --addr 0x80300000 --size 0x40 --out tests/sdk/gx/gx_set_tev_direct/expected/gx_set_tev_direct_mp4_init_gx_001.bin --run 0.5 --halt`
+  - `tools/run_host_scenario.sh tests/sdk/gx/gx_set_tev_direct/host/gx_set_tev_direct_mp4_init_gx_001_scenario.c`
+  - `python3 tools/ram_compare.py tests/sdk/gx/gx_set_tev_direct/expected/gx_set_tev_direct_mp4_init_gx_001.bin tests/sdk/gx/gx_set_tev_direct/actual/gx_set_tev_direct_mp4_init_gx_001.bin`
+- Result: PASS (bit-exact).
+- Coverage/todo snapshot updates:
+  - `todo/REMAINING_TEST_STRATEGY.md`: trace replay `~74 -> ~73`, GX gap count `20 -> 19`.
+  - `todo/SDK_PORT_COVERAGE.md`: GX `102 -> 103`, total ported `~231 -> ~232`.
+
+## 2026-02-12: GXSetIndTexMtx added + deterministic PPC-vs-host suite
+
+- Added sdk_port function in `src/sdk_port/gx/GX.c`:
+  - `GXSetIndTexMtx(mtx_id, offset, scale_exp)` mirrors `GXBump.c`:
+    - maps `mtx_id` to slot id
+    - emits three packed BP regs (`id*3 + 6/7/8`)
+    - writes via `gx_write_ras_reg` and clears `gc_gx_bp_sent_not`
+  - Added observable mirrors: `gc_gx_ind_mtx_reg0/1/2`.
+- Added deterministic suite:
+  - `tests/sdk/gx/gx_set_ind_tex_mtx/dol/mp4/gx_set_ind_tex_mtx_mp4_init_gx_001/`
+  - `tests/sdk/gx/gx_set_ind_tex_mtx/host/gx_set_ind_tex_mtx_mp4_init_gx_001_scenario.c`
+- Validation commands:
+  - `cd tests/sdk/gx/gx_set_ind_tex_mtx/dol/mp4/gx_set_ind_tex_mtx_mp4_init_gx_001 && make clean && make`
+  - `python3 tools/ram_dump.py --exec tests/sdk/gx/gx_set_ind_tex_mtx/dol/mp4/gx_set_ind_tex_mtx_mp4_init_gx_001/gx_set_ind_tex_mtx_mp4_init_gx_001.dol --addr 0x80300000 --size 0x40 --out tests/sdk/gx/gx_set_ind_tex_mtx/expected/gx_set_ind_tex_mtx_mp4_init_gx_001.bin --run 0.5 --halt`
+  - `tools/run_host_scenario.sh tests/sdk/gx/gx_set_ind_tex_mtx/host/gx_set_ind_tex_mtx_mp4_init_gx_001_scenario.c`
+  - `python3 tools/ram_compare.py tests/sdk/gx/gx_set_ind_tex_mtx/expected/gx_set_ind_tex_mtx_mp4_init_gx_001.bin tests/sdk/gx/gx_set_ind_tex_mtx/actual/gx_set_ind_tex_mtx_mp4_init_gx_001.bin`
+- Result: PASS (bit-exact).
+- Coverage/todo snapshot updates:
+  - `todo/REMAINING_TEST_STRATEGY.md`: trace replay `~73 -> ~72`, GX gap count `19 -> 18`.
+  - `todo/SDK_PORT_COVERAGE.md`: GX `103 -> 104`, total ported `~232 -> ~233`.
+
+## 2026-02-12: GXSetTevIndWarp (+GXSetTevIndirect core) added + deterministic suite
+
+- Added sdk_port functions in `src/sdk_port/gx/GX.c`:
+  - `GXSetTevIndirect(...)` packed BP register writer (decomp field layout from `GXBump.c`).
+  - `GXSetTevIndWarp(...)` wrapper that maps:
+    - `signed_offset` -> `bias_sel` (`NONE`/`STU`)
+    - `replace_mode` -> `wrap` (`OFF`/`0`)
+    - forwards to `GXSetTevIndirect`.
+- Added deterministic suite:
+  - `tests/sdk/gx/gx_set_tev_ind_warp/dol/mp4/gx_set_tev_ind_warp_mp4_init_gx_001/`
+  - `tests/sdk/gx/gx_set_tev_ind_warp/host/gx_set_tev_ind_warp_mp4_init_gx_001_scenario.c`
+- Validation commands:
+  - `cd tests/sdk/gx/gx_set_tev_ind_warp/dol/mp4/gx_set_tev_ind_warp_mp4_init_gx_001 && make clean && make`
+  - `python3 tools/ram_dump.py --exec tests/sdk/gx/gx_set_tev_ind_warp/dol/mp4/gx_set_tev_ind_warp_mp4_init_gx_001/gx_set_tev_ind_warp_mp4_init_gx_001.dol --addr 0x80300000 --size 0x40 --out tests/sdk/gx/gx_set_tev_ind_warp/expected/gx_set_tev_ind_warp_mp4_init_gx_001.bin --run 0.5 --halt`
+  - `tools/run_host_scenario.sh tests/sdk/gx/gx_set_tev_ind_warp/host/gx_set_tev_ind_warp_mp4_init_gx_001_scenario.c`
+  - `python3 tools/ram_compare.py tests/sdk/gx/gx_set_tev_ind_warp/expected/gx_set_tev_ind_warp_mp4_init_gx_001.bin tests/sdk/gx/gx_set_tev_ind_warp/actual/gx_set_tev_ind_warp_mp4_init_gx_001.bin`
+- Result: PASS (bit-exact).
+- Coverage/todo snapshot updates:
+  - `todo/REMAINING_TEST_STRATEGY.md`: trace replay `~72 -> ~71`, GX gap count `18 -> 17`.
+  - `todo/SDK_PORT_COVERAGE.md`: GX `104 -> 105`, total ported `~233 -> ~234`.

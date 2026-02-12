@@ -91,6 +91,12 @@ u32 gc_gx_mat_color[2];
 // Pixel engine control mirrors (subset).
 u32 gc_gx_cmode0;
 u32 gc_gx_pe_ctrl;
+u32 gc_gx_ind_tex_scale0;
+u32 gc_gx_ind_tex_scale1;
+u32 gc_gx_iref;
+u32 gc_gx_ind_mtx_reg0;
+u32 gc_gx_ind_mtx_reg1;
+u32 gc_gx_ind_mtx_reg2;
 u32 gc_gx_zmode;
 
 u32 gc_gx_cp_disp_src;
@@ -621,6 +627,12 @@ GXFifoObj *GXInit(void *base, u32 size) {
     gc_gx_mat_color[1] = 0;
     gc_gx_cmode0 = 0;
     gc_gx_pe_ctrl = 0;
+    gc_gx_ind_tex_scale0 = 0;
+    gc_gx_ind_tex_scale1 = 0;
+    gc_gx_iref = 0;
+    gc_gx_ind_mtx_reg0 = 0;
+    gc_gx_ind_mtx_reg1 = 0;
+    gc_gx_ind_mtx_reg2 = 0;
 
     // Texture region defaults (GXInit.c).
     gc_gx_next_tex_rgn = 0;
@@ -2000,6 +2012,161 @@ void GXSetNumIndStages(u8 nIndStages) {
     // GXBump.c: genMode bits 16..18 hold indirect stage count (0..4).
     gc_gx_gen_mode = set_field(gc_gx_gen_mode, 3, 16, (u32)(nIndStages & 7u));
     gc_gx_dirty_state |= 6u;
+}
+
+void GXSetIndTexCoordScale(u32 ind_state, u32 scale_s, u32 scale_t) {
+    // GXBump.c: stage0/1 packed in reg 0x25, stage2/3 packed in reg 0x26.
+    switch (ind_state & 3u) {
+    case 0u:
+        gc_gx_ind_tex_scale0 = set_field(gc_gx_ind_tex_scale0, 4, 0, scale_s & 0xFu);
+        gc_gx_ind_tex_scale0 = set_field(gc_gx_ind_tex_scale0, 4, 4, scale_t & 0xFu);
+        gc_gx_ind_tex_scale0 = set_field(gc_gx_ind_tex_scale0, 8, 24, 0x25u);
+        gx_write_ras_reg(gc_gx_ind_tex_scale0);
+        break;
+    case 1u:
+        gc_gx_ind_tex_scale0 = set_field(gc_gx_ind_tex_scale0, 4, 8, scale_s & 0xFu);
+        gc_gx_ind_tex_scale0 = set_field(gc_gx_ind_tex_scale0, 4, 12, scale_t & 0xFu);
+        gc_gx_ind_tex_scale0 = set_field(gc_gx_ind_tex_scale0, 8, 24, 0x25u);
+        gx_write_ras_reg(gc_gx_ind_tex_scale0);
+        break;
+    case 2u:
+        gc_gx_ind_tex_scale1 = set_field(gc_gx_ind_tex_scale1, 4, 0, scale_s & 0xFu);
+        gc_gx_ind_tex_scale1 = set_field(gc_gx_ind_tex_scale1, 4, 4, scale_t & 0xFu);
+        gc_gx_ind_tex_scale1 = set_field(gc_gx_ind_tex_scale1, 8, 24, 0x26u);
+        gx_write_ras_reg(gc_gx_ind_tex_scale1);
+        break;
+    case 3u:
+        gc_gx_ind_tex_scale1 = set_field(gc_gx_ind_tex_scale1, 4, 8, scale_s & 0xFu);
+        gc_gx_ind_tex_scale1 = set_field(gc_gx_ind_tex_scale1, 4, 12, scale_t & 0xFu);
+        gc_gx_ind_tex_scale1 = set_field(gc_gx_ind_tex_scale1, 8, 24, 0x26u);
+        gx_write_ras_reg(gc_gx_ind_tex_scale1);
+        break;
+    }
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXSetIndTexOrder(u32 ind_stage, u32 tex_coord, u32 tex_map) {
+    // GXBump.c: iref has 3-bit pairs {tex_map, tex_coord} per indirect stage.
+    switch (ind_stage & 3u) {
+    case 0u:
+        gc_gx_iref = set_field(gc_gx_iref, 3, 0, tex_map & 7u);
+        gc_gx_iref = set_field(gc_gx_iref, 3, 3, tex_coord & 7u);
+        break;
+    case 1u:
+        gc_gx_iref = set_field(gc_gx_iref, 3, 6, tex_map & 7u);
+        gc_gx_iref = set_field(gc_gx_iref, 3, 9, tex_coord & 7u);
+        break;
+    case 2u:
+        gc_gx_iref = set_field(gc_gx_iref, 3, 12, tex_map & 7u);
+        gc_gx_iref = set_field(gc_gx_iref, 3, 15, tex_coord & 7u);
+        break;
+    case 3u:
+        gc_gx_iref = set_field(gc_gx_iref, 3, 18, tex_map & 7u);
+        gc_gx_iref = set_field(gc_gx_iref, 3, 21, tex_coord & 7u);
+        break;
+    }
+    gx_write_ras_reg(gc_gx_iref);
+    gc_gx_dirty_state |= 3u;
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXSetTevDirect(u32 tev_stage) {
+    // GXBump.c GXSetTevDirect: forwards to GXSetTevIndirect with all-zero direct params.
+    // That packs only the BP register id byte (tev_stage + 16) in this direct form.
+    u32 reg = 0;
+    reg = set_field(reg, 8, 24, (tev_stage + 16u) & 0xFFu);
+    gx_write_ras_reg(reg);
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXSetTevIndirect(u32 tev_stage, u32 ind_stage, u32 format, u32 bias_sel, u32 matrix_sel, u32 wrap_s, u32 wrap_t,
+                      u32 add_prev, u32 utc_lod, u32 alpha_sel) {
+    u32 reg = 0;
+    reg = set_field(reg, 2, 0, ind_stage & 3u);
+    reg = set_field(reg, 2, 2, format & 3u);
+    reg = set_field(reg, 3, 4, bias_sel & 7u);
+    reg = set_field(reg, 2, 7, alpha_sel & 3u);
+    reg = set_field(reg, 4, 9, matrix_sel & 0xFu);
+    reg = set_field(reg, 3, 13, wrap_s & 7u);
+    reg = set_field(reg, 3, 16, wrap_t & 7u);
+    reg = set_field(reg, 1, 19, utc_lod & 1u);
+    reg = set_field(reg, 1, 20, add_prev & 1u);
+    reg = set_field(reg, 8, 24, (tev_stage + 16u) & 0xFFu);
+    gx_write_ras_reg(reg);
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXSetTevIndWarp(u32 tev_stage, u32 ind_stage, u8 signed_offset, u8 replace_mode, u32 matrix_sel) {
+    // GXBump.c wrapper over GXSetTevIndirect.
+    const u32 GX_ITF_8 = 0u;
+    const u32 GX_ITB_NONE = 0u;
+    const u32 GX_ITB_STU = 7u;
+    const u32 GX_ITW_OFF = 0u;
+    const u32 GX_ITW_0 = 6u;
+    u32 wrap = (replace_mode != 0u) ? GX_ITW_0 : GX_ITW_OFF;
+    GXSetTevIndirect(tev_stage, ind_stage, GX_ITF_8, (signed_offset != 0u) ? GX_ITB_STU : GX_ITB_NONE, matrix_sel,
+                     wrap, wrap, 0u, 0u, 0u);
+}
+
+void GXSetIndTexMtx(u32 mtx_id, float offset[2][3], int8_t scale_exp) {
+    // GXBump.c: choose matrix slot id from ITM_* group and emit 3 packed BP regs.
+    u32 id;
+    int32_t mtx[6];
+    int32_t sc = (int32_t)scale_exp + 0x11;
+    u32 reg;
+
+    switch (mtx_id) {
+    case 1u:
+    case 2u:
+    case 3u:
+        id = mtx_id - 1u;
+        break;
+    case 5u:
+    case 6u:
+    case 7u:
+        id = mtx_id - 5u;
+        break;
+    case 9u:
+    case 10u:
+    case 11u:
+        id = mtx_id - 9u;
+        break;
+    default:
+        id = 0;
+        break;
+    }
+
+    mtx[0] = ((int32_t)(1024.0f * offset[0][0])) & 0x7FF;
+    mtx[1] = ((int32_t)(1024.0f * offset[1][0])) & 0x7FF;
+    reg = 0;
+    reg = set_field(reg, 11, 0, (u32)mtx[0]);
+    reg = set_field(reg, 11, 11, (u32)mtx[1]);
+    reg = set_field(reg, 2, 22, (u32)sc & 3u);
+    reg = set_field(reg, 8, 24, id * 3u + 6u);
+    gc_gx_ind_mtx_reg0 = reg;
+    gx_write_ras_reg(reg);
+
+    mtx[2] = ((int32_t)(1024.0f * offset[0][1])) & 0x7FF;
+    mtx[3] = ((int32_t)(1024.0f * offset[1][1])) & 0x7FF;
+    reg = 0;
+    reg = set_field(reg, 11, 0, (u32)mtx[2]);
+    reg = set_field(reg, 11, 11, (u32)mtx[3]);
+    reg = set_field(reg, 2, 22, ((u32)sc >> 2) & 3u);
+    reg = set_field(reg, 8, 24, id * 3u + 7u);
+    gc_gx_ind_mtx_reg1 = reg;
+    gx_write_ras_reg(reg);
+
+    mtx[4] = ((int32_t)(1024.0f * offset[0][2])) & 0x7FF;
+    mtx[5] = ((int32_t)(1024.0f * offset[1][2])) & 0x7FF;
+    reg = 0;
+    reg = set_field(reg, 11, 0, (u32)mtx[4]);
+    reg = set_field(reg, 11, 11, (u32)mtx[5]);
+    reg = set_field(reg, 2, 22, ((u32)sc >> 4) & 3u);
+    reg = set_field(reg, 8, 24, id * 3u + 8u);
+    gc_gx_ind_mtx_reg2 = reg;
+    gx_write_ras_reg(reg);
+
+    gc_gx_bp_sent_not = 0;
 }
 
 // Forward declarations (implemented later in this file).
