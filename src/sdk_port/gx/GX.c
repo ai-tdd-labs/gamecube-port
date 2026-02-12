@@ -189,6 +189,13 @@ u32 gc_gx_tev_tc_enab;
 u32 gc_gx_tev_color_reg_ra_last;
 u32 gc_gx_tev_color_reg_bg_last;
 
+// TEV konstant state (GXTev.c).
+u32 gc_gx_tev_ksel[8];
+u32 gc_gx_tev_kcolor_ra[4];
+u32 gc_gx_tev_kcolor_bg[4];
+u32 gc_gx_tev_colors10_ra_last;
+u32 gc_gx_tev_colors10_bg_last;
+
 // Immediate-mode vertex helpers (in the real SDK these write to the FIFO).
 u32 gc_gx_pos3f32_x_bits;
 u32 gc_gx_pos3f32_y_bits;
@@ -2450,6 +2457,92 @@ void GXSetTevColor(u32 id, GXColor color) {
     gx_write_ras_reg(regBG);
     gx_write_ras_reg(regBG);
     gx_write_ras_reg(regBG);
+    gc_gx_bp_sent_not = 0;
+}
+
+typedef struct { s16 r, g, b, a; } GXColorS10;
+
+void GXSetTevColorS10(u32 id, GXColorS10 color) {
+    u32 regRA = 0;
+    regRA = set_field(regRA, 11, 0, (u32)(color.r & 0x7FF));
+    regRA = set_field(regRA, 11, 12, (u32)(color.a & 0x7FF));
+    regRA = set_field(regRA, 8, 24, 224u + id * 2u);
+
+    u32 regBG = 0;
+    regBG = set_field(regBG, 11, 0, (u32)(color.b & 0x7FF));
+    regBG = set_field(regBG, 11, 12, (u32)(color.g & 0x7FF));
+    regBG = set_field(regBG, 8, 24, 225u + id * 2u);
+
+    gc_gx_tev_colors10_ra_last = regRA;
+    gc_gx_tev_colors10_bg_last = regBG;
+    gc_sdk_state_store_u32_mirror(GC_SDK_OFF_GX_TEV_COLORS10_RA_LAST,
+                                 &gc_gx_tev_colors10_ra_last, regRA);
+    gc_sdk_state_store_u32_mirror(GC_SDK_OFF_GX_TEV_COLORS10_BG_LAST,
+                                 &gc_gx_tev_colors10_bg_last, regBG);
+
+    gx_write_ras_reg(regRA);
+    gx_write_ras_reg(regBG);
+    gx_write_ras_reg(regBG);
+    gx_write_ras_reg(regBG);
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXSetTevKColor(u32 id, GXColor color) {
+    u32 regRA = 0;
+    regRA = set_field(regRA, 8, 0, (u32)color.r);
+    regRA = set_field(regRA, 8, 12, (u32)color.a);
+    regRA = set_field(regRA, 4, 20, 8u);
+    regRA = set_field(regRA, 8, 24, 224u + id * 2u);
+
+    u32 regBG = 0;
+    regBG = set_field(regBG, 8, 0, (u32)color.b);
+    regBG = set_field(regBG, 8, 12, (u32)color.g);
+    regBG = set_field(regBG, 4, 20, 8u);
+    regBG = set_field(regBG, 8, 24, 225u + id * 2u);
+
+    if (id < 4u) {
+        gc_gx_tev_kcolor_ra[id] = regRA;
+        gc_gx_tev_kcolor_bg[id] = regBG;
+        gc_sdk_state_store_u32_mirror(
+            GC_SDK_OFF_GX_TEV_KCOLOR_RA_BASE + id * 4u,
+            &gc_gx_tev_kcolor_ra[id], regRA);
+        gc_sdk_state_store_u32_mirror(
+            GC_SDK_OFF_GX_TEV_KCOLOR_BG_BASE + id * 4u,
+            &gc_gx_tev_kcolor_bg[id], regBG);
+    }
+
+    gx_write_ras_reg(regRA);
+    gx_write_ras_reg(regBG);
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXSetTevKColorSel(u32 stage, u32 sel) {
+    if (stage >= 16u) return;
+    u32 idx = stage >> 1;
+    if (stage & 1u) {
+        gc_gx_tev_ksel[idx] = set_field(gc_gx_tev_ksel[idx], 5, 14, sel);
+    } else {
+        gc_gx_tev_ksel[idx] = set_field(gc_gx_tev_ksel[idx], 5, 4, sel);
+    }
+    gc_sdk_state_store_u32_mirror(
+        GC_SDK_OFF_GX_TEV_KSEL_BASE + idx * 4u,
+        &gc_gx_tev_ksel[idx], gc_gx_tev_ksel[idx]);
+    gx_write_ras_reg(gc_gx_tev_ksel[idx]);
+    gc_gx_bp_sent_not = 0;
+}
+
+void GXSetTevKAlphaSel(u32 stage, u32 sel) {
+    if (stage >= 16u) return;
+    u32 idx = stage >> 1;
+    if (stage & 1u) {
+        gc_gx_tev_ksel[idx] = set_field(gc_gx_tev_ksel[idx], 5, 19, sel);
+    } else {
+        gc_gx_tev_ksel[idx] = set_field(gc_gx_tev_ksel[idx], 5, 9, sel);
+    }
+    gc_sdk_state_store_u32_mirror(
+        GC_SDK_OFF_GX_TEV_KSEL_BASE + idx * 4u,
+        &gc_gx_tev_ksel[idx], gc_gx_tev_ksel[idx]);
+    gx_write_ras_reg(gc_gx_tev_ksel[idx]);
     gc_gx_bp_sent_not = 0;
 }
 
