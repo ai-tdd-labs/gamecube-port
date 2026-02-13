@@ -2631,3 +2631,32 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_gx_load_tlut_pbt.sh` -> PASS
   - `tools/run_mutation_check.sh tools/mutations/gx_load_tlut_wrong_offset_mask.patch -- tools/run_gx_load_tlut_pbt.sh` -> PASS (mutant fails as expected)
+
+## 2026-02-13: GXSetTexCoordScaleManually unified DOL PBT suite (L0-L5)
+
+- Callsite evidence across decomp projects:
+  - MP4: `decomp_mario_party_4/src/game/sprput.c`
+  - TP: `decomp_twilight_princess/src/m_Do/m_Do_ext.cpp`
+  - WW: `decomp_wind_waker/src/m_Do/m_Do_ext.cpp`, `decomp_wind_waker/src/d/d_magma.cpp`
+  - AC: `decomp_animal_crossing/src/static/Famicom/ks_nes_draw.cpp`
+- Added unified GXSetTexCoordScaleManually PBT suite:
+  - `tests/sdk/gx/gx_set_tex_coord_scale_manually/dol/pbt/gx_set_tex_coord_scale_manually_pbt_001/*`
+  - `tests/sdk/gx/gx_set_tex_coord_scale_manually/host/gx_set_tex_coord_scale_manually_pbt_001_scenario.c`
+  - `tools/run_gx_set_tex_coord_scale_manually_pbt.sh`
+- Coverage levels in `gx_set_tex_coord_scale_manually_pbt_001`:
+  - L0 isolated `(coord, enable, ss, ts)` matrix
+  - L1 accumulation over deterministic coord/enable toggles
+  - L2 overwrite transitions (same coord reprogrammed twice)
+  - L3 random-start deterministic seeded states (`2048` cases)
+  - L4 harvested callsite-style enable/disable sequences
+  - L5 boundary/no-op invariants (`coord>=8`, zero scales wrapping to `0xFFFF`)
+- DOL oracle is decoupled from host sdk_port:
+  - `tests/sdk/gx/gx_set_tex_coord_scale_manually/dol/pbt/gx_set_tex_coord_scale_manually_pbt_001/oracle_gx_set_tex_coord_scale_manually.c`
+- Confirmed observable behavior:
+  - `gc_gx_tcs_man_enab` bit for selected coord mirrors `(enable != 0)`.
+  - On enable path, low 16 bits of `gc_gx_su_ts0/1[coord]` are written with `(ss-1)` / `(ts-1)`.
+  - Enable path writes BP registers and clears `gc_gx_bp_sent_not`; final `gc_gx_last_ras_reg` equals `gc_gx_su_ts1[coord]`.
+  - Disable path does not rewrite `gc_gx_su_ts0/1[coord]`.
+- Validation:
+  - `tools/run_gx_set_tex_coord_scale_manually_pbt.sh` -> PASS
+  - `tools/run_mutation_check.sh tools/mutations/gx_set_tex_coord_scale_manually_no_minus1.patch -- tools/run_gx_set_tex_coord_scale_manually_pbt.sh` -> PASS (mutant fails as expected)
