@@ -2713,3 +2713,27 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_ar_start_dma_pbt.sh` -> PASS
   - `tools/run_mutation_check.sh tools/mutations/ar_start_dma_swap_mmem_aram.patch -- tools/run_ar_start_dma_pbt.sh` -> PASS (mutant fails as expected)
+
+## 2026-02-13: ARGetDMAStatus unified DOL PBT suite (L0-L5)
+
+- Callsite evidence:
+  - MP4/AC: polled by ARQ service loops (`decomp_mario_party_4/src/dolphin/ar/arq.c`, `decomp_animal_crossing/src/static/dolphin/ar/arq.c`).
+  - TP: MetroTRK polls `ARGetDMAStatus()` during debugger transfers (`decomp_twilight_princess/src/TRK_MINNOW_DOLPHIN/.../dolphin_trk.c`).
+- Added unified ARGetDMAStatus PBT suite:
+  - `tests/sdk/ar/ar_get_dma_status/dol/pbt/ar_get_dma_status_pbt_001/*`
+  - `tests/sdk/ar/ar_get_dma_status/host/ar_get_dma_status_pbt_001_scenario.c`
+  - `tools/run_ar_get_dma_status_pbt.sh`
+- Coverage levels in `ar_get_dma_status_pbt_001`:
+  - L0 isolated status values
+  - L1 accumulation (repeat reads without reset)
+  - L2 overwrite/idempotency transitions (same seeded reset then read)
+  - L3 random-start deterministic seeded states (`2048` cases)
+  - L4 boundary values (including `0x200` bit-pattern)
+  - L5 repeat-read invariants
+- DOL oracle is decoupled from host sdk_port:
+  - `tests/sdk/ar/ar_get_dma_status/dol/pbt/ar_get_dma_status_pbt_001/oracle_ar_get_dma_status.c`
+- Confirmed observable behavior (current sdk_port model):
+  - Returns `gc_ar_dma_status` verbatim, no other side effects.
+- Validation:
+  - `tools/run_ar_get_dma_status_pbt.sh` -> PASS
+  - `tools/run_mutation_check.sh tools/mutations/ar_get_dma_status_const0.patch -- tools/run_ar_get_dma_status_pbt.sh` -> PASS (mutant fails as expected)
