@@ -2451,3 +2451,22 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_gx_color_1x16_pbt.sh` -> PASS
   - `tools/run_mutation_check.sh tools/mutations/gx_color_1x16_truncate.patch -- tools/run_gx_color_1x16_pbt.sh` -> PASS (mutant fails as expected)
+
+## 2026-02-13: GXColor4u8 unified DOL PBT suite (L0-L5)
+
+- Added unified GXColor4u8 PBT suite:
+  - `tests/sdk/gx/gx_color_4u8/dol/pbt/gx_color_4u8_pbt_001/*`
+  - `tests/sdk/gx/gx_color_4u8/host/gx_color_4u8_pbt_001_scenario.c`
+  - `tools/run_gx_color_4u8_pbt.sh`
+- Coverage levels in `gx_color_4u8_pbt_001`:
+  - L0 isolated RGBA byte-lane matrix
+  - L1 accumulation transitions over deterministic 4x4 color grid
+  - L2 idempotency (repeat same RGBA write)
+  - L3 random-start deterministic seeded states (`2048` cases)
+  - L4 callsite-style sequential overwrite pattern
+  - L5 boundary channel-isolation cases (single-channel max)
+- DOL oracle is decoupled from host sdk_port:
+  - `tests/sdk/gx/gx_color_4u8/dol/pbt/gx_color_4u8_pbt_001/oracle_gx_color_4u8.c`
+- Validation:
+  - `tools/run_gx_color_4u8_pbt.sh` -> PASS
+  - `tools/run_mutation_check.sh tools/mutations/gx_color_4u8_swap_rg.patch -- tools/run_gx_color_4u8_pbt.sh` -> PASS (mutant fails as expected)

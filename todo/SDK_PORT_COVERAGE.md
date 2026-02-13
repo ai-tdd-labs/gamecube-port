@@ -15,6 +15,7 @@ Current migration status:
 - GX `GXSetTevColorS10` now includes unified L0-L5 DOL-PBT coverage (`tools/run_gx_set_tev_color_s10_pbt.sh`, mutation-checked with `tools/mutations/gx_set_tev_color_s10_wrong_g_shift.patch`).
 - GX `GXSetTevIndTile` now includes unified L0-L5 DOL-PBT coverage (`tools/run_gx_set_tev_ind_tile_pbt.sh`, mutation-checked with `tools/mutations/gx_set_tev_ind_tile_wrong_wrap.patch`).
 - GX `GXColor1x16` now includes unified L0-L5 DOL-PBT coverage (`tools/run_gx_color_1x16_pbt.sh`, mutation-checked with `tools/mutations/gx_color_1x16_truncate.patch`).
+- GX `GXColor4u8` now includes unified L0-L5 DOL-PBT coverage (`tools/run_gx_color_4u8_pbt.sh`, mutation-checked with `tools/mutations/gx_color_4u8_swap_rg.patch`).
 
 ## Remaining test workload snapshot
 
