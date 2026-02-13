@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+index bdef922..d33f14d 100644
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1555,7 +1555,7 @@ void GXInitTlutObj(GXTlutObj *tlut_obj, void *lut, u32 fmt, u16 n_entries) {
+     tlut_obj->tlut = set_field(tlut_obj->tlut, 2, 10, fmt);
+     tlut_obj->loadTlut0 = 0;
+-    tlut_obj->loadTlut0 = set_field(tlut_obj->loadTlut0, 21, 0, ((u32)((uintptr_t)lut) & 0x3FFFFFFFu) >> 5);
++    tlut_obj->loadTlut0 = set_field(tlut_obj->loadTlut0, 21, 0, ((u32)((uintptr_t)lut) & 0x3FFFFFFFu) >> 6);
+     tlut_obj->loadTlut0 = set_field(tlut_obj->loadTlut0, 8, 24, 0x64u);
+     tlut_obj->numEntries = n_entries;
+ }
