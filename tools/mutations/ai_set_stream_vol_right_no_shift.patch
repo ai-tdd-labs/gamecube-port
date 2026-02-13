@@ -1,0 +1,13 @@
+diff --git a/src/sdk_port/ai/ai.c b/src/sdk_port/ai/ai.c
+index 6328304..ad883e6 100644
+--- a/src/sdk_port/ai/ai.c
++++ b/src/sdk_port/ai/ai.c
+@@ -84,7 +84,7 @@ uint8_t AIGetStreamVolLeft(void)
+ /* AISetStreamVolRight (ai.c:197-200) */
+ void AISetStreamVolRight(uint8_t volume)
+ {
+-    gc_ai_regs[1] = (gc_ai_regs[1] & ~0xFF00u) | (((uint32_t)volume & 0xFFu) << 8);
++    gc_ai_regs[1] = (gc_ai_regs[1] & ~0xFF00u) | ((uint32_t)volume & 0xFFu);
+ }
+ 
+ /* AIGetStreamVolRight (ai.c:202-205) */
