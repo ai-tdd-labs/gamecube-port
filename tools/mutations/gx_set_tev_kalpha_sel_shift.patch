@@ -1,0 +1,13 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+index bbb5d39..72bc93a 100644
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2718,7 +2718,7 @@ void GXSetTevKAlphaSel(u32 stage, u32 sel) {
+     if (stage >= 16u) return;
+     u32 idx = stage >> 1;
+     if (stage & 1u) {
+-        gc_gx_tev_ksel[idx] = set_field(gc_gx_tev_ksel[idx], 5, 19, sel);
++        gc_gx_tev_ksel[idx] = set_field(gc_gx_tev_ksel[idx], 5, 14, sel);
+     } else {
+         gc_gx_tev_ksel[idx] = set_field(gc_gx_tev_ksel[idx], 5, 9, sel);
+     }
