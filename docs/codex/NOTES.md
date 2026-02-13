@@ -2775,4 +2775,4 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
   - `gc_ar_callback_ptr` compared via callback classification IDs (null/cb0/cb1/cb2/other), not raw pointer values.
 - Validation:
   - `tools/run_ar_set_size_pbt.sh` -> PASS
-  - Mutation check to run: `tools/run_mutation_check.sh tools/mutations/ar_set_size_flip_status.patch -- tools/run_ar_set_size_pbt.sh`
+  - `tools/run_mutation_check.sh tools/mutations/ar_set_size_flip_status.patch -- tools/run_ar_set_size_pbt.sh` -> PASS (mutant fails as expected)
