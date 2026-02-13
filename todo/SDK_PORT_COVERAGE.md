@@ -29,7 +29,7 @@ Current migration status:
 - AR `ARGetDMAStatus` now includes unified L0-L5 DOL-PBT coverage (`tools/run_ar_get_dma_status_pbt.sh`, mutation-checked with `tools/mutations/ar_get_dma_status_const0.patch`).
 - AR `ARRegisterDMACallback` now includes unified L0-L5 DOL-PBT coverage (`tools/run_ar_register_dma_callback_pbt.sh`, mutation-checked with `tools/mutations/ar_register_dma_callback_no_store.patch`).
 - AR `ARSetSize` now includes unified L0-L5 DOL-PBT coverage (`tools/run_ar_set_size_pbt.sh`, mutation-checked with `tools/mutations/ar_set_size_flip_status.patch`).
-- AI `AIGetDMAStartAddr` now includes unified L0-L5 DOL-PBT coverage (`tools/run_ai_get_dma_start_addr_pbt.sh`, mutation patch: `tools/mutations/ai_get_dma_start_addr_wrong_mask.patch`).
+- AI `AIGetDMAStartAddr` now includes unified L0-L5 DOL-PBT coverage (`tools/run_ai_get_dma_start_addr_pbt.sh`, mutation-checked with `tools/mutations/ai_get_dma_start_addr_wrong_mask.patch`).
 
 ## Remaining test workload snapshot
 
