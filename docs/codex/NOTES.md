@@ -2809,3 +2809,20 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_ai_init_dma_pbt.sh` -> PASS
   - `tools/run_mutation_check.sh tools/mutations/ai_init_dma_clear_start_bit.patch -- tools/run_ai_init_dma_pbt.sh` -> PASS (mutant fails as expected)
+
+## 2026-02-13: AIRegisterDMACallback unified DOL PBT suite (L0-L5)
+
+- Callsite evidence:
+  - MP4 THP init installs DMA callback and stores the previous callback (`decomp_mario_party_4/src/game/THPSimple.c`, `OldAIDCallback = AIRegisterDMACallback(THPAudioMixCallback)`).
+  - MP4 msm system installs its server callback and stores previous (`decomp_mario_party_4/src/msm/msmsys.c`, `sys.oldAIDCallback = AIRegisterDMACallback(msmSysServer)`).
+- Decomp contract (MP4 Dolphin SDK):
+  - `decomp_mario_party_4/src/dolphin/ai.c` swaps `__AID_Callback` under disabled interrupts and returns the previous callback pointer.
+- Added unified AIRegisterDMACallback PBT suite:
+  - `tests/sdk/ai/ai_register_dma_callback/dol/pbt/ai_register_dma_callback_pbt_001/*`
+  - `tests/sdk/ai/ai_register_dma_callback/host/ai_register_dma_callback_pbt_001_scenario.c`
+  - `tools/run_ai_register_dma_callback_pbt.sh`
+- Oracle independence:
+  - DOL-side and host-side compare callback pointers via stable classification IDs (null/cb0/cb1/cb2/other), not raw addresses.
+- Validation:
+  - `tools/run_ai_register_dma_callback_pbt.sh` -> PASS
+  - Mutation check to run: `tools/run_mutation_check.sh tools/mutations/ai_register_dma_callback_no_store.patch -- tools/run_ai_register_dma_callback_pbt.sh`

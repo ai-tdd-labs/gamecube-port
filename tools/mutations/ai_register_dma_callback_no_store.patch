@@ -1,0 +1,13 @@
+diff --git a/src/sdk_port/ai/ai.c b/src/sdk_port/ai/ai.c
+index 6328304..53fe55a 100644
+--- a/src/sdk_port/ai/ai.c
++++ b/src/sdk_port/ai/ai.c
+@@ -18,7 +18,7 @@ uintptr_t gc_ai_dma_cb_ptr;
+ AIDCallback AIRegisterDMACallback(AIDCallback callback)
+ {
+     AIDCallback old = (AIDCallback)gc_ai_dma_cb_ptr;
+-    gc_ai_dma_cb_ptr = (uintptr_t)callback;
++    /* mutant: forget to store new callback */
+     return old;
+ }
+ 
