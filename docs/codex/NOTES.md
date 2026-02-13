@@ -2737,3 +2737,26 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_ar_get_dma_status_pbt.sh` -> PASS
   - `tools/run_mutation_check.sh tools/mutations/ar_get_dma_status_const0.patch -- tools/run_ar_get_dma_status_pbt.sh` -> PASS (mutant fails as expected)
+
+## 2026-02-13: ARRegisterDMACallback unified DOL PBT suite (L0-L5)
+
+- Callsite evidence:
+  - Used by ARQ init to install the ARQ ISR (`decomp_mario_party_4/src/dolphin/ar/arq.c`, `decomp_animal_crossing/src/static/dolphin/ar/arq.c`, `decomp_twilight_princess/src/dolphin/ar/arq.c`).
+- Added unified ARRegisterDMACallback PBT suite:
+  - `tests/sdk/ar/ar_register_dma_callback/dol/pbt/ar_register_dma_callback_pbt_001/*`
+  - `tests/sdk/ar/ar_register_dma_callback/host/ar_register_dma_callback_pbt_001_scenario.c`
+  - `tools/run_ar_register_dma_callback_pbt.sh`
+- Coverage levels in `ar_register_dma_callback_pbt_001`:
+  - L0 isolated callback swaps (cb0/cb1/cb2/null)
+  - L1 accumulation over deterministic resets and swaps
+  - L2 idempotency (set same callback twice)
+  - L3 random-start deterministic seeded states (`2048` cases)
+  - L4 callsite-style set/clear sequences
+  - L5 boundary invariants with repeated null and repeated non-null set
+- Oracle independence:
+  - DOL-side compares using callback classification IDs (null/cb0/cb1/cb2/other), not raw pointer addresses (host vs PPC address spaces differ).
+- Confirmed observable behavior (current sdk_port model):
+  - Returns the previous callback pointer and stores the new callback pointer in `gc_ar_callback_ptr`.
+- Validation:
+  - `tools/run_ar_register_dma_callback_pbt.sh` -> PASS
+  - `tools/run_mutation_check.sh tools/mutations/ar_register_dma_callback_no_store.patch -- tools/run_ar_register_dma_callback_pbt.sh` -> PASS (mutant fails as expected)
