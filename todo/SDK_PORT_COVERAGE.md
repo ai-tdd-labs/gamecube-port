@@ -21,6 +21,7 @@ Current migration status:
 - GX `GXTexCoord1x16` now includes unified L0-L5 DOL-PBT coverage (`tools/run_gx_tex_coord_1x16_pbt.sh`, mutation-checked with `tools/mutations/gx_tex_coord_1x16_truncate.patch`).
 - GX `GXTexCoord2s16` now includes unified L0-L5 DOL-PBT coverage (`tools/run_gx_tex_coord_2s16_pbt.sh`, mutation-checked with `tools/mutations/gx_tex_coord_2s16_drop_sign.patch`).
 - GX `GXInitTexObjCI` now includes unified L0-L5 DOL-PBT coverage (`tools/run_gx_init_tex_obj_ci_pbt.sh`, mutation-checked with `tools/mutations/gx_init_tex_obj_ci_keep_ci_flag.patch`).
+- GX `GXInitTlutObj` now includes unified L0-L5 DOL-PBT coverage (`tools/run_gx_init_tlut_obj_pbt.sh`, mutation-checked with `tools/mutations/gx_init_tlut_obj_bad_shift.patch`).
 
 ## Remaining test workload snapshot
 
@@ -77,10 +78,10 @@ Current migration status:
 All core GX functions for rendering pipeline: Begin/End, vertex formats, TEV stages,
 color/alpha blending, texture objects, projection, viewport, scissor, copy, lights, etc.
 
-**Missing (6 functions):**
+**Missing (5 functions):**
 - TEV Konstant: `GXSetTevKColorSel`
 - TEV Swap: `GXSetTevSwapModeTable`
-- Texture: `GXInitTlutObj`, `GXLoadTlut`, `GXSetTexCoordScaleManually`
+- Texture: `GXLoadTlut`, `GXSetTexCoordScaleManually`
 - Misc: `GXNtsc480Prog`
 
 ### DVD (12/12 = 100%)

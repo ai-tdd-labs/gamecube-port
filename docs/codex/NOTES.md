@@ -2574,3 +2574,31 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_gx_init_tex_obj_ci_pbt.sh` -> PASS
   - `tools/run_mutation_check.sh tools/mutations/gx_init_tex_obj_ci_keep_ci_flag.patch -- tools/run_gx_init_tex_obj_ci_pbt.sh` -> PASS (mutant fails as expected)
+
+## 2026-02-13: GXInitTlutObj unified DOL PBT suite (L0-L5)
+
+- Callsite evidence across decomp projects:
+  - MP4: `decomp_mario_party_4/src/game/sprput.c`, `decomp_mario_party_4/src/game/hsfdraw.c`
+  - TP: `decomp_twilight_princess/src/JSystem/JUtility/JUTPalette.cpp`, `decomp_twilight_princess/src/d/actor/d_a_mant.cpp`
+  - WW: `decomp_wind_waker/src/JSystem/JUtility/JUTPalette.cpp`, `decomp_wind_waker/src/d/d_map.cpp`
+  - AC: `decomp_animal_crossing/src/static/libforest/emu64/emu64.c`
+- Added unified GXInitTlutObj PBT suite:
+  - `tests/sdk/gx/gx_init_tlut_obj/dol/pbt/gx_init_tlut_obj_pbt_001/*`
+  - `tests/sdk/gx/gx_init_tlut_obj/host/gx_init_tlut_obj_pbt_001_scenario.c`
+  - `tools/run_gx_init_tlut_obj_pbt.sh`
+- Coverage levels in `gx_init_tlut_obj_pbt_001`:
+  - L0 isolated format/address/entry-count matrix
+  - L1 accumulation over deterministic address-grid transitions
+  - L2 idempotency (same tuple replayed twice)
+  - L3 random-start deterministic seeded states (`2048` cases)
+  - L4 harvested callsite-style palette init sequence
+  - L5 boundary alignment and max-entry invariants
+- DOL oracle is decoupled from host sdk_port:
+  - `tests/sdk/gx/gx_init_tlut_obj/dol/pbt/gx_init_tlut_obj_pbt_001/oracle_gx_init_tlut_obj.c`
+- Confirmed observable behavior:
+  - `tlut` packs `fmt` into bits `10..11`.
+  - `loadTlut0` packs `(lut & 0x3FFFFFFF) >> 5` in low 21 bits and BP id `0x64` in bits `24..31`.
+  - `numEntries` stores the input `n_entries` verbatim.
+- Validation:
+  - `tools/run_gx_init_tlut_obj_pbt.sh` -> PASS
+  - `tools/run_mutation_check.sh tools/mutations/gx_init_tlut_obj_bad_shift.patch -- tools/run_gx_init_tlut_obj_pbt.sh` -> PASS (mutant fails as expected)
