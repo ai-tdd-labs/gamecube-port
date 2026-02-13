@@ -1,7 +1,8 @@
 diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
 --- a/src/sdk_port/gx/GX.c
 +++ b/src/sdk_port/gx/GX.c
-@@ -2544,7 +2544,7 @@ void GXNormal1x16(u16 index) {
+@@ -2545,7 +2545,7 @@ void GXNormal1x16(u16 index) {
+ }
  
  void GXNormal3s16(s16 x, s16 y, s16 z) {
 -    gc_gx_normal3s16_x = (u32)(s32)x;
