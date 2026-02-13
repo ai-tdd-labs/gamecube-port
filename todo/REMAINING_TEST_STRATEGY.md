@@ -69,7 +69,7 @@ These are hardware-coupled and can only be verified against Dolphin ground truth
 | **GX** | 1 | TEV konstant (1): `GXSetTevKColorSel` | Medium — register packing, SET_REG_FIELD macros |
 | **CARD** | 19 | `CARDInit`, `CARDMount`, `CARDUnmount`, `CARDOpen`, `CARDClose`, `CARDCreate`, `CARDDelete`, `CARDRead`, `CARDWrite`, `CARDFormat`, `CARDCheck`, `CARDFreeBlocks`, `CARDGetSectorSize`, `CARDProbeEx`, `CARDGetSerialNo`, `CARDGetStatus`, `CARDSetStatus`, `CARDSetBannerFormat`, `CARDSetCommentAddress`+ icon setters | Large — needs EXI simulation, host filesystem backend |
 | **THP** | 27 | `THPInit`, `THPVideoDecode`, `THPSimpleOpen/Close/Decode/PreLoad/LoadStop/Init/Quit`, `THPSimpleSetBuffer/SetVolume/CalcNeedMemory`, `THPSimpleAudioStart/Stop`, `THPSimpleGetTotalFrame/GetVideoInfo/DrawCurrentFrame`, `THPGXYuv2RgbSetup/Draw`, `THPGXRestore`, `THPAudioMixCallback`, `THPDecodeFunc`, `THPViewFunc/ViewSprFunc`, `THPTestProc`, `THPSimpleInlineFunc` | Large — JPEG codec + ADPCM + locked cache emulation |
-| **AI** | 1 | `AIStartDMA` | Medium — needs audio backend (SDL_audio or similar) |
+| **AI** | 0 | — | Medium — needs audio backend (SDL_audio or similar) |
 | **DVD** | 1 | `DVDCancel` — cancel in-flight read | Small |
 
 ### PBT possible (~0 functions)

@@ -35,6 +35,7 @@ Current migration status:
 - AI `AISetStreamPlayState` now includes unified L0-L5 DOL-PBT coverage (`tools/run_ai_set_stream_play_state_pbt.sh`, mutation-checked with `tools/mutations/ai_set_stream_play_state_no_swap.patch`).
 - AI `AISetStreamVolLeft` now includes unified L0-L5 DOL-PBT coverage (`tools/run_ai_set_stream_vol_left_pbt.sh`, mutation-checked with `tools/mutations/ai_set_stream_vol_left_wrong_shift.patch`).
 - AI `AISetStreamVolRight` now includes unified L0-L5 DOL-PBT coverage (`tools/run_ai_set_stream_vol_right_pbt.sh`, mutation-checked with `tools/mutations/ai_set_stream_vol_right_no_shift.patch`).
+- AI `AIStartDMA` now includes unified L0-L5 DOL-PBT coverage (`tools/run_ai_start_dma_pbt.sh`, mutation patch: `tools/mutations/ai_start_dma_wrong_bit.patch`).
 
 ## Remaining test workload snapshot
 
