@@ -26,6 +26,9 @@ Current migration status:
 - GX `GXSetTexCoordScaleManually` now includes unified L0-L5 DOL-PBT coverage (`tools/run_gx_set_tex_coord_scale_manually_pbt.sh`, mutation-checked with `tools/mutations/gx_set_tex_coord_scale_manually_no_minus1.patch`).
 - GX `GXSetTevSwapModeTable` now includes unified L0-L5 DOL-PBT coverage (`tools/run_gx_set_tev_swap_mode_table_pbt.sh`, mutation-checked with `tools/mutations/gx_set_tev_swap_mode_table_wrong_green_shift.patch`).
 - AR `ARStartDMA` now includes unified L0-L5 DOL-PBT coverage (`tools/run_ar_start_dma_pbt.sh`, mutation-checked with `tools/mutations/ar_start_dma_swap_mmem_aram.patch`).
+- AR `ARGetDMAStatus` now includes unified L0-L5 DOL-PBT coverage (`tools/run_ar_get_dma_status_pbt.sh`, mutation-checked with `tools/mutations/ar_get_dma_status_const0.patch`).
+- AR `ARRegisterDMACallback` now includes unified L0-L5 DOL-PBT coverage (`tools/run_ar_register_dma_callback_pbt.sh`, mutation-checked with `tools/mutations/ar_register_dma_callback_no_store.patch`).
+- AR `ARSetSize` now includes unified L0-L5 DOL-PBT coverage (`tools/run_ar_set_size_pbt.sh`, mutation patch: `tools/mutations/ar_set_size_flip_status.patch`).
 
 ## Remaining test workload snapshot
 
@@ -45,7 +48,7 @@ Current migration status:
 | **SI** | 1 | 1 | **100%** | SISetSamplingRate |
 | **MTX** | 33 | 33 | **100%** | Includes PSMTXReorder, PSMTXROMultVecArray, PSMTXMultVecArray |
 | **CARD** | 23 | 14 | **61%** | FAT internals + Dir ops + Unlock crypto (exnor, bitrev, CARDRand) |
-| **AR** | 10 | 6 | **60%** | ARInit, ARAlloc, ARFree, ARCheckInit, ARGetBaseAddress, ARGetSize |
+| **AR** | 10 | 10 | **100%** | Hardware layer modeled via observable globals + unified DOL-PBT suites |
 | **ARQ** | 2 | 2 | **100%** | ARQInit + ARQPostRequest (+ internal helpers) |
 | **AI** | 7 | 0 | **0%** | Audio interface — not started |
 | **THP** | 27 | 0 | **0%** | Video player — not started |
@@ -143,7 +146,7 @@ CARDSetCommentAddress, CARDSetIconAddress, CARDSetIconAnim, CARDSetIconFormat, C
 Note: Remaining CARD functions need EXI subsystem for actual hardware I/O.
 For port, we'll simulate with host filesystem (similar to Dolphin emulator approach).
 
-### AR (6/10 = 60%)
+### AR (10/10 = 100%)
 
 **Ported:**
 - `ARInit` — stack allocator init (hardware stripped, `__ARChecksize` elided)
@@ -155,11 +158,17 @@ For port, we'll simulate with host filesystem (similar to Dolphin emulator appro
 
 PBT suite: 344,753 checks PASS (2000 seeds).
 
-**Missing (4 hardware functions):**
-- `ARSetSize` — empty stub in decomp
-- `ARGetDMAStatus` — read `__DSPRegs[5]` (hardware)
-- `ARRegisterDMACallback` — set/get callback pointer
-- `ARStartDMA` — program DMA registers for ARAM↔MRAM transfer (hardware)
+**Ported hardware layer (modeled for trace replay):**
+- `ARStartDMA` — records parameters as observable state (`gc_ar_dma_*`)
+- `ARGetDMAStatus` — returns modeled status (`gc_ar_dma_status`)
+- `ARRegisterDMACallback` — swaps modeled callback pointer (`gc_ar_callback_ptr`)
+- `ARSetSize` — empty stub per decomp (no-op invariant)
+
+Unified L0-L5 DOL-PBT suites (Dolphin expected vs host actual):
+- `tools/run_ar_start_dma_pbt.sh`
+- `tools/run_ar_get_dma_status_pbt.sh`
+- `tools/run_ar_register_dma_callback_pbt.sh`
+- `tools/run_ar_set_size_pbt.sh`
 
 ### ARQ (2/2 = 100%)
 
@@ -225,7 +234,7 @@ All oracle functions verified as exact copies of mp4-decomp Nintendo SDK code (1
 
 All pure-computation functions in the decomp have been PBT-tested. Remaining untested modules:
 - **AI**: 21 functions — all hardware register I/O, no PBT possible
-- **AR DMA**: ARStartDMA, ARGetDMAStatus, ARRegisterDMACallback — all hardware, no PBT possible
+- **AR DMA**: ARStartDMA, ARGetDMAStatus, ARRegisterDMACallback — all hardware, no PBT possible (covered by unified DOL-PBT suites instead)
 - **THP video**: THPDec.c has ~14 pure functions (Huffman tables, IDCT, MCU decompression) but they use PPC paired-single ASM and locked cache — would need host JPEG decoder reimplementation
 - **CARD remaining**: 14 API functions need EXI subsystem mock for hardware I/O
 
@@ -235,7 +244,7 @@ All pure-computation functions in the decomp have been PBT-tested. Remaining unt
 
 ### Tier 1 — Required for basic init + main loop
 1. ~~OS stubs: OSGetTick~~ DONE — OSTicksToMilliseconds (macro) still needed
-2. ~~AR allocator~~ 6/10 DONE — remaining 4 are hardware stubs (ARStartDMA, ARGetDMAStatus, ARRegisterDMACallback, ARSetSize)
+2. ~~AR allocator~~ 10/10 DONE — hardware layer modeled + unified DOL-PBT suites (ARStartDMA/ARGetDMAStatus/ARRegisterDMACallback/ARSetSize)
 3. GX indirect texturing (7 functions) — used heavily in MP4 board rendering
 4. GX TEV konstant colors (4 functions) — used in multi-texture effects
 5. GX TEV swap modes (2 functions) — used in alpha/color channel routing

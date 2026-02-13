@@ -2760,3 +2760,19 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_ar_register_dma_callback_pbt.sh` -> PASS
   - `tools/run_mutation_check.sh tools/mutations/ar_register_dma_callback_no_store.patch -- tools/run_ar_register_dma_callback_pbt.sh` -> PASS (mutant fails as expected)
+
+## 2026-02-13: ARSetSize unified DOL PBT suite (L0-L5)
+
+- Decomp evidence:
+  - MP4 Dolphin SDK decomp: `decomp_mario_party_4/src/dolphin/ar/ar.c` implements `ARSetSize(void) { }` (empty stub).
+  - TP Dolphin SDK decomp: `decomp_twilight_princess/src/dolphin/ar/ar.c` `ARSetSize()` only `OSReport(...)` under `#if DEBUG` (no functional side effects).
+- Added unified ARSetSize PBT suite (no-op invariant):
+  - `tests/sdk/ar/ar_set_size/dol/pbt/ar_set_size_pbt_001/*`
+  - `tests/sdk/ar/ar_set_size/host/ar_set_size_pbt_001_scenario.c`
+  - `tools/run_ar_set_size_pbt.sh`
+- Observable state covered (must not change):
+  - `gc_ar_dma_type/gc_ar_dma_mainmem/gc_ar_dma_aram/gc_ar_dma_length/gc_ar_dma_status`
+  - `gc_ar_callback_ptr` compared via callback classification IDs (null/cb0/cb1/cb2/other), not raw pointer values.
+- Validation:
+  - `tools/run_ar_set_size_pbt.sh` -> PASS
+  - Mutation check to run: `tools/run_mutation_check.sh tools/mutations/ar_set_size_flip_status.patch -- tools/run_ar_set_size_pbt.sh`

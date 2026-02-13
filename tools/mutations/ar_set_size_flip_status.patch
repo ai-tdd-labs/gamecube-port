@@ -1,0 +1,11 @@
+diff --git a/src/sdk_port/ar/ar_hw.c b/src/sdk_port/ar/ar_hw.c
+index 8fb86c7..c67a07a 100644
+--- a/src/sdk_port/ar/ar_hw.c
++++ b/src/sdk_port/ar/ar_hw.c
+@@ -42,4 +42,6 @@ ARCallback ARRegisterDMACallback(ARCallback callback)
+ /* ARSetSize (ar.c:137) — Empty stub per decomp. */
+ void ARSetSize(void)
+ {
++    /* MUTATION TARGET: should be a no-op. */
++    gc_ar_dma_status ^= 1u;
+ }
