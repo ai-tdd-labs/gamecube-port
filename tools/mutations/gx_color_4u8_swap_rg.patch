@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2537,7 +2537,7 @@ void GXColor1x16(u16 index) {
+ }
+ 
+ void GXColor4u8(u8 r, u8 g, u8 b, u8 a) {
+-    gc_gx_color4u8_last = ((u32)r << 24) | ((u32)g << 16) | ((u32)b << 8) | (u32)a;
++    gc_gx_color4u8_last = ((u32)g << 24) | ((u32)r << 16) | ((u32)b << 8) | (u32)a;
+ }
+ 
+ void GXNormal1x16(u16 index) {
