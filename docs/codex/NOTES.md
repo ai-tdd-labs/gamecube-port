@@ -2845,3 +2845,17 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_ai_set_stream_play_state_pbt.sh` -> PASS
   - `tools/run_mutation_check.sh tools/mutations/ai_set_stream_play_state_no_swap.patch -- tools/run_ai_set_stream_play_state_pbt.sh` -> PASS (mutant fails as expected)
+
+## 2026-02-13: AISetStreamVolLeft unified DOL PBT suite (L0-L5)
+
+- Callsite evidence:
+  - MP4 audio system updates stream volume left (`decomp_mario_party_4/src/game/audio.c`).
+- Decomp contract (MP4 Dolphin SDK):
+  - `decomp_mario_party_4/src/dolphin/ai.c`: `__AIRegs[1] = (__AIRegs[1] & ~0xFF) | (volume & 0xFF);`
+- Added unified AISetStreamVolLeft PBT suite:
+  - `tests/sdk/ai/ai_set_stream_vol_left/dol/pbt/ai_set_stream_vol_left_pbt_001/*`
+  - `tests/sdk/ai/ai_set_stream_vol_left/host/ai_set_stream_vol_left_pbt_001_scenario.c`
+  - `tools/run_ai_set_stream_vol_left_pbt.sh`
+- Validation:
+  - `tools/run_ai_set_stream_vol_left_pbt.sh` -> PASS
+  - Mutation check to run: `tools/run_mutation_check.sh tools/mutations/ai_set_stream_vol_left_wrong_shift.patch -- tools/run_ai_set_stream_vol_left_pbt.sh`
