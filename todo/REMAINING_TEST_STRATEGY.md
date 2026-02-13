@@ -13,6 +13,7 @@ Method migration queue (current):
 - PAD family is already migrated to unified L0-L5 DOL-PBT with mutation checks, and is the template for remaining upgrades.
 - `GXSetTevSwapMode` has been migrated to unified L0-L5 DOL-PBT (`tools/run_gx_set_tev_swap_mode_pbt.sh`).
 - `GXSetTevKColor` / `GXSetTevKAlphaSel` have been migrated to unified L0-L5 DOL-PBT (`tools/run_gx_set_tev_kcolor_pbt.sh`).
+- `GXSetTevColorS10` has been migrated to unified L0-L5 DOL-PBT (`tools/run_gx_set_tev_color_s10_pbt.sh`).
 
 ## Remaining test workload snapshot
 

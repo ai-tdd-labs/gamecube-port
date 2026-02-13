@@ -2394,3 +2394,22 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_gx_set_tev_kcolor_pbt.sh` -> PASS
   - `tools/run_mutation_check.sh tools/mutations/gx_set_tev_kalpha_sel_shift.patch -- tools/run_gx_set_tev_kcolor_pbt.sh` -> PASS (mutant fails as expected)
+
+## 2026-02-13: GXSetTevColorS10 unified DOL PBT suite (L0-L5)
+
+- Added unified GXSetTevColorS10 PBT suite:
+  - `tests/sdk/gx/gx_set_tev_kcolor/dol/pbt/gx_set_tev_kcolor_pbt_002/*`
+  - `tests/sdk/gx/gx_set_tev_kcolor/host/gx_set_tev_kcolor_pbt_002_scenario.c`
+  - `tools/run_gx_set_tev_color_s10_pbt.sh`
+- Coverage levels in `gx_set_tev_kcolor_pbt_002`:
+  - L0 isolated input matrix (in-range/out-of-range `id`, signed 10-bit and 16-bit-extreme channel values)
+  - L1 accumulation transitions across deterministic 4x4 `(id,case)` grid
+  - L2 idempotency (repeat same call twice for fixed cases)
+  - L3 random-start deterministic seeded states (`1024` cases)
+  - L4 callsite-style replay anchored to existing generic sample (`id=1, {-100,200,-300,400}`)
+  - L5 boundary/no-op-style invariants on extreme signed inputs and large ids (packing remains deterministic)
+- DOL oracle is decoupled from host sdk_port:
+  - `tests/sdk/gx/gx_set_tev_kcolor/dol/pbt/gx_set_tev_kcolor_pbt_002/oracle_gx_set_tev_color_s10.c`
+- Validation:
+  - `tools/run_gx_set_tev_color_s10_pbt.sh` -> PASS
+  - `tools/run_mutation_check.sh tools/mutations/gx_set_tev_color_s10_wrong_g_shift.patch -- tools/run_gx_set_tev_color_s10_pbt.sh` -> PASS (mutant fails as expected)
