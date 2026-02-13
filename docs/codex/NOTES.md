@@ -2825,4 +2825,4 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
   - DOL-side and host-side compare callback pointers via stable classification IDs (null/cb0/cb1/cb2/other), not raw addresses.
 - Validation:
   - `tools/run_ai_register_dma_callback_pbt.sh` -> PASS
-  - Mutation check to run: `tools/run_mutation_check.sh tools/mutations/ai_register_dma_callback_no_store.patch -- tools/run_ai_register_dma_callback_pbt.sh`
+  - `tools/run_mutation_check.sh tools/mutations/ai_register_dma_callback_no_store.patch -- tools/run_ai_register_dma_callback_pbt.sh` -> PASS (mutant fails as expected)
