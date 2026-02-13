@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2652,7 +2652,7 @@ void GXSetTevColorS10(u32 id, GXColorS10 color) {
+ 
+     u32 regBG = 0;
+     regBG = set_field(regBG, 11, 0, (u32)(color.b & 0x7FF));
+-    regBG = set_field(regBG, 11, 12, (u32)(color.g & 0x7FF));
++    regBG = set_field(regBG, 11, 11, (u32)(color.g & 0x7FF));
+     regBG = set_field(regBG, 8, 24, 225u + id * 2u);
+ 
+     gc_gx_tev_colors10_ra_last = regRA;
