@@ -2413,3 +2413,22 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_gx_set_tev_color_s10_pbt.sh` -> PASS
   - `tools/run_mutation_check.sh tools/mutations/gx_set_tev_color_s10_wrong_g_shift.patch -- tools/run_gx_set_tev_color_s10_pbt.sh` -> PASS (mutant fails as expected)
+
+## 2026-02-13: GXSetTevIndTile unified DOL PBT suite (L0-L5)
+
+- Added unified GXSetTevIndTile PBT suite:
+  - `tests/sdk/gx/gx_set_tev_indirect/dol/pbt/gx_set_tev_ind_tile_pbt_001/*`
+  - `tests/sdk/gx/gx_set_tev_indirect/host/gx_set_tev_ind_tile_pbt_001_scenario.c`
+  - `tools/run_gx_set_tev_ind_tile_pbt.sh`
+- Coverage levels in `gx_set_tev_ind_tile_pbt_001`:
+  - L0 isolated matrix over tile-size wrap mappings, matrix families, and stage boundary (`stage=16`)
+  - L1 accumulation transitions across deterministic 4x4 stage/input grid
+  - L2 idempotency (repeat same tile config twice)
+  - L3 random-start deterministic seeded states (`1024` cases)
+  - L4 callsite-style replay anchored to existing `gx_set_tev_indirect_generic_001` tuple
+  - L5 boundary/no-op invariants (invalid sizes -> `GX_ITW_OFF`, invalid stage keeps TEV entry unchanged while matrix path still updates)
+- DOL oracle is decoupled from host sdk_port:
+  - `tests/sdk/gx/gx_set_tev_indirect/dol/pbt/gx_set_tev_ind_tile_pbt_001/oracle_gx_set_tev_ind_tile.c`
+- Validation:
+  - `tools/run_gx_set_tev_ind_tile_pbt.sh` -> PASS
+  - `tools/run_mutation_check.sh tools/mutations/gx_set_tev_ind_tile_wrong_wrap.patch -- tools/run_gx_set_tev_ind_tile_pbt.sh` -> PASS (mutant fails as expected)
