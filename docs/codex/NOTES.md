@@ -2776,3 +2776,19 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_ar_set_size_pbt.sh` -> PASS
   - `tools/run_mutation_check.sh tools/mutations/ar_set_size_flip_status.patch -- tools/run_ar_set_size_pbt.sh` -> PASS (mutant fails as expected)
+
+## 2026-02-13: AIGetDMAStartAddr unified DOL PBT suite (L0-L5)
+
+- Callsite evidence:
+  - MP4 THP audio callback uses DMA start address to pick the current audio buffer (`decomp_mario_party_4/src/game/THPSimple.c`, `AIGetDMAStartAddr() + 0x80000000`).
+- Decomp contract (MP4 Dolphin SDK):
+  - `decomp_mario_party_4/src/dolphin/ai.c`:
+    - `return ((__DSPRegs[24] & 0x03FF) << 16) | (__DSPRegs[25] & 0xFFE0);`
+    - High 6 bits of `__DSPRegs[24]` and low 5 bits of `__DSPRegs[25]` are ignored.
+- Added unified AIGetDMAStartAddr PBT suite:
+  - `tests/sdk/ai/ai_get_dma_start_addr/dol/pbt/ai_get_dma_start_addr_pbt_001/*`
+  - `tests/sdk/ai/ai_get_dma_start_addr/host/ai_get_dma_start_addr_pbt_001_scenario.c`
+  - `tools/run_ai_get_dma_start_addr_pbt.sh`
+- Validation:
+  - `tools/run_ai_get_dma_start_addr_pbt.sh` -> PASS
+  - Mutation check to run: `tools/run_mutation_check.sh tools/mutations/ai_get_dma_start_addr_wrong_mask.patch -- tools/run_ai_get_dma_start_addr_pbt.sh`

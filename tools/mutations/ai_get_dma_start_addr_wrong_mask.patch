@@ -1,0 +1,13 @@
+diff --git a/src/sdk_port/ai/ai.c b/src/sdk_port/ai/ai.c
+index 6328304..4fbb816 100644
+--- a/src/sdk_port/ai/ai.c
++++ b/src/sdk_port/ai/ai.c
+@@ -39,7 +39,7 @@ void AIStartDMA(void)
+ /* AIGetDMAStartAddr (ai.c:57-60) — Read DMA start address from DSP regs. */
+ uint32_t AIGetDMAStartAddr(void)
+ {
+-    return (uint32_t)((gc_ai_dsp_regs[0] & 0x03FF) << 16) | (gc_ai_dsp_regs[1] & 0xFFE0);
++    return (uint32_t)((gc_ai_dsp_regs[0] & 0x03FF) << 16) | (gc_ai_dsp_regs[1] & 0xFFFF);
+ }
+ 
+ /* AISetStreamPlayState (ai.c:84-109) — Set stream play bit in AI control reg. */

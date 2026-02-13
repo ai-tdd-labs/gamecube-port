@@ -29,6 +29,7 @@ Current migration status:
 - AR `ARGetDMAStatus` now includes unified L0-L5 DOL-PBT coverage (`tools/run_ar_get_dma_status_pbt.sh`, mutation-checked with `tools/mutations/ar_get_dma_status_const0.patch`).
 - AR `ARRegisterDMACallback` now includes unified L0-L5 DOL-PBT coverage (`tools/run_ar_register_dma_callback_pbt.sh`, mutation-checked with `tools/mutations/ar_register_dma_callback_no_store.patch`).
 - AR `ARSetSize` now includes unified L0-L5 DOL-PBT coverage (`tools/run_ar_set_size_pbt.sh`, mutation-checked with `tools/mutations/ar_set_size_flip_status.patch`).
+- AI `AIGetDMAStartAddr` now includes unified L0-L5 DOL-PBT coverage (`tools/run_ai_get_dma_start_addr_pbt.sh`, mutation patch: `tools/mutations/ai_get_dma_start_addr_wrong_mask.patch`).
 
 ## Remaining test workload snapshot
 
@@ -50,7 +51,7 @@ Current migration status:
 | **CARD** | 23 | 14 | **61%** | FAT internals + Dir ops + Unlock crypto (exnor, bitrev, CARDRand) |
 | **AR** | 10 | 10 | **100%** | Hardware layer modeled via observable globals + unified DOL-PBT suites |
 | **ARQ** | 2 | 2 | **100%** | ARQInit + ARQPostRequest (+ internal helpers) |
-| **AI** | 7 | 0 | **0%** | Audio interface — not started |
+| **AI** | 7 | 7 | **100%** | Hardware layer modeled via observable globals; trace replay suites in progress |
 | **THP** | 27 | 0 | **0%** | Video player — not started |
 | **TOTAL** | **~305** | **~234** | **~76%** | |
 
@@ -176,13 +177,13 @@ Unified L0-L5 DOL-PBT suites (Dolphin expected vs host actual):
 
 All game-needed ARQ functions are implemented. PBT suite passes (2000 seeds).
 
-### AI (0/7 = 0%) — HARDWARE ONLY
+### AI (7/7 = 100%) — HARDWARE ONLY
 
-**Missing:** AIGetDMAStartAddr, AIInitDMA, AIRegisterDMACallback, AISetStreamPlayState,
-AISetStreamVolLeft, AISetStreamVolRight, AIStartDMA
+**Ported (modeled):** `AIInitDMA`, `AIStartDMA`, `AIGetDMAStartAddr`, `AIRegisterDMACallback`,
+`AISetStreamPlayState`, `AISetStreamVolLeft`, `AISetStreamVolRight`
 
-Note: All 21 functions in ai.c are pure hardware register I/O (`__AIRegs`, `__DSPRegs`).
-No pure computation suitable for PBT. For port, needs audio backend (SDL_audio or similar).
+Note: AI is hardware register I/O (`__AIRegs`, `__DSPRegs`). For the port we model registers as
+observable globals and validate bit-exact behavior vs Dolphin via DOL-PBT suites.
 
 ### THP (0/27 = 0%) — NOT STARTED
 
