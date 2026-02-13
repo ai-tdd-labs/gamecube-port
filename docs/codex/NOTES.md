@@ -2870,4 +2870,4 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
   - `tools/run_ai_set_stream_vol_right_pbt.sh`
 - Validation:
   - `tools/run_ai_set_stream_vol_right_pbt.sh` -> PASS
-  - Mutation check to run: `tools/run_mutation_check.sh tools/mutations/ai_set_stream_vol_right_no_shift.patch -- tools/run_ai_set_stream_vol_right_pbt.sh`
+  - `tools/run_mutation_check.sh tools/mutations/ai_set_stream_vol_right_no_shift.patch -- tools/run_ai_set_stream_vol_right_pbt.sh` -> PASS (mutant fails as expected)
