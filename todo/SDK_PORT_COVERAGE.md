@@ -11,6 +11,7 @@ Current migration status:
 - PAD function suites are now in unified L0-L5 DOL-PBT format (`PADControlMotor`, `PADSetSpec`, `PADReset`, `PADInit`, `PADRead`, `PADClamp`, `PADRecalibrate`).
 - VI now includes a unified L0-L5 DOL-PBT suite for `VISetBlack` (`tools/run_vi_set_black_pbt.sh`, mutation-checked with `tools/mutations/vi_set_black_flip_test.patch`).
 - GX `GXSetTevSwapMode` now includes unified L0-L5 DOL-PBT coverage (`tools/run_gx_set_tev_swap_mode_pbt.sh`, mutation-checked with `tools/mutations/gx_set_tev_swap_mode_flip.patch`).
+- GX `GXSetTevKColor` / `GXSetTevKAlphaSel` now include unified L0-L5 DOL-PBT coverage (`tools/run_gx_set_tev_kcolor_pbt.sh`, mutation-checked with `tools/mutations/gx_set_tev_kalpha_sel_shift.patch`).
 
 ## Remaining test workload snapshot
 
