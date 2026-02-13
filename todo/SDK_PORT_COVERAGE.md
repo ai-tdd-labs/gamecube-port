@@ -25,6 +25,7 @@ Current migration status:
 - GX `GXLoadTlut` now includes unified L0-L5 DOL-PBT coverage (`tools/run_gx_load_tlut_pbt.sh`, mutation-checked with `tools/mutations/gx_load_tlut_wrong_offset_mask.patch`).
 - GX `GXSetTexCoordScaleManually` now includes unified L0-L5 DOL-PBT coverage (`tools/run_gx_set_tex_coord_scale_manually_pbt.sh`, mutation-checked with `tools/mutations/gx_set_tex_coord_scale_manually_no_minus1.patch`).
 - GX `GXSetTevSwapModeTable` now includes unified L0-L5 DOL-PBT coverage (`tools/run_gx_set_tev_swap_mode_table_pbt.sh`, mutation-checked with `tools/mutations/gx_set_tev_swap_mode_table_wrong_green_shift.patch`).
+- AR `ARStartDMA` now includes unified L0-L5 DOL-PBT coverage (`tools/run_ar_start_dma_pbt.sh`, mutation-checked with `tools/mutations/ar_start_dma_swap_mmem_aram.patch`).
 
 ## Remaining test workload snapshot
 

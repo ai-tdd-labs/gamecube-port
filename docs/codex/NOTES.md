@@ -2689,3 +2689,27 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_gx_set_tev_swap_mode_table_pbt.sh` -> PASS
   - `tools/run_mutation_check.sh tools/mutations/gx_set_tev_swap_mode_table_wrong_green_shift.patch -- tools/run_gx_set_tev_swap_mode_table_pbt.sh` -> PASS (mutant fails as expected)
+
+## 2026-02-13: ARStartDMA unified DOL PBT suite (L0-L5)
+
+- Callsite evidence across decomp projects:
+  - MP4/AC: ARQ service uses `ARStartDMA` to execute queued transfers (`decomp_mario_party_4/src/dolphin/ar/arq.c`, `decomp_animal_crossing/src/static/dolphin/ar/arq.c`).
+  - TP: MetroTRK uses `ARStartDMA` in debugger transport (`decomp_twilight_princess/src/TRK_MINNOW_DOLPHIN/.../dolphin_trk.c`).
+- Added unified ARStartDMA PBT suite:
+  - `tests/sdk/ar/ar_start_dma/dol/pbt/ar_start_dma_pbt_001/*`
+  - `tests/sdk/ar/ar_start_dma/host/ar_start_dma_pbt_001_scenario.c`
+  - `tools/run_ar_start_dma_pbt.sh`
+- Coverage levels in `ar_start_dma_pbt_001`:
+  - L0 isolated parameter matrix (type/mainmem/aram/len)
+  - L1 accumulation over deterministic address/length sweep
+  - L2 idempotency (repeat same call)
+  - L3 random-start deterministic seeded states (`2048` cases)
+  - L4 callsite-style DMA sequences
+  - L5 boundary/odd inputs (no validation; raw param record)
+- DOL oracle is decoupled from host sdk_port:
+  - `tests/sdk/ar/ar_start_dma/dol/pbt/ar_start_dma_pbt_001/oracle_ar_start_dma.c`
+- Confirmed observable behavior (current sdk_port model):
+  - Records `type/mainmem_addr/aram_addr/length` into `gc_ar_dma_*` globals without additional side effects.
+- Validation:
+  - `tools/run_ar_start_dma_pbt.sh` -> PASS
+  - `tools/run_mutation_check.sh tools/mutations/ar_start_dma_swap_mmem_aram.patch -- tools/run_ar_start_dma_pbt.sh` -> PASS (mutant fails as expected)

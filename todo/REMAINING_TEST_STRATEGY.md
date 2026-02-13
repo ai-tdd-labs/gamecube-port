@@ -65,7 +65,7 @@ These are hardware-coupled and can only be verified against Dolphin ground truth
 | **CARD** | 19 | `CARDInit`, `CARDMount`, `CARDUnmount`, `CARDOpen`, `CARDClose`, `CARDCreate`, `CARDDelete`, `CARDRead`, `CARDWrite`, `CARDFormat`, `CARDCheck`, `CARDFreeBlocks`, `CARDGetSectorSize`, `CARDProbeEx`, `CARDGetSerialNo`, `CARDGetStatus`, `CARDSetStatus`, `CARDSetBannerFormat`, `CARDSetCommentAddress`+ icon setters | Large — needs EXI simulation, host filesystem backend |
 | **THP** | 27 | `THPInit`, `THPVideoDecode`, `THPSimpleOpen/Close/Decode/PreLoad/LoadStop/Init/Quit`, `THPSimpleSetBuffer/SetVolume/CalcNeedMemory`, `THPSimpleAudioStart/Stop`, `THPSimpleGetTotalFrame/GetVideoInfo/DrawCurrentFrame`, `THPGXYuv2RgbSetup/Draw`, `THPGXRestore`, `THPAudioMixCallback`, `THPDecodeFunc`, `THPViewFunc/ViewSprFunc`, `THPTestProc`, `THPSimpleInlineFunc` | Large — JPEG codec + ADPCM + locked cache emulation |
 | **AI** | 7 | `AIGetDMAStartAddr`, `AIInitDMA`, `AIRegisterDMACallback`, `AISetStreamPlayState`, `AISetStreamVolLeft`, `AISetStreamVolRight`, `AIStartDMA` | Medium — needs audio backend (SDL_audio or similar) |
-| **AR** | 4 | `ARStartDMA` (DMA = memcpy simulation), `ARGetDMAStatus` (hardware reg read), `ARRegisterDMACallback` (callback setter), `ARSetSize` (empty stub in decomp) | Small — ARStartDMA is just memcpy between host ARAM buffer and MEM1 |
+| **AR** | 3 | `ARGetDMAStatus` (hardware reg read), `ARRegisterDMACallback` (callback setter), `ARSetSize` (empty stub in decomp) | Small — hardware-coupled, modeled in sdk_port |
 | **DVD** | 1 | `DVDCancel` — cancel in-flight read | Small |
 
 ### PBT possible (~0 functions)
