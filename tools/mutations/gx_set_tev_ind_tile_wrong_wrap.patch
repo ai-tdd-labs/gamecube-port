@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -3164,7 +3164,7 @@ void GXSetTevIndTile(GXTevStageID tev_stage, GXIndTexStageID ind_stage,
+     switch (tilesize_s) {
+         case 256: wrap_s = GX_ITW_256; break;
+         case 128: wrap_s = GX_ITW_128; break;
+-        case 64:  wrap_s = GX_ITW_64;  break;
++        case 64:  wrap_s = GX_ITW_32;  break;
+         case 32:  wrap_s = GX_ITW_32;  break;
+         case 16:  wrap_s = GX_ITW_16;  break;
+         default:  wrap_s = GX_ITW_OFF; break;
