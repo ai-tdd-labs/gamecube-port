@@ -1,0 +1,13 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+index bdef922..e31f6e1 100644
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1583,7 +1583,7 @@ void GXSetTexCoordScaleManually(u32 coord, u8 enable, u16 ss, u16 ts) {
+     if (coord >= 8) return;
+     gc_gx_tcs_man_enab = (gc_gx_tcs_man_enab & ~(1u << coord)) | ((u32)(enable != 0) << coord);
+     if (enable != 0) {
+-        gc_gx_su_ts0[coord] = set_field(gc_gx_su_ts0[coord], 16, 0, (u32)(u16)(ss - 1u));
++        gc_gx_su_ts0[coord] = set_field(gc_gx_su_ts0[coord], 16, 0, (u32)(u16)ss);
+         gc_gx_su_ts1[coord] = set_field(gc_gx_su_ts1[coord], 16, 0, (u32)(u16)(ts - 1u));
+         gx_write_ras_reg(gc_gx_su_ts0[coord]);
+         gx_write_ras_reg(gc_gx_su_ts1[coord]);
