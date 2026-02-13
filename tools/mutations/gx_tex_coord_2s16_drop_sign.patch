@@ -1,0 +1,11 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2555,7 +2555,7 @@ void GXTexCoord1x16(u16 index) {
+ }
+ 
+ void GXTexCoord2s16(s16 s, s16 t) {
+-    gc_gx_texcoord2s16_s = (u32)(s32)s;
++    gc_gx_texcoord2s16_s = (u32)(u16)s;
+     gc_gx_texcoord2s16_t = (u32)(s32)t;
+ }
