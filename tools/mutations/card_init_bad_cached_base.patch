@@ -1,0 +1,13 @@
+diff --git a/src/sdk_port/card/card_bios.c b/src/sdk_port/card/card_bios.c
+index 17e9743..3fcb507 100644
+--- a/src/sdk_port/card/card_bios.c
++++ b/src/sdk_port/card/card_bios.c
+@@ -29,7 +29,7 @@ static void *OSPhysicalToCached(uint32_t paddr)
+ {
+     /* On GC, physical MEM1 0 maps to 0x80000000 cached. */
+     (void)paddr;
+-    return (void *)(uintptr_t)0x80000000u;
++    return (void *)(uintptr_t)0x00000000u;
+ }
+ 
+ static void OSRegisterResetFunction(void *info)
