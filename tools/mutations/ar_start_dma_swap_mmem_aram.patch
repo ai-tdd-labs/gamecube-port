@@ -1,8 +1,9 @@
 diff --git a/src/sdk_port/ar/ar_hw.c b/src/sdk_port/ar/ar_hw.c
-index 5ce3504..d46e4df 100644
+index 8fb86c7..bfcf8dd 100644
 --- a/src/sdk_port/ar/ar_hw.c
 +++ b/src/sdk_port/ar/ar_hw.c
-@@ -22,8 +22,8 @@ void ARStartDMA(uint32_t type, uint32_t mainmem_addr, uint32_t aram_addr, uint32
+@@ -20,8 +20,8 @@ uintptr_t gc_ar_callback_ptr;
+ void ARStartDMA(uint32_t type, uint32_t mainmem_addr, uint32_t aram_addr, uint32_t length)
  {
      gc_ar_dma_type = type;
 -    gc_ar_dma_mainmem = mainmem_addr;
@@ -11,3 +12,4 @@ index 5ce3504..d46e4df 100644
 +    gc_ar_dma_aram = mainmem_addr;
      gc_ar_dma_length = length;
  }
+ 
