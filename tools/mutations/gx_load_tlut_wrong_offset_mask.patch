@@ -1,0 +1,13 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+index bdef922..31c1f32 100644
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -1573,7 +1573,7 @@ void GXLoadTlut(GXTlutObj *tlut_obj, u32 tlut_name) {
+     gc_gx_tlut_load0_last = tlut_obj->loadTlut0;
+     gc_gx_tlut_load1_last = r->loadTlut1;
+ 
+-    u32 tlut_offset = r->loadTlut1 & 0x3FFu;
++    u32 tlut_offset = r->loadTlut1 & 0x1FFu;
+     tlut_obj->tlut = set_field(tlut_obj->tlut, 10, 0, tlut_offset);
+     r->tlutObj = *tlut_obj;
+ }
