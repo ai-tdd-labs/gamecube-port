@@ -1,0 +1,13 @@
+diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
+index bdef922..3e44b17 100644
+--- a/src/sdk_port/gx/GX.c
++++ b/src/sdk_port/gx/GX.c
+@@ -2730,7 +2730,7 @@ void GXSetTevKAlphaSel(u32 stage, u32 sel) {
+ void GXSetTevSwapMode(u32 stage, u32 ras_sel, u32 tex_sel) {
+     if (stage >= 16u) return;
+     gc_gx_teva[stage] = set_field(gc_gx_teva[stage], 2, 0, ras_sel);
+-    gc_gx_teva[stage] = set_field(gc_gx_teva[stage], 2, 2, tex_sel);
++    gc_gx_teva[stage] = set_field(gc_gx_teva[stage], 2, 0, tex_sel); // MUTANT
+     gx_write_ras_reg(gc_gx_teva[stage]);
+     gc_gx_bp_sent_not = 0;
+ }

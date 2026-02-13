@@ -2324,3 +2324,54 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_pad_recalibrate_pbt.sh` → PASS
   - `tools/run_mutation_check.sh tools/mutations/pad_recalibrate_skip_call_counter.patch -- tools/run_pad_recalibrate_pbt.sh` → PASS (mutant fails as expected).
+
+## 2026-02-13: Docs status sync + next function queue
+
+- Status sync completed for current migration phase:
+  - PAD unified L0-L5 DOL-PBT suites are in place for `PADControlMotor`, `PADSetSpec`, `PADReset`, `PADInit`, `PADRead`, `PADClamp`, `PADRecalibrate`.
+  Evidence: `tests/sdk/pad/*/dol/pbt/*`, `tools/run_pad_*_pbt.sh`.
+- Next unblocked SDK function task is `VISetBlack` unified migration (`bd gamecube-64js`).
+  Evidence: `bd ready` output in this session.
+- Updated planning docs to reflect current queue and priorities:
+  - `todo/SDK_PORT_COVERAGE.md`
+  - `todo/REMAINING_TEST_STRATEGY.md`
+
+## 2026-02-13: VISetBlack unified DOL PBT suite (L0-L5)
+
+- Added unified VISetBlack PBT suite:
+  - `tests/sdk/vi/vi_set_black/dol/pbt/vi_set_black_pbt_001/*`
+  - `tests/sdk/vi/vi_set_black/host/vi_set_black_pbt_001_scenario.c`
+  - `tools/run_vi_set_black_pbt.sh`
+- Coverage levels in `vi_set_black_pbt_001`:
+  - L0 isolated input matrix (`0,1,2,0xffffffff`)
+  - L1 accumulation transitions (two-call matrix)
+  - L2 idempotency (same input twice)
+  - L3 random-start seeded state (deterministic PRNG)
+  - L4 callsite-derived value replay set from MP4 decomp (`0,1,1,0`)
+  - L5 boundary behavior (`set_black_calls` near wrap + bool normalization)
+- DOL oracle decoupled from host sdk_port for mutation checks:
+  - `tests/sdk/vi/vi_set_black/dol/pbt/vi_set_black_pbt_001/oracle_vi_set_black.c`
+- Validation:
+  - `tools/run_vi_set_black_pbt.sh` -> PASS
+  - Mutant (`tools/mutations/vi_set_black_flip_test.patch`) causes suite failure, then baseline re-run passes.
+  - Mutation wrapper updated to target unified suite:
+    - `tools/mutations/vi_set_black_flip_test.sh`
+
+## 2026-02-13: GXSetTevSwapMode unified DOL PBT suite (L0-L5)
+
+- Added unified GXSetTevSwapMode PBT suite:
+  - `tests/sdk/gx/gx_set_tev_swap_mode/dol/pbt/gx_set_tev_swap_mode_pbt_001/*`
+  - `tests/sdk/gx/gx_set_tev_swap_mode/host/gx_set_tev_swap_mode_pbt_001_scenario.c`
+  - `tools/run_gx_set_tev_swap_mode_pbt.sh`
+- Coverage levels in `gx_set_tev_swap_mode_pbt_001`:
+  - L0 isolated valid/invalid stage+table matrix
+  - L1 accumulation transitions across stage/table combinations
+  - L2 idempotency (same writes repeated)
+  - L3 random-start deterministic seeded states
+  - L4 callsite-style sequence (mirrors existing generic chain values)
+  - L5 boundary no-op invariants for invalid stage/table
+- DOL oracle is decoupled from host sdk_port:
+  - `tests/sdk/gx/gx_set_tev_swap_mode/dol/pbt/gx_set_tev_swap_mode_pbt_001/oracle_gx_set_tev_swap_mode.c`
+- Validation:
+  - `tools/run_gx_set_tev_swap_mode_pbt.sh` -> PASS
+  - Mutant (`tools/mutations/gx_set_tev_swap_mode_flip.patch`) causes suite failure; baseline re-run passes.

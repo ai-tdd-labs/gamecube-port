@@ -1,11 +1,16 @@
 # SDK Port Coverage — Mario Party 4
 
-Last updated: 2026-02-12
+Last updated: 2026-02-13
 
 ## Summary
 
 The game calls **~305 unique SDK functions** across 13 modules.
 The port currently implements **~233 functions** (plus internal helpers).
+
+Current migration status:
+- PAD function suites are now in unified L0-L5 DOL-PBT format (`PADControlMotor`, `PADSetSpec`, `PADReset`, `PADInit`, `PADRead`, `PADClamp`, `PADRecalibrate`).
+- VI now includes a unified L0-L5 DOL-PBT suite for `VISetBlack` (`tools/run_vi_set_black_pbt.sh`, mutation-checked with `tools/mutations/vi_set_black_flip_test.patch`).
+- GX `GXSetTevSwapMode` now includes unified L0-L5 DOL-PBT coverage (`tools/run_gx_set_tev_swap_mode_pbt.sh`, mutation-checked with `tools/mutations/gx_set_tev_swap_mode_flip.patch`).
 
 ## Remaining test workload snapshot
 

@@ -2,27 +2,12 @@
 set -euo pipefail
 
 # Mutation check for VISetBlack: invert the boolean test (0u/1u swapped).
-#
-# Usage:
-#   tools/mutations/vi_set_black_flip_test.sh <test_case_dir> [<test_case_dir2> ...]
+# Runs against the unified L0-L5 DOL-PBT suite.
 
 repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$repo_root"
 
-if [[ $# -lt 1 ]]; then
-  echo "usage: $0 <test_case_dir> [<test_case_dir2> ...]" >&2
-  exit 2
-fi
-
-args=("tools/run_mutation_check.sh" "tools/mutations/vi_set_black_flip_test.patch" "--")
-
-first=1
-for d in "$@"; do
-  if [[ $first -eq 0 ]]; then
-    args+=("::")
-  fi
-  first=0
-  args+=("tools/run_host_scenario.sh" "$d")
-done
-
-"${args[@]}"
+tools/run_mutation_check.sh \
+  tools/mutations/vi_set_black_flip_test.patch \
+  -- \
+  tools/run_vi_set_black_pbt.sh

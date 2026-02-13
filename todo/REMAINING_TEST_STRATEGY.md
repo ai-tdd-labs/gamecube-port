@@ -1,12 +1,17 @@
 # Remaining Functions — Test Strategy
 
-Last updated: 2026-02-12 (pm)
+Last updated: 2026-02-13
 
 ## Context
 
 The game needs **~305 SDK functions**. Currently **~213 are ported**.
 The remaining **~85 functions** are all hardware-coupled — every pure-computation
 function is already covered by PBT (18 suites, ~250M+ checks).
+
+Method migration queue (current):
+- `VISetBlack` has been migrated to unified L0-L5 DOL-PBT (`tools/run_vi_set_black_pbt.sh`).
+- PAD family is already migrated to unified L0-L5 DOL-PBT with mutation checks, and is the template for remaining upgrades.
+- `GXSetTevSwapMode` has been migrated to unified L0-L5 DOL-PBT (`tools/run_gx_set_tev_swap_mode_pbt.sh`).
 
 ## Remaining test workload snapshot
 
