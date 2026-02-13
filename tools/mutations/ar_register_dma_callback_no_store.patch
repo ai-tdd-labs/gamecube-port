@@ -1,11 +1,13 @@
 diff --git a/src/sdk_port/ar/ar_hw.c b/src/sdk_port/ar/ar_hw.c
-index 5ce3504..64001bb 100644
+index 8fb86c7..a29c48b 100644
 --- a/src/sdk_port/ar/ar_hw.c
 +++ b/src/sdk_port/ar/ar_hw.c
-@@ -37,7 +37,7 @@ ARCallback ARRegisterDMACallback(ARCallback callback)
+@@ -35,7 +35,7 @@ uint32_t ARGetDMAStatus(void)
+ ARCallback ARRegisterDMACallback(ARCallback callback)
  {
      ARCallback old = (ARCallback)gc_ar_callback_ptr;
 -    gc_ar_callback_ptr = (uintptr_t)callback;
 +    (void)callback;
      return old;
  }
+ 
