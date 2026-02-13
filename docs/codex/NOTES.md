@@ -2432,3 +2432,22 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_gx_set_tev_ind_tile_pbt.sh` -> PASS
   - `tools/run_mutation_check.sh tools/mutations/gx_set_tev_ind_tile_wrong_wrap.patch -- tools/run_gx_set_tev_ind_tile_pbt.sh` -> PASS (mutant fails as expected)
+
+## 2026-02-13: GXColor1x16 unified DOL PBT suite (L0-L5)
+
+- Added unified GXColor1x16 PBT suite:
+  - `tests/sdk/gx/gx_color_1x16/dol/pbt/gx_color_1x16_pbt_001/*`
+  - `tests/sdk/gx/gx_color_1x16/host/gx_color_1x16_pbt_001_scenario.c`
+  - `tools/run_gx_color_1x16_pbt.sh`
+- Coverage levels in `gx_color_1x16_pbt_001`:
+  - L0 isolated 16-bit index matrix (`0x0000`, `0x00ff`, `0x0100`, `0xffff`, etc.)
+  - L1 accumulation transitions over deterministic 4x4 index grid
+  - L2 idempotency (same 16-bit write repeated)
+  - L3 random-start deterministic seeded states (`2048` cases)
+  - L4 callsite-style sequential overwrite pattern
+  - L5 boundary byte-lane invariants (`0x00ff` vs `0xff00`)
+- DOL oracle is decoupled from host sdk_port:
+  - `tests/sdk/gx/gx_color_1x16/dol/pbt/gx_color_1x16_pbt_001/oracle_gx_color_1x16.c`
+- Validation:
+  - `tools/run_gx_color_1x16_pbt.sh` -> PASS
+  - `tools/run_mutation_check.sh tools/mutations/gx_color_1x16_truncate.patch -- tools/run_gx_color_1x16_pbt.sh` -> PASS (mutant fails as expected)

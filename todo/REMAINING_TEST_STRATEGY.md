@@ -15,6 +15,7 @@ Method migration queue (current):
 - `GXSetTevKColor` / `GXSetTevKAlphaSel` have been migrated to unified L0-L5 DOL-PBT (`tools/run_gx_set_tev_kcolor_pbt.sh`).
 - `GXSetTevColorS10` has been migrated to unified L0-L5 DOL-PBT (`tools/run_gx_set_tev_color_s10_pbt.sh`).
 - `GXSetTevIndTile` has been migrated to unified L0-L5 DOL-PBT (`tools/run_gx_set_tev_ind_tile_pbt.sh`).
+- `GXColor1x16` has been migrated to unified L0-L5 DOL-PBT (`tools/run_gx_color_1x16_pbt.sh`).
 
 ## Remaining test workload snapshot
 
