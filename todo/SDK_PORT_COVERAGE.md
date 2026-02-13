@@ -17,6 +17,7 @@ Current migration status:
 - GX `GXColor1x16` now includes unified L0-L5 DOL-PBT coverage (`tools/run_gx_color_1x16_pbt.sh`, mutation-checked with `tools/mutations/gx_color_1x16_truncate.patch`).
 - GX `GXColor4u8` now includes unified L0-L5 DOL-PBT coverage (`tools/run_gx_color_4u8_pbt.sh`, mutation-checked with `tools/mutations/gx_color_4u8_swap_rg.patch`).
 - GX `GXNormal1x16` now includes unified L0-L5 DOL-PBT coverage (`tools/run_gx_normal_1x16_pbt.sh`, mutation-checked with `tools/mutations/gx_normal_1x16_truncate.patch`).
+- GX `GXNormal3s16` now includes unified L0-L5 DOL-PBT coverage (`tools/run_gx_normal_3s16_pbt.sh`, mutation-checked with `tools/mutations/gx_normal_3s16_drop_sign.patch`).
 
 ## Remaining test workload snapshot
 

@@ -2489,3 +2489,22 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_gx_normal_1x16_pbt.sh` -> PASS
   - `tools/run_mutation_check.sh tools/mutations/gx_normal_1x16_truncate.patch -- tools/run_gx_normal_1x16_pbt.sh` -> PASS (mutant fails as expected)
+
+## 2026-02-13: GXNormal3s16 unified DOL PBT suite (L0-L5)
+
+- Added unified GXNormal3s16 PBT suite:
+  - `tests/sdk/gx/gx_normal_3s16/dol/pbt/gx_normal_3s16_pbt_001/*`
+  - `tests/sdk/gx/gx_normal_3s16/host/gx_normal_3s16_pbt_001_scenario.c`
+  - `tools/run_gx_normal_3s16_pbt.sh`
+- Coverage levels in `gx_normal_3s16_pbt_001`:
+  - L0 isolated signed-16 vector matrix (including `-32768/32767` and byte-lane edge values)
+  - L1 accumulation transitions over deterministic 4x4 vector grid
+  - L2 idempotency (repeat same vector write)
+  - L3 random-start deterministic seeded states (`2048` cases)
+  - L4 callsite-style sequential overwrite vectors
+  - L5 boundary sign-extension invariants (negative inputs remain sign-extended in `u32` mirrors)
+- DOL oracle is decoupled from host sdk_port:
+  - `tests/sdk/gx/gx_normal_3s16/dol/pbt/gx_normal_3s16_pbt_001/oracle_gx_normal_3s16.c`
+- Validation:
+  - `tools/run_gx_normal_3s16_pbt.sh` -> PASS
+  - `tools/run_mutation_check.sh tools/mutations/gx_normal_3s16_drop_sign.patch -- tools/run_gx_normal_3s16_pbt.sh` -> PASS (mutant fails as expected)

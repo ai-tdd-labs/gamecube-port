@@ -18,6 +18,7 @@ Method migration queue (current):
 - `GXColor1x16` has been migrated to unified L0-L5 DOL-PBT (`tools/run_gx_color_1x16_pbt.sh`).
 - `GXColor4u8` has been migrated to unified L0-L5 DOL-PBT (`tools/run_gx_color_4u8_pbt.sh`).
 - `GXNormal1x16` has been migrated to unified L0-L5 DOL-PBT (`tools/run_gx_normal_1x16_pbt.sh`).
+- `GXNormal3s16` has been migrated to unified L0-L5 DOL-PBT (`tools/run_gx_normal_3s16_pbt.sh`).
 
 ## Remaining test workload snapshot
 
