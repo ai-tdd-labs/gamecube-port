@@ -2883,3 +2883,23 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_ai_start_dma_pbt.sh` -> PASS
   - `tools/run_mutation_check.sh tools/mutations/ai_start_dma_wrong_bit.patch -- tools/run_ai_start_dma_pbt.sh` -> PASS (mutant fails as expected)
+
+## 2026-02-13: CARDInit unified DOL PBT suite (L0-L5)
+
+- Callsite evidence:
+  - MP4 card system calls `CARDInit()` during game card init (`decomp_mario_party_4/src/game/card.c`).
+- Decomp contract (MP4 Dolphin SDK):
+  - `decomp_mario_party_4/src/dolphin/card/CARDBios.c`:
+    - If both `__CARDBlock[0].diskID` and `__CARDBlock[1].diskID` are non-null: early return.
+    - Else: calls `DSPInit()` and `OSInitAlarm()`, initializes each channel with `result = CARD_RESULT_NOCARD`, `OSInitThreadQueue`, `OSCreateAlarm`, then `__CARDSetDiskID(OSPhysicalToCached(0))`, then `OSRegisterResetFunction(&ResetFunctionInfo)`.
+- Note: TP decomp version also sets `__CARDEncode = OSGetFontEncode()` and calls `OSRegisterVersion(__CARDVersion)` (not present in MP4 release decomp).
+- Added unified CARDInit PBT suite:
+  - `tests/sdk/card/card_init/dol/pbt/card_init_pbt_001/*`
+  - `tests/sdk/card/card_init/host/card_init_pbt_001_scenario.c`
+  - `tools/run_card_init_pbt.sh`
+- Modeled observable state:
+  - `gc_card_block[0/1].disk_id/result/thread_queue_inited/alarm_created`
+  - `gc_card_dsp_init_calls/gc_card_os_init_alarm_calls/gc_card_os_register_reset_calls`
+- Validation:
+  - `tools/run_card_init_pbt.sh` -> PASS
+  - Mutation check to run: `tools/run_mutation_check.sh tools/mutations/card_init_bad_cached_base.patch -- tools/run_card_init_pbt.sh`

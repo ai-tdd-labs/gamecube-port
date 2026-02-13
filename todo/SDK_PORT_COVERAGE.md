@@ -54,7 +54,7 @@ Current migration status:
 | **VI** | 13 | 13 | **100%** | VI callback setter pair covered |
 | **SI** | 1 | 1 | **100%** | SISetSamplingRate |
 | **MTX** | 33 | 33 | **100%** | Includes PSMTXReorder, PSMTXROMultVecArray, PSMTXMultVecArray |
-| **CARD** | 23 | 14 | **61%** | FAT internals + Dir ops + Unlock crypto (exnor, bitrev, CARDRand) |
+| **CARD** | 23 | 15 | **65%** | +CARDInit modeled; FAT internals + Dir ops + Unlock crypto (exnor, bitrev, CARDRand) |
 | **AR** | 10 | 10 | **100%** | Hardware layer modeled via observable globals + unified DOL-PBT suites |
 | **ARQ** | 2 | 2 | **100%** | ARQInit + ARQPostRequest (+ internal helpers) |
 | **AI** | 7 | 7 | **100%** | Hardware layer modeled via observable globals; trace replay suites in progress |
@@ -134,18 +134,19 @@ Plus QUAT (8): Add, Multiply, Normalize, Inverse, Slerp, RotAxisRad, Mtx.
 **Still need for game:** none in current MTX batch set.
 (batch/reorder ops — PPC paired-single ASM, need C loop equivalents)
 
-### CARD (14/23 = 61%)
+### CARD (15/23 = 65%)
 
 **Ported:**
 - FAT internals: `__CARDCheckSum`, `__CARDUpdateFatBlock`, `__CARDAllocBlock`, `__CARDFreeBlock`
 - Directory ops: `__CARDCompareFileName`, `__CARDAccess`, `__CARDIsPublic`, `__CARDGetFileNo`
 - Seek: `__CARDSeek` (FAT chain traversal)
 - Unlock crypto: `exnor_1st`, `exnor`, `bitrev`, `CARDSrand`, `CARDRand`
+- `CARDInit` — modeled (init side effects verified via unified DOL-PBT suite)
 
 PBT suites: CARD-FAT (AllocBlock/FreeBlock/CheckSum) + CARD-Dir (CompareFileName/Access/IsPublic/GetFileNo/Seek) + CARD-Unlock (exnor_1st/exnor/bitrev/CARDRand) — 330k+ checks, all PASS.
 
-**Missing (9 API functions):**
-CARDInit, CARDMount, CARDUnmount, CARDOpen, CARDClose, CARDCreate, CARDDelete,
+**Missing (API functions):**
+CARDMount, CARDUnmount, CARDOpen, CARDClose, CARDCreate, CARDDelete,
 CARDRead, CARDWrite, CARDFormat, CARDCheck, CARDFreeBlocks, CARDGetSectorSize,
 CARDProbeEx, CARDGetSerialNo, CARDGetStatus, CARDSetStatus, CARDSetBannerFormat,
 CARDSetCommentAddress, CARDSetIconAddress, CARDSetIconAnim, CARDSetIconFormat, CARDSetIconSpeed
