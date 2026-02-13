@@ -2546,3 +2546,31 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_gx_tex_coord_2s16_pbt.sh` -> PASS
   - `tools/run_mutation_check.sh tools/mutations/gx_tex_coord_2s16_drop_sign.patch -- tools/run_gx_tex_coord_2s16_pbt.sh` -> PASS (mutant fails as expected)
+
+## 2026-02-13: GXInitTexObjCI unified DOL PBT suite (L0-L5)
+
+- Callsite evidence across decomp projects:
+  - MP4: `decomp_mario_party_4/src/game/sprput.c`, `decomp_mario_party_4/src/game/hsfdraw.c`
+  - TP: `decomp_twilight_princess/src/d/actor/d_a_mant.cpp`, `decomp_twilight_princess/src/m_Do/m_Do_lib.cpp`
+  - WW: `decomp_wind_waker/src/m_Do/m_Do_lib.cpp`, `decomp_wind_waker/src/JSystem/JUtility/JUTTexture.cpp`
+  - AC: `decomp_animal_crossing/src/static/libforest/emu64/emu64.c`
+- Added unified GXInitTexObjCI PBT suite:
+  - `tests/sdk/gx/gx_init_tex_obj_ci/dol/pbt/gx_init_tex_obj_ci_pbt_001/*`
+  - `tests/sdk/gx/gx_init_tex_obj_ci/host/gx_init_tex_obj_ci_pbt_001_scenario.c`
+  - `tools/run_gx_init_tex_obj_ci_pbt.sh`
+- Coverage levels in `gx_init_tex_obj_ci_pbt_001`:
+  - L0 isolated CI format/wrap/mipmap matrix (`C4`, `C8`, `C14X2`)
+  - L1 accumulation over deterministic width/height grid
+  - L2 idempotency (same call repeated without reset)
+  - L3 random-start deterministic seeded states (`2048` cases)
+  - L4 harvested callsite-style texture setup sequence
+  - L5 boundary dimensions and high `tlut_name` invariants
+- DOL oracle is decoupled from host sdk_port:
+  - `tests/sdk/gx/gx_init_tex_obj_ci/dol/pbt/gx_init_tex_obj_ci_pbt_001/oracle_gx_init_tex_obj_ci.c`
+- Confirmed observable behavior:
+  - Function zeroes the object through `GXInitTexObj`, repacks `mode0/image0/image3/loadCnt/loadFmt`.
+  - CI flag bit (`0x2`) is cleared in final object state.
+  - `tlutName` is set to the provided argument.
+- Validation:
+  - `tools/run_gx_init_tex_obj_ci_pbt.sh` -> PASS
+  - `tools/run_mutation_check.sh tools/mutations/gx_init_tex_obj_ci_keep_ci_flag.patch -- tools/run_gx_init_tex_obj_ci_pbt.sh` -> PASS (mutant fails as expected)

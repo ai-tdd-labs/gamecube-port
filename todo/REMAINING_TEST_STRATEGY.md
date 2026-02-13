@@ -21,6 +21,7 @@ Method migration queue (current):
 - `GXNormal3s16` has been migrated to unified L0-L5 DOL-PBT (`tools/run_gx_normal_3s16_pbt.sh`).
 - `GXTexCoord1x16` has been migrated to unified L0-L5 DOL-PBT (`tools/run_gx_tex_coord_1x16_pbt.sh`).
 - `GXTexCoord2s16` has been migrated to unified L0-L5 DOL-PBT (`tools/run_gx_tex_coord_2s16_pbt.sh`).
+- `GXInitTexObjCI` has been migrated to unified L0-L5 DOL-PBT (`tools/run_gx_init_tex_obj_ci_pbt.sh`).
 
 ## Remaining test workload snapshot
 
@@ -56,7 +57,7 @@ These are hardware-coupled and can only be verified against Dolphin ground truth
 
 | Module | Count | Functions | Complexity |
 |--------|-------|-----------|------------|
-| **GX** | 17 | Indirect tex (1): `GXSetTevIndTile`. TEV konstant (4): `GXSetTevKAlphaSel`, `GXSetTevKColor`, `GXSetTevKColorSel`, `GXSetTevColorS10`. TEV swap (2): `GXSetTevSwapMode`, `GXSetTevSwapModeTable`. Vertex formats (6): `GXColor1x16`, `GXColor4u8`, `GXNormal1x16`, `GXNormal3s16`, `GXTexCoord1x16`, `GXTexCoord2s16`. Texture (4): `GXInitTexObjCI`, `GXInitTlutObj`, `GXLoadTlut`, `GXSetTexCoordScaleManually` | Medium — register packing, SET_REG_FIELD macros |
+| **GX** | 5 | TEV konstant (1): `GXSetTevKColorSel`. TEV swap (1): `GXSetTevSwapModeTable`. Texture (3): `GXInitTlutObj`, `GXLoadTlut`, `GXSetTexCoordScaleManually` | Medium — register packing, SET_REG_FIELD macros |
 | **CARD** | 19 | `CARDInit`, `CARDMount`, `CARDUnmount`, `CARDOpen`, `CARDClose`, `CARDCreate`, `CARDDelete`, `CARDRead`, `CARDWrite`, `CARDFormat`, `CARDCheck`, `CARDFreeBlocks`, `CARDGetSectorSize`, `CARDProbeEx`, `CARDGetSerialNo`, `CARDGetStatus`, `CARDSetStatus`, `CARDSetBannerFormat`, `CARDSetCommentAddress`+ icon setters | Large — needs EXI simulation, host filesystem backend |
 | **THP** | 27 | `THPInit`, `THPVideoDecode`, `THPSimpleOpen/Close/Decode/PreLoad/LoadStop/Init/Quit`, `THPSimpleSetBuffer/SetVolume/CalcNeedMemory`, `THPSimpleAudioStart/Stop`, `THPSimpleGetTotalFrame/GetVideoInfo/DrawCurrentFrame`, `THPGXYuv2RgbSetup/Draw`, `THPGXRestore`, `THPAudioMixCallback`, `THPDecodeFunc`, `THPViewFunc/ViewSprFunc`, `THPTestProc`, `THPSimpleInlineFunc` | Large — JPEG codec + ADPCM + locked cache emulation |
 | **AI** | 7 | `AIGetDMAStartAddr`, `AIInitDMA`, `AIRegisterDMACallback`, `AISetStreamPlayState`, `AISetStreamVolLeft`, `AISetStreamVolRight`, `AIStartDMA` | Medium — needs audio backend (SDL_audio or similar) |
