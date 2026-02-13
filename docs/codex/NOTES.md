@@ -2826,3 +2826,22 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_ai_register_dma_callback_pbt.sh` -> PASS
   - `tools/run_mutation_check.sh tools/mutations/ai_register_dma_callback_no_store.patch -- tools/run_ai_register_dma_callback_pbt.sh` -> PASS (mutant fails as expected)
+
+## 2026-02-13: AISetStreamPlayState unified DOL PBT suite (L0-L5)
+
+- Callsite evidence:
+  - MP4 audio subsystem starts/stops stream playback (`decomp_mario_party_4/src/game/audio.c`, `AISetStreamPlayState(0/1)`).
+  - TP DTK player uses start/stop frequently (`decomp_twilight_princess/src/dolphin/dtk/dtk.c`).
+- Decomp contract (MP4 Dolphin SDK):
+  - `decomp_mario_party_4/src/dolphin/ai.c`:
+    - If `state == AIGetStreamPlayState()` -> no-op.
+    - If `AIGetStreamSampleRate() == 0` and `state == 1`:
+      - temporarily zeroes stream volumes, sets `__AIRegs[0]` bit5 then bit0, then restores volumes with L/R swapped.
+    - Else: sets `__AIRegs[0]` bit0 to `state`.
+- Added unified AISetStreamPlayState PBT suite:
+  - `tests/sdk/ai/ai_set_stream_play_state/dol/pbt/ai_set_stream_play_state_pbt_001/*`
+  - `tests/sdk/ai/ai_set_stream_play_state/host/ai_set_stream_play_state_pbt_001_scenario.c`
+  - `tools/run_ai_set_stream_play_state_pbt.sh`
+- Validation:
+  - `tools/run_ai_set_stream_play_state_pbt.sh` -> PASS
+  - Mutation check to run: `tools/run_mutation_check.sh tools/mutations/ai_set_stream_play_state_no_swap.patch -- tools/run_ai_set_stream_play_state_pbt.sh`

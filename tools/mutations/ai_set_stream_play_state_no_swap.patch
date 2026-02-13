@@ -1,0 +1,15 @@
+diff --git a/src/sdk_port/ai/ai.c b/src/sdk_port/ai/ai.c
+index 6328304..1b464e1 100644
+--- a/src/sdk_port/ai/ai.c
++++ b/src/sdk_port/ai/ai.c
+@@ -56,8 +56,8 @@ void AISetStreamPlayState(uint32_t state)
+         /* __AI_SRC_INIT() — hardware timing calibration, no-op in port. */
+         gc_ai_regs[0] = (gc_ai_regs[0] & ~0x20u) | 0x20u;
+         gc_ai_regs[0] = (gc_ai_regs[0] & ~1u) | 1u;
+-        AISetStreamVolLeft(volRight);
+-        AISetStreamVolRight(volLeft);
++        AISetStreamVolLeft(volLeft);
++        AISetStreamVolRight(volRight);
+     } else {
+         gc_ai_regs[0] = (gc_ai_regs[0] & ~1u) | state;
+     }
