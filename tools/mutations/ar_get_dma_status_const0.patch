@@ -1,0 +1,10 @@
+diff --git a/src/sdk_port/ar/ar_hw.c b/src/sdk_port/ar/ar_hw.c
+index 5ce3504..aa6d643 100644
+--- a/src/sdk_port/ar/ar_hw.c
++++ b/src/sdk_port/ar/ar_hw.c
+@@ -29,7 +29,7 @@ void ARStartDMA(uint32_t type, uint32_t mainmem_addr, uint32_t aram_addr, uint32
+ uint32_t ARGetDMAStatus(void)
+ {
+-    return gc_ar_dma_status;
++    return 0;
+ }
