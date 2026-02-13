@@ -2660,3 +2660,32 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_gx_set_tex_coord_scale_manually_pbt.sh` -> PASS
   - `tools/run_mutation_check.sh tools/mutations/gx_set_tex_coord_scale_manually_no_minus1.patch -- tools/run_gx_set_tex_coord_scale_manually_pbt.sh` -> PASS (mutant fails as expected)
+
+## 2026-02-13: GXSetTevSwapModeTable unified DOL PBT suite (L0-L5)
+
+- Callsite evidence across decomp projects:
+  - MP4: `decomp_mario_party_4/src/game/THPDraw.c`, `decomp_mario_party_4/src/game/hsfdraw.c`
+  - TP: `decomp_twilight_princess/src/JSystem/J3DGraphBase/J3DSys.cpp`, `decomp_twilight_princess/src/m_Do/m_Do_graphic.cpp`
+  - WW: `decomp_wind_waker/src/JSystem/J3DGraphBase/J3DSys.cpp`, `decomp_wind_waker/src/m_Do/m_Do_graphic.cpp`
+  - AC: `decomp_animal_crossing/src/static/libforest/emu64/emu64.c`, `decomp_animal_crossing/src/static/Famicom/ks_nes_draw.cpp`
+- Added unified GXSetTevSwapModeTable PBT suite:
+  - `tests/sdk/gx/gx_set_tev_swap_mode_table/dol/pbt/gx_set_tev_swap_mode_table_pbt_001/*`
+  - `tests/sdk/gx/gx_set_tev_swap_mode_table/host/gx_set_tev_swap_mode_table_pbt_001_scenario.c`
+  - `tools/run_gx_set_tev_swap_mode_table_pbt.sh`
+- Coverage levels in `gx_set_tev_swap_mode_table_pbt_001`:
+  - L0 isolated table/channel matrix (including invalid table no-op checks)
+  - L1 accumulation over deterministic table sweep
+  - L2 idempotency (repeat same tuple)
+  - L3 random-start deterministic seeded states (`2048` cases)
+  - L4 harvested callsite-style swap-table presets
+  - L5 boundary/no-op invariants with wide channel inputs
+- DOL oracle is decoupled from host sdk_port:
+  - `tests/sdk/gx/gx_set_tev_swap_mode_table/dol/pbt/gx_set_tev_swap_mode_table_pbt_001/oracle_gx_set_tev_swap_mode_table.c`
+- Confirmed observable behavior:
+  - For `table < 4`, writes red/green into `gc_gx_tev_ksel[table*2]` bits `0..1` / `2..3`.
+  - Writes blue/alpha into `gc_gx_tev_ksel[table*2+1]` bits `0..1` / `2..3`.
+  - Final `gc_gx_last_ras_reg` equals updated `gc_gx_tev_ksel[table*2+1]` and `gc_gx_bp_sent_not` becomes `0`.
+  - For `table >= 4`, state is unchanged (early return).
+- Validation:
+  - `tools/run_gx_set_tev_swap_mode_table_pbt.sh` -> PASS
+  - `tools/run_mutation_check.sh tools/mutations/gx_set_tev_swap_mode_table_wrong_green_shift.patch -- tools/run_gx_set_tev_swap_mode_table_pbt.sh` -> PASS (mutant fails as expected)

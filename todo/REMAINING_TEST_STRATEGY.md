@@ -25,6 +25,7 @@ Method migration queue (current):
 - `GXInitTlutObj` has been migrated to unified L0-L5 DOL-PBT (`tools/run_gx_init_tlut_obj_pbt.sh`).
 - `GXLoadTlut` has been migrated to unified L0-L5 DOL-PBT (`tools/run_gx_load_tlut_pbt.sh`).
 - `GXSetTexCoordScaleManually` has been migrated to unified L0-L5 DOL-PBT (`tools/run_gx_set_tex_coord_scale_manually_pbt.sh`).
+- `GXSetTevSwapModeTable` has been migrated to unified L0-L5 DOL-PBT (`tools/run_gx_set_tev_swap_mode_table_pbt.sh`).
 
 ## Remaining test workload snapshot
 
@@ -60,7 +61,7 @@ These are hardware-coupled and can only be verified against Dolphin ground truth
 
 | Module | Count | Functions | Complexity |
 |--------|-------|-----------|------------|
-| **GX** | 2 | TEV konstant (1): `GXSetTevKColorSel`. TEV swap (1): `GXSetTevSwapModeTable` | Medium — register packing, SET_REG_FIELD macros |
+| **GX** | 1 | TEV konstant (1): `GXSetTevKColorSel` | Medium — register packing, SET_REG_FIELD macros |
 | **CARD** | 19 | `CARDInit`, `CARDMount`, `CARDUnmount`, `CARDOpen`, `CARDClose`, `CARDCreate`, `CARDDelete`, `CARDRead`, `CARDWrite`, `CARDFormat`, `CARDCheck`, `CARDFreeBlocks`, `CARDGetSectorSize`, `CARDProbeEx`, `CARDGetSerialNo`, `CARDGetStatus`, `CARDSetStatus`, `CARDSetBannerFormat`, `CARDSetCommentAddress`+ icon setters | Large — needs EXI simulation, host filesystem backend |
 | **THP** | 27 | `THPInit`, `THPVideoDecode`, `THPSimpleOpen/Close/Decode/PreLoad/LoadStop/Init/Quit`, `THPSimpleSetBuffer/SetVolume/CalcNeedMemory`, `THPSimpleAudioStart/Stop`, `THPSimpleGetTotalFrame/GetVideoInfo/DrawCurrentFrame`, `THPGXYuv2RgbSetup/Draw`, `THPGXRestore`, `THPAudioMixCallback`, `THPDecodeFunc`, `THPViewFunc/ViewSprFunc`, `THPTestProc`, `THPSimpleInlineFunc` | Large — JPEG codec + ADPCM + locked cache emulation |
 | **AI** | 7 | `AIGetDMAStartAddr`, `AIInitDMA`, `AIRegisterDMACallback`, `AISetStreamPlayState`, `AISetStreamVolLeft`, `AISetStreamVolRight`, `AIStartDMA` | Medium — needs audio backend (SDL_audio or similar) |

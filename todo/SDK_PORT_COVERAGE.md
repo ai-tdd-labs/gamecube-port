@@ -24,6 +24,7 @@ Current migration status:
 - GX `GXInitTlutObj` now includes unified L0-L5 DOL-PBT coverage (`tools/run_gx_init_tlut_obj_pbt.sh`, mutation-checked with `tools/mutations/gx_init_tlut_obj_bad_shift.patch`).
 - GX `GXLoadTlut` now includes unified L0-L5 DOL-PBT coverage (`tools/run_gx_load_tlut_pbt.sh`, mutation-checked with `tools/mutations/gx_load_tlut_wrong_offset_mask.patch`).
 - GX `GXSetTexCoordScaleManually` now includes unified L0-L5 DOL-PBT coverage (`tools/run_gx_set_tex_coord_scale_manually_pbt.sh`, mutation-checked with `tools/mutations/gx_set_tex_coord_scale_manually_no_minus1.patch`).
+- GX `GXSetTevSwapModeTable` now includes unified L0-L5 DOL-PBT coverage (`tools/run_gx_set_tev_swap_mode_table_pbt.sh`, mutation-checked with `tools/mutations/gx_set_tev_swap_mode_table_wrong_green_shift.patch`).
 
 ## Remaining test workload snapshot
 
@@ -80,9 +81,8 @@ Current migration status:
 All core GX functions for rendering pipeline: Begin/End, vertex formats, TEV stages,
 color/alpha blending, texture objects, projection, viewport, scissor, copy, lights, etc.
 
-**Missing (3 functions):**
+**Missing (2 functions):**
 - TEV Konstant: `GXSetTevKColorSel`
-- TEV Swap: `GXSetTevSwapModeTable`
 - Misc: `GXNtsc480Prog`
 
 ### DVD (12/12 = 100%)
