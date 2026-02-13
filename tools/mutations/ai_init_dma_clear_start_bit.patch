@@ -1,0 +1,13 @@
+diff --git a/src/sdk_port/ai/ai.c b/src/sdk_port/ai/ai.c
+index 6328304..1d3db15 100644
+--- a/src/sdk_port/ai/ai.c
++++ b/src/sdk_port/ai/ai.c
+@@ -27,7 +27,7 @@ void AIInitDMA(uint32_t addr, uint32_t length)
+ {
+     gc_ai_dsp_regs[0] = (uint16_t)((gc_ai_dsp_regs[0] & ~0x3FF) | (addr >> 16));
+     gc_ai_dsp_regs[1] = (uint16_t)((gc_ai_dsp_regs[1] & ~0xFFE0) | (0xFFFF & addr));
+-    gc_ai_dsp_regs[3] = (uint16_t)((gc_ai_dsp_regs[3] & ~0x7FFF) | (uint16_t)((length >> 5) & 0xFFFF));
++    gc_ai_dsp_regs[3] = (uint16_t)((gc_ai_dsp_regs[3] & ~0xFFFF) | (uint16_t)((length >> 5) & 0xFFFF));
+ }
+ 
+ /* AIStartDMA (ai.c:47-50) — Set DMA start bit. */

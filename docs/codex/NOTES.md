@@ -2792,3 +2792,20 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_ai_get_dma_start_addr_pbt.sh` -> PASS
   - `tools/run_mutation_check.sh tools/mutations/ai_get_dma_start_addr_wrong_mask.patch -- tools/run_ai_get_dma_start_addr_pbt.sh` -> PASS (mutant fails as expected)
+
+## 2026-02-13: AIInitDMA unified DOL PBT suite (L0-L5)
+
+- Callsite evidence:
+  - MP4 THP audio callback programs DMA start/length each buffer flip (`decomp_mario_party_4/src/game/THPSimple.c`, `AIInitDMA((u32)SoundBuffer[...], sizeof(SoundBuffer[0]))`).
+- Decomp contract (MP4 Dolphin SDK):
+  - `decomp_mario_party_4/src/dolphin/ai.c` writes:
+    - `__DSPRegs[24] = (__DSPRegs[24] & ~0x3FF) | (addr >> 16)`
+    - `__DSPRegs[25] = (__DSPRegs[25] & ~0xFFE0) | (addr & 0xFFFF)`
+    - `__DSPRegs[27] = (__DSPRegs[27] & ~0x7FFF) | ((length >> 5) & 0xFFFF)` (preserves bit 15 DMA-enable flag)
+- Added unified AIInitDMA PBT suite:
+  - `tests/sdk/ai/ai_init_dma/dol/pbt/ai_init_dma_pbt_001/*`
+  - `tests/sdk/ai/ai_init_dma/host/ai_init_dma_pbt_001_scenario.c`
+  - `tools/run_ai_init_dma_pbt.sh`
+- Validation:
+  - `tools/run_ai_init_dma_pbt.sh` -> PASS
+  - Mutation check to run: `tools/run_mutation_check.sh tools/mutations/ai_init_dma_clear_start_bit.patch -- tools/run_ai_init_dma_pbt.sh`
