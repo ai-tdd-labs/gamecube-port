@@ -1,8 +1,9 @@
 diff --git a/src/sdk_port/gx/GX.c b/src/sdk_port/gx/GX.c
-index bdef922..325f93d 100644
+index bdef922..c6fe955 100644
 --- a/src/sdk_port/gx/GX.c
 +++ b/src/sdk_port/gx/GX.c
-@@ -2740,7 +2740,7 @@ void GXSetTevSwapModeTable(u32 table, u32 red, u32 green, u32 blue, u32 alpha)
+@@ -2740,7 +2740,7 @@ void GXSetTevSwapModeTable(u32 table, u32 red, u32 green, u32 blue, u32 alpha) {
+     u32 idx0 = table * 2u;
      u32 idx1 = table * 2u + 1u;
      gc_gx_tev_ksel[idx0] = set_field(gc_gx_tev_ksel[idx0], 2, 0, red);
 -    gc_gx_tev_ksel[idx0] = set_field(gc_gx_tev_ksel[idx0], 2, 2, green);
