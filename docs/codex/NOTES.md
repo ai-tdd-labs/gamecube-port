@@ -2602,3 +2602,32 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_gx_init_tlut_obj_pbt.sh` -> PASS
   - `tools/run_mutation_check.sh tools/mutations/gx_init_tlut_obj_bad_shift.patch -- tools/run_gx_init_tlut_obj_pbt.sh` -> PASS (mutant fails as expected)
+
+## 2026-02-13: GXLoadTlut unified DOL PBT suite (L0-L5)
+
+- Callsite evidence across decomp projects:
+  - MP4: `decomp_mario_party_4/src/game/sprput.c`, `decomp_mario_party_4/src/game/hsfdraw.c`
+  - TP: `decomp_twilight_princess/src/JSystem/JUtility/JUTPalette.cpp`, `decomp_twilight_princess/src/d/d_drawlist.cpp`
+  - WW: `decomp_wind_waker/src/JSystem/JUtility/JUTPalette.cpp`, `decomp_wind_waker/src/d/d_drawlist.cpp`
+  - AC: `decomp_animal_crossing/src/static/libforest/emu64/emu64.c`
+- Added unified GXLoadTlut PBT suite:
+  - `tests/sdk/gx/gx_load_tlut/dol/pbt/gx_load_tlut_pbt_001/*`
+  - `tests/sdk/gx/gx_load_tlut/host/gx_load_tlut_pbt_001_scenario.c`
+  - `tools/run_gx_load_tlut_pbt.sh`
+- Coverage levels in `gx_load_tlut_pbt_001`:
+  - L0 isolated tlut-name routing (`<20` direct region, `>=20` fallback region0)
+  - L1 accumulation over deterministic tlut slot sweep
+  - L2 idempotency (double load of same object/name)
+  - L3 random-start deterministic seeded states (`2048` cases)
+  - L4 harvested callsite-style palette load sequence
+  - L5 boundary tlut-name/address invariants
+- DOL oracle is decoupled from host sdk_port:
+  - `tests/sdk/gx/gx_load_tlut/dol/pbt/gx_load_tlut_pbt_001/oracle_gx_load_tlut.c`
+- Confirmed observable behavior:
+  - Writes BP sequence mask/load0/load1/mask (final `gc_gx_last_ras_reg == gc_gx_bp_mask`).
+  - Mirrors `loadTlut0/loadTlut1` into `gc_gx_tlut_load0_last` and `gc_gx_tlut_load1_last`.
+  - Rewrites `tlut_obj->tlut` low 10 bits with `loadTlut1 & 0x3FF`.
+  - Copies mutated TLUT object into selected region cache.
+- Validation:
+  - `tools/run_gx_load_tlut_pbt.sh` -> PASS
+  - `tools/run_mutation_check.sh tools/mutations/gx_load_tlut_wrong_offset_mask.patch -- tools/run_gx_load_tlut_pbt.sh` -> PASS (mutant fails as expected)
