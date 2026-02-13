@@ -2902,4 +2902,4 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
   - `gc_card_dsp_init_calls/gc_card_os_init_alarm_calls/gc_card_os_register_reset_calls`
 - Validation:
   - `tools/run_card_init_pbt.sh` -> PASS
-  - Mutation check to run: `tools/run_mutation_check.sh tools/mutations/card_init_bad_cached_base.patch -- tools/run_card_init_pbt.sh`
+  - `tools/run_mutation_check.sh tools/mutations/card_init_bad_cached_base.patch -- tools/run_card_init_pbt.sh` -> PASS (mutant fails as expected)
