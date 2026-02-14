@@ -1973,6 +1973,32 @@ Notes:
   - `bash tools/run_mutation_check.sh tools/mutations/card_probe_ex_bad_align_check.patch -- bash tools/run_card_probe_ex_pbt.sh`
   - Result: PASS (suite fails under mutant).
 
+## 2026-02-14: CARDMountAsync preflight unified DOL PBT suite (L0-L5)
+
+- Decomp contract (MP4 Dolphin SDK):
+  - `decomp_mario_party_4/src/dolphin/card/CARDMount.c` `CARDMountAsync` preflight:
+    - `chan` out of range -> `CARD_RESULT_FATAL_ERROR`.
+    - If `GameChoice & 0x80` -> `CARD_RESULT_NOCARD`.
+    - If `card->result == CARD_RESULT_BUSY` -> returns `CARD_RESULT_BUSY` (no further side effects).
+    - If `!card->attached && (EXIGetState(chan) & 0x08)` -> `CARD_RESULT_WRONGDEVICE`.
+    - Otherwise sets `card->result = CARD_RESULT_BUSY`, stores `workArea/ext/api` callback pointers, attempts `EXIAttach` when not already attached; on attach failure returns `CARD_RESULT_NOCARD`.
+    - Sets `mountStep=0`, `attached=TRUE`, clears EXI callback, cancels alarm, clears `currentDir/currentFat`.
+    - If `EXILock` fails -> returns `CARD_RESULT_READY` (async will complete later).
+- Added minimal sdk_port preflight model:
+  - `src/sdk_port/card/CARDMount.c`: `CARDMountAsync` implemented through the preflight branches; `DoMount` left unimplemented (suite avoids calling it by forcing lock-fail).
+  - `src/sdk_port/exi/EXI.c`: added `gc_exi_attach_ok[]` knob so host suites can force `EXIAttach` failure deterministically.
+  - Modeled preflight state fields appended to `GcCardControl` in `src/sdk_port/card/card_bios.h` (workArea/callback pointers stored as `uintptr_t`, alarm cancel count, currentDir/currentFat).
+- Added unified PPC-vs-host suite:
+  - Runner: `tools/run_card_mount_preflight_pbt.sh`
+  - DOL: `tests/sdk/card/card_mount_preflight/dol/pbt/card_mount_preflight_pbt_001/`
+  - Host: `tests/sdk/card/card_mount_preflight/host/card_mount_preflight_pbt_001_scenario.c`
+- Validation:
+  - `bash tools/run_card_mount_preflight_pbt.sh`
+  - Result: PASS (bit-exact expected vs actual).
+- Mutation check:
+  - `bash tools/run_mutation_check.sh tools/mutations/card_mount_async_busy_check_inverted.patch -- bash tools/run_card_mount_preflight_pbt.sh`
+  - Result: PASS (suite fails under mutant).
+
 ## 2026-02-14: Host memcard backend (raw file image) for CARD port
 
 - Added host-only memcard backend used by sdk_port to simulate a memory card image:
