@@ -1,0 +1,13 @@
+diff --git a/src/sdk_port/card/CARDGetStatus.c b/src/sdk_port/card/CARDGetStatus.c
+index 994e7ac..4f2777d 100644
+--- a/src/sdk_port/card/CARDGetStatus.c
++++ b/src/sdk_port/card/CARDGetStatus.c
+@@ -166,7 +166,7 @@ s32 CARDGetStatus(s32 chan, s32 fileNo, CARDStat* stat)
+     if (result >= 0) {
+         memcpy(stat->gameName, gc_mem_ptr(dir_addr + PORT_CARD_DIR_OFF_GAMENAME, 4), 4);
+         memcpy(stat->company, gc_mem_ptr(dir_addr + PORT_CARD_DIR_OFF_COMPANY, 2), 2);
+-        stat->length = load_u16be(dir_addr + PORT_CARD_DIR_OFF_LENGTH) * (u32)card->sector_size;
++        stat->length = load_u16be(dir_addr + PORT_CARD_DIR_OFF_LENGTH) * (u32)card->sector_size + 1u;
+         memcpy(stat->fileName, gc_mem_ptr(dir_addr + PORT_CARD_DIR_OFF_FILENAME, CARD_FILENAME_MAX), CARD_FILENAME_MAX);
+         stat->time = load_u32be(dir_addr + PORT_CARD_DIR_OFF_TIME);
+ 

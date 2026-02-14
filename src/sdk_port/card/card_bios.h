@@ -70,6 +70,55 @@ typedef struct {
     uint16_t __padding;
 } CARDFileInfo;
 
+/* CARDStat mirror for CARDGetStatus parity work. */
+enum {
+    CARD_FILENAME_MAX = 32,
+    CARD_ICON_MAX = 8,
+
+    CARD_READ_SIZE = 512,
+    CARD_COMMENT_SIZE = 64,
+    CARD_ICON_WIDTH = 32,
+    CARD_ICON_HEIGHT = 32,
+    CARD_BANNER_WIDTH = 96,
+    CARD_BANNER_HEIGHT = 32,
+
+    CARD_STAT_ICON_NONE = 0,
+    CARD_STAT_ICON_C8 = 1,
+    CARD_STAT_ICON_RGB5A3 = 2,
+    CARD_STAT_ICON_MASK = 3,
+
+    CARD_STAT_BANNER_NONE = 0,
+    CARD_STAT_BANNER_C8 = 1,
+    CARD_STAT_BANNER_RGB5A3 = 2,
+    CARD_STAT_BANNER_MASK = 3,
+
+    CARD_STAT_SPEED_FAST = 1,
+    CARD_STAT_SPEED_MIDDLE = 2,
+    CARD_STAT_SPEED_SLOW = 3,
+    CARD_STAT_SPEED_MASK = 3,
+};
+
+typedef struct {
+    char fileName[CARD_FILENAME_MAX];
+    uint32_t length;
+    uint32_t time;
+    uint8_t gameName[4];
+    uint8_t company[2];
+
+    uint8_t bannerFormat;
+    uint8_t __padding;
+    uint32_t iconAddr;
+    uint16_t iconFormat;
+    uint16_t iconSpeed;
+    uint32_t commentAddr;
+
+    uint32_t offsetBanner;
+    uint32_t offsetBannerTlut;
+    uint32_t offsetIcon[CARD_ICON_MAX];
+    uint32_t offsetIconTlut;
+    uint32_t offsetData;
+} CARDStat;
+
 extern GcCardControl gc_card_block[GC_CARD_CHANS];
 
 /* Observable side-effect counters for CARDInit. */
@@ -95,3 +144,6 @@ int32_t CARDGetSectorSize(int32_t chan, uint32_t* size);
 
 /* CARD serial API (decomp: external/mp4-decomp/src/dolphin/card/CARDNet.c). */
 int32_t CARDGetSerialNo(int32_t chan, uint64_t* serialNo);
+
+/* CARD status API (decomp: external/mp4-decomp/src/dolphin/card/CARDStat.c). */
+int32_t CARDGetStatus(int32_t chan, int32_t fileNo, CARDStat* stat);

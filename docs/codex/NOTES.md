@@ -3638,6 +3638,24 @@ Evidence:
 - `./tools/run_card_mount_pbt.sh` -> PASS
 - `./tools/run_card_init_pbt.sh` -> PASS
 
+## 2026-02-14: CARDGetStatus unified DOL-host parity suite
+
+- Implemented card status API parity:
+  - `src/sdk_port/card/card_bios.h`: added `CARDStat` mirror and `CARDGetStatus` prototype/defines.
+  - `src/sdk_port/card/CARDGetStatus.c`: implemented `CARDGetStatus` and icon/layout offset logic against decomp contract.
+- Harness support updates:
+  - `tools/run_host_scenario.sh`: includes `src/sdk_port/card/CARDGetStatus.c` for `card` subsystem runs so host scenarios link against real implementation.
+- New trace-replay suite:
+  - `tools/run_card_get_status_pbt.sh` (orchestrator)
+  - `tests/sdk/card/card_get_status/dol/pbt/card_get_status_pbt_001/oracle_card_get_status.c`
+  - `tests/sdk/card/card_get_status/host/card_get_status_pbt_001_scenario.c`
+- Mutation check:
+  - `tools/mutations/card_get_status_length_plus1.patch` (length math mutant)
+  - Mutant application causes `bash tools/run_card_get_status_pbt.sh` to fail (as expected).
+- Verification:
+  - `bash tools/run_card_get_status_pbt.sh` -> PASS (expected=actual)
+  - `bash tools/run_card_free_blocks_pbt.sh` and `bash tools/run_card_get_serial_no_pbt.sh` still pass after harness update
+
 ## 2026-02-14: CARDFreeBlocks and CARDGetSectorSize unified DOL-host PBT
 
 - Decomp contract source:
