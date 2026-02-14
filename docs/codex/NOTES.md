@@ -3552,3 +3552,14 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Updated:
   - `todo/REMAINING_TEST_STRATEGY.md` (added ladder reachability + knobs section)
   - `todo/SDK_PORT_COVERAGE.md` (added note about 1000-tick + wipe crossfade + pfDrawFonts draw step)
+
+## 2026-02-14: GXNtsc480Prog weak compatibility symbol in sdk_port
+
+- Implementatie: `src/sdk_port/gx/GX.c`
+  - Added weak `GXNtsc480Prog` (`GXRenderModeObj`) with decomp-accurate fields and values:
+    - `viTVmode = 2`, `xfbHeight = 480`, `viXOrigin = 40`, `aa = 0`,
+    - progressive sample pattern `{6,6,...}` and vfilter `{0,0,21,22,21,0,0}`.
+- Verificatie:
+  - `./tools/run_gx_set_tev_kcolor_pbt.sh` (PASS)
+  - `./tools/run_host_scenario.sh tests/workload/mp4/mp4_mainloop_thousand_iter_tick_001_scenario.c` (PASS)
+  - `./tools/run_host_scenario.sh tests/workload/mp4/mp4_husysinit_001_scenario.c` (PASS; ensures local `GXNtsc480Prog` definitions do not conflict)

@@ -77,7 +77,7 @@ These are hardware-coupled and can only be verified against Dolphin ground truth
 
 | Module | Count | Functions | Complexity |
 |--------|-------|-----------|------------|
-| **GX** | 1 | TEV konstant (1): `GXSetTevKColorSel` | Medium — register packing, SET_REG_FIELD macros |
+| **GX** | 0 | — | Remaining GX blocker is now data compatibility: `GXNtsc480Prog` weak symbol wiring |
 | **CARD** | 18 | `CARDMount`, `CARDUnmount`, `CARDOpen`, `CARDClose`, `CARDCreate`, `CARDDelete`, `CARDRead`, `CARDWrite`, `CARDFormat`, `CARDCheck`, `CARDFreeBlocks`, `CARDGetSectorSize`, `CARDProbeEx`, `CARDGetSerialNo`, `CARDGetStatus`, `CARDSetStatus`, `CARDSetBannerFormat`, `CARDSetCommentAddress`+ icon setters | Large — needs EXI simulation, host filesystem backend |
 | **THP** | 27 | `THPInit`, `THPVideoDecode`, `THPSimpleOpen/Close/Decode/PreLoad/LoadStop/Init/Quit`, `THPSimpleSetBuffer/SetVolume/CalcNeedMemory`, `THPSimpleAudioStart/Stop`, `THPSimpleGetTotalFrame/GetVideoInfo/DrawCurrentFrame`, `THPGXYuv2RgbSetup/Draw`, `THPGXRestore`, `THPAudioMixCallback`, `THPDecodeFunc`, `THPViewFunc/ViewSprFunc`, `THPTestProc`, `THPSimpleInlineFunc` | Large — JPEG codec + ADPCM + locked cache emulation |
 | **AI** | 0 | — | Medium — needs audio backend (SDL_audio or similar) |

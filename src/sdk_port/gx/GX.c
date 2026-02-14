@@ -726,7 +726,30 @@ typedef struct {
     u16 viWidth;
     u16 viHeight;
     u32 xFBmode;
+    u8 field_rendering;
+    u8 aa;
+    u8 sample_pattern[12][2];
+    u8 vfilter[7];
 } GXRenderModeObj;
+
+__attribute__((weak)) const GXRenderModeObj GXNtsc480Prog = {
+    .viTVmode = 2,
+    .fbWidth = 640,
+    .efbHeight = 480,
+    .xfbHeight = 480,
+    .viXOrigin = 40,
+    .viYOrigin = 0,
+    .viWidth = 640,
+    .viHeight = 480,
+    .xFBmode = 0,
+    .field_rendering = 0,
+    .aa = 0,
+    .sample_pattern = {
+        {6, 6}, {6, 6}, {6, 6}, {6, 6}, {6, 6}, {6, 6},
+        {6, 6}, {6, 6}, {6, 6}, {6, 6}, {6, 6}, {6, 6},
+    },
+    .vfilter = {0, 0, 21, 22, 21, 0, 0},
+};
 
 void GXAdjustForOverscan(GXRenderModeObj *rmin, GXRenderModeObj *rmout, u16 hor, u16 ver) {
     u16 hor2 = (u16)(hor * 2u);

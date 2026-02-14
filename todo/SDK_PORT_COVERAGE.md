@@ -90,15 +90,14 @@ Current migration status:
 **Missing (1 function):**
 - `OSTicksToMilliseconds` — **macro** (`ticks / (OS_TIMER_CLOCK / 1000)`), just need the define
 
-### GX (105/121 = 87%)
+### GX (106/121 = 88%)
 
 **Ported (93 functions in GX.c):**
 All core GX functions for rendering pipeline: Begin/End, vertex formats, TEV stages,
 color/alpha blending, texture objects, projection, viewport, scissor, copy, lights, etc.
 
-**Missing (2 functions):**
-- TEV Konstant: `GXSetTevKColorSel`
-- Misc: `GXNtsc480Prog`
+**Missing (1 item):**
+- `GXNtsc480Prog` (compat render-mode object now provided as weak `GXRenderModeObj` data in `src/sdk_port/gx/GX.c`)
 
 ### DVD (12/12 = 100%)
 
