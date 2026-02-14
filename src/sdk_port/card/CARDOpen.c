@@ -50,7 +50,11 @@ s32 CARDOpen(int32_t chan, const char* fileName, CARDFileInfo* fileInfo) {
 
     result = port_CARDGetFileNo(&view, fileName, &fileNo);
     if (0 <= result) {
-        dir = (const u8*)gc_mem_ptr((uint32_t)card->current_dir_ptr, PORT_CARD_DIR_SIZE);
+        // Need to be able to read the startBlock field for the selected fileNo.
+        const uint32_t need_len =
+            (uint32_t)fileNo * (uint32_t)PORT_CARD_DIR_SIZE +
+            (uint32_t)PORT_CARD_DIR_OFF_STARTBLOCK + 2u;
+        dir = (const u8*)gc_mem_ptr((uint32_t)card->current_dir_ptr, (size_t)need_len);
         if (!dir) {
             result = CARD_RESULT_BROKEN;
         } else {

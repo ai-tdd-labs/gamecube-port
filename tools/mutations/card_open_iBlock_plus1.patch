@@ -1,8 +1,8 @@
 diff --git a/src/sdk_port/card/CARDOpen.c b/src/sdk_port/card/CARDOpen.c
-index 8d9f6f9..9dd120f 100644
+index ccdd841..68a6386 100644
 --- a/src/sdk_port/card/CARDOpen.c
-+++ b/src/sdk_port/card/CARDOpen.c
-@@ -63,7 +63,7 @@ s32 CARDOpen(int32_t chan, const char* fileName, CARDFileInfo* fileInfo) {
++++ b/tmp/CARDOpen_mut.patchsrc
+@@ -67,7 +67,7 @@ s32 CARDOpen(int32_t chan, const char* fileName, CARDFileInfo* fileInfo) {
              fileInfo->chan = chan;
              fileInfo->fileNo = fileNo;
              fileInfo->offset = 0;
@@ -11,3 +11,4 @@ index 8d9f6f9..9dd120f 100644
          }
          }
      }
+

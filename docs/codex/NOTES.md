@@ -88,6 +88,10 @@ Rules:
 - Evidence:
   - `bash tools/run_card_open_pbt.sh` => PASS (expected.bin == actual.bin)
   - Mutation gate: `bash tools/run_mutation_check.sh tools/mutations/card_open_iBlock_plus1.patch -- tools/run_card_open_pbt.sh` => PASS (mutant fails)
+- Bounds fix:
+  - `src/sdk_port/card/CARDOpen.c` now requests a `gc_mem_ptr` view length that covers the selected `fileNo` directory entry startBlock read:
+    `need_len = fileNo*PORT_CARD_DIR_SIZE + PORT_CARD_DIR_OFF_STARTBLOCK + 2`.
+  - This avoids out-of-bounds reads under the `gc_mem_ptr` contract when `fileNo > 0`.
 
 ### CARDMount sync-path trace replay parity (2026-02-14)
 - `CARDMount` in `src/sdk_port/card/CARDMount.c` now uses the `__CARDSync` wait path after `CARDMountAsync`.
