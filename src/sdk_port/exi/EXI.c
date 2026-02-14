@@ -25,6 +25,22 @@ enum {
 // Channel layout: STAT, DMA_ADDR, LEN, CONTROL, IMM.
 u32 gc_exi_regs[16];
 
+// Host-test configuration knobs.
+//
+// These are not part of the real hardware; they're deterministic controls so
+// higher-level subsystems (CARD) can be validated without needing a full EXI bus
+// emulator upfront.
+//
+// Conventions:
+// - EXIProbeEx returns:
+//     -1 => no device
+//      0 => busy
+//     >0 => device present
+// - EXIGetID returns 1 on success, 0 on failure (SDK convention).
+s32 gc_exi_probeex_ret[MAX_CHAN] = { -1, -1, -1 };
+u32 gc_exi_getid_ok[MAX_CHAN];
+u32 gc_exi_id[MAX_CHAN];
+
 typedef struct GcExiControl {
   EXICallback exi_cb;
   EXICallback tc_cb;
@@ -74,6 +90,12 @@ EXICallback EXISetExiCallback(s32 channel, EXICallback callback) {
 void EXIInit(void) {
   memset(gc_exi_regs, 0, sizeof(gc_exi_regs));
   memset(s_ecb, 0, sizeof(s_ecb));
+  // Default: no devices present.
+  for (int i = 0; i < MAX_CHAN; i++) {
+    gc_exi_probeex_ret[i] = -1;
+    gc_exi_getid_ok[i] = 0;
+    gc_exi_id[i] = 0;
+  }
 }
 
 BOOL EXILock(s32 channel, u32 device, EXICallback callback) {
@@ -227,13 +249,13 @@ BOOL EXISync(s32 channel) {
 }
 
 BOOL EXIProbe(s32 channel) {
-  (void)channel;
-  return FALSE;
+  if (channel < 0 || channel >= MAX_CHAN) return FALSE;
+  return gc_exi_probeex_ret[channel] > 0;
 }
 
 s32 EXIProbeEx(s32 channel) {
-  (void)channel;
-  return 0;
+  if (channel < 0 || channel >= MAX_CHAN) return -1;
+  return gc_exi_probeex_ret[channel];
 }
 
 BOOL EXIAttach(s32 channel, EXICallback callback) {
@@ -258,8 +280,12 @@ u32 EXIGetState(s32 channel) {
 s32 EXIGetID(s32 channel, u32 device, u32* id) {
   (void)device;
   if (channel < 0 || channel >= MAX_CHAN) return 0;
-  if (id) *id = 0;
-  return 0;
+  if (!gc_exi_getid_ok[channel]) {
+    if (id) *id = 0;
+    return 0;
+  }
+  if (id) *id = gc_exi_id[channel];
+  return 1;
 }
 
 void EXIProbeReset(void) {}

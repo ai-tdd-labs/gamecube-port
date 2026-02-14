@@ -1906,6 +1906,22 @@ Notes:
 - Evidence source used for behavior (register packing/state machine shape):
   - `decomp_mario_party_4/src/dolphin/exi/EXIBios.c`
 
+## 2026-02-14: EXI Probe/ProbeEx/GetID host-test knobs + unified PPC-vs-host suite
+
+- Extended sdk_port EXI model with deterministic "presence/ID" knobs:
+  - `src/sdk_port/exi/EXI.c`:
+    - `gc_exi_probeex_ret[chan]` controls `EXIProbeEx` return (`-1` no device, `0` busy, `>0` present).
+    - `gc_exi_getid_ok[chan]` gates `EXIGetID` success.
+    - `gc_exi_id[chan]` provides the returned ID when enabled.
+  - Host-safe externs added in `tests/workload/include/dolphin/exi.h`.
+- Added unified PPC-vs-host suite:
+  - Runner: `tools/run_exi_probe_getid_pbt.sh`
+  - DOL: `tests/sdk/exi/exi_probe_getid/dol/pbt/exi_probe_getid_pbt_001/`
+  - Host: `tests/sdk/exi/exi_probe_getid/host/exi_probe_getid_pbt_001_scenario.c`
+- Validation:
+  - `bash tools/run_exi_probe_getid_pbt.sh`
+  - Result: PASS (bit-exact expected vs actual).
+
 ## 2026-02-14: Host memcard backend (raw file image) for CARD port
 
 - Added host-only memcard backend used by sdk_port to simulate a memory card image:
