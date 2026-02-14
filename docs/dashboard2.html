@@ -127,7 +127,10 @@
                   Note: <span class="mono">pfDrawFonts</span> uses a GX-setup-only slice to avoid pulling MTX/projection/render-loop code into the host workload build.
                 </div>
                 <div class="muted" style="margin-top:6px;">
-                  Ladder currently reaches: <span class="mono">mp4_mainloop_hundred_iter_tick_001</span> (100 VI ticks) and includes <span class="mono">mp4_process_*</span> scheduler scenarios.
+                  Optional: <span class="mono">GC_HOST_WORKLOAD_PF_DRAW=1</span> enables a tiny opt-in quad draw inside the <span class="mono">pfDrawFonts</span> slice to surface deeper vertex/FIFO behaviors (reachability only).
+                </div>
+                <div class="muted" style="margin-top:6px;">
+                  Ladder currently reaches: <span class="mono">mp4_mainloop_thousand_iter_tick_001</span> (1000 VI ticks) and includes <span class="mono">mp4_process_*</span> scheduler scenarios.
                 </div>
                 <div class="muted" style="margin-top:6px;">
                   Slices: <span class="mono">WipeExecAlways</span> and <span class="mono">pfDrawFonts</span> are host-safe but closer to decomp control-flow/state setup (no real GX rendering yet).

@@ -55,9 +55,9 @@ void GXSetBlendMode(u32 type, u32 src_fact, u32 dst_fact, u32 op);
 //
 // Source of truth: external/mp4-decomp/include/dolphin/gx/GXEnum.h
 // (copying exact numeric values avoids guessing and avoids pulling full GX headers into workload builds).
-enum {
-    GX_ALWAYS = 7,
-    GX_GEQUAL = 6,
+	enum {
+	    GX_ALWAYS = 7,
+	    GX_GEQUAL = 6,
 
     GX_AOP_AND = 0,
 
@@ -98,11 +98,13 @@ enum {
     GX_DF_CLAMP = 2,
     GX_AF_SPOT = 1,
 
-    GX_BM_BLEND = 1,
-    GX_BL_SRCALPHA = 4,
-    GX_BL_INVSRCALPHA = 5,
-    GX_LO_NOOP = 5,
-};
+	    GX_BM_BLEND = 1,
+	    GX_BL_SRCALPHA = 4,
+	    GX_BL_INVSRCALPHA = 5,
+	    GX_LO_NOOP = 5,
+
+	    GX_QUADS = 0x80,
+	};
 
 // Minimal font texture payload to satisfy GXInitTexObj source pointer.
 static uint8_t s_font_tex_i4[128u * 128u / 2u];
@@ -111,10 +113,10 @@ static uint8_t s_font_tex_i4[128u * 128u / 2u];
 // setup side effects.
 static GXColor s_fcoltbl[256];
 
-void pfDrawFonts(void)
-{
-    if (!RenderMode) {
-        return;
+	void pfDrawFonts(void)
+	{
+	    if (!RenderMode) {
+	        return;
     }
 
 #ifdef GC_HOST_WORKLOAD_MTX
@@ -159,8 +161,26 @@ void pfDrawFonts(void)
 
     GXSetNumChans(1);
     GXSetChanCtrl(GX_COLOR0A0, GX_FALSE, GX_SRC_VTX, GX_SRC_VTX, GX_LIGHT0, GX_DF_CLAMP, GX_AF_SPOT);
-    GXSetZCompLoc(GX_FALSE);
-    GXSetAlphaCompare(GX_GEQUAL, 1, GX_AOP_AND, GX_GEQUAL, 1);
-    GXSetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_NOOP);
-    GXSetAlphaUpdate(GX_TRUE);
-}
+	    GXSetZCompLoc(GX_FALSE);
+	    GXSetAlphaCompare(GX_GEQUAL, 1, GX_AOP_AND, GX_GEQUAL, 1);
+	    GXSetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_NOOP);
+	    GXSetAlphaUpdate(GX_TRUE);
+
+	#ifdef GC_HOST_WORKLOAD_PF_DRAW
+	    // Opt-in tiny draw to surface deeper FIFO/vertex formatting behavior.
+	    // Keep it minimal and deterministic: one quad, fixed vertex payload.
+	    void GXPosition3s16(s16 x, s16 y, s16 z);
+	    void GXColor1x8(u8 c);
+	    void GXTexCoord2f32(f32 s, f32 t);
+
+	    // Ensure the indexed color table has at least one non-zero entry.
+	    s_fcoltbl[15] = (GXColor){ .r = 0xFF, .g = 0xFF, .b = 0xFF, .a = 0xFF };
+
+	    GXBegin((u8)GX_QUADS, (u8)GX_VTXFMT0, 4);
+	    GXPosition3s16(0, 0, 0);     GXColor1x8((u8)15); GXTexCoord2f32(0.0f, 0.0f);
+	    GXPosition3s16(64, 0, 0);    GXColor1x8((u8)15); GXTexCoord2f32(1.0f, 0.0f);
+	    GXPosition3s16(64, 32, 0);   GXColor1x8((u8)15); GXTexCoord2f32(1.0f, 1.0f);
+	    GXPosition3s16(0, 32, 0);    GXColor1x8((u8)15); GXTexCoord2f32(0.0f, 1.0f);
+	    GXEnd();
+	#endif
+	}

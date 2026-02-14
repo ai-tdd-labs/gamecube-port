@@ -3519,3 +3519,30 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Evidence:
   - `./tools/run_mp4_workload_ladder.sh` -> `DONE` (includes `mp4_wipe_crossfade_mtx_001`)
   - `./tools/run_mp4_workload_ladder.sh --from 14 --to 20` -> `DONE` and shows `mp4_wipe_crossfade_mtx_001` marker `58434641 deadbeef`.
+
+## 2026-02-14: MP4 workload ladder 1000-tick mainloop scenario (reachability)
+
+- New scenario:
+  - `tests/workload/mp4/mp4_mainloop_thousand_iter_tick_001_scenario.c`:
+    - Mirrors the 100-tick scenario loop but runs 1000 iterations.
+    - Marker: `MP4Z` (`0x4D50345A`) in `tests/actual/workload/mp4_mainloop_thousand_iter_tick_001.bin`.
+- Runner wiring:
+  - `tools/run_host_scenario.sh` links `post_sprinit_stubs.c`, `wipeexecalways_decomp_blank.c`, and `pfdrawfonts_gx_setup_only.c` for `mp4_mainloop_thousand_iter_tick_001_scenario`.
+- Evidence:
+  - `./tools/run_mp4_workload_ladder.sh --from 15 --to 17` -> `DONE` and shows `mp4_mainloop_thousand_iter_tick_001` marker `4d50345a deadbeef`.
+  - `./tools/run_mp4_workload_ladder.sh` -> `DONE` including the 1000-tick step.
+
+## 2026-02-14: MP4 pfDrawFonts opt-in minimal draw workload step (reachability; scenario-specific compile define)
+
+- Runner knob:
+  - `tools/run_host_scenario.sh` maps `GC_HOST_WORKLOAD_PF_DRAW=1` to `-DGC_HOST_WORKLOAD_PF_DRAW=1` for workload builds.
+- Slice change:
+  - `tests/workload/mp4/slices/pfdrawfonts_gx_setup_only.c`:
+    - Default: GX state setup only.
+    - With `GC_HOST_WORKLOAD_PF_DRAW=1`: emits a minimal quad draw (`GXBegin` + 4 vertices with `GXPosition3s16` + `GXColor1x8` + `GXTexCoord2f32`) to surface deeper vertex/FIFO behaviors.
+- New scenario:
+  - `tests/workload/mp4/mp4_mainloop_one_iter_tick_pf_draw_001_scenario.c`
+    - Marker: `MPFD` (`0x4D504644`) in `tests/actual/workload/mp4_mainloop_one_iter_tick_pf_draw_001.bin`.
+- Evidence:
+  - `./tools/run_mp4_workload_ladder.sh --from 9 --to 13` -> `DONE` and shows `mp4_mainloop_one_iter_tick_pf_draw_001` marker `4d504644 deadbeef`.
+  - `./tools/run_mp4_workload_ladder.sh` -> `DONE` including the pfDrawFonts draw step.
