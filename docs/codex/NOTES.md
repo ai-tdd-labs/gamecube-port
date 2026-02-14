@@ -3327,3 +3327,4 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - DOL test implementation (built, partial cases A-C):
   - `tests/sdk/card/card_verify/dol/pbt/card_verify_pbt_001/*`
   - Build: `make -C tests/sdk/card/card_verify/dol/pbt/card_verify_pbt_001`
+  - Expected dump (Dolphin): `tools/dump_expected.sh tests/sdk/card/card_verify/dol/pbt/card_verify_pbt_001/card_verify_pbt_001.dol tests/sdk/card/card_verify/expected/card_verify_pbt_001.bin 0x80300000 0x80 0.7`
