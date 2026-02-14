@@ -69,3 +69,6 @@ extern uint32_t gc_card_os_register_reset_calls;
 extern uint32_t gc_card_tx_calls[GC_CARD_CHANS];
 
 void CARDInit(void);
+
+// Internal CARDBios helpers (modeled subset).
+int32_t __CARDGetControlBlock(int32_t chan, GcCardControl** pcard);

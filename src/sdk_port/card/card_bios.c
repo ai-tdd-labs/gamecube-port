@@ -8,6 +8,7 @@ enum {
     CARD_RESULT_READY = 0,
     CARD_RESULT_NOCARD = -3,
     CARD_RESULT_BUSY = -1,
+    CARD_RESULT_FATAL_ERROR = -128,
 };
 
 GcCardControl gc_card_block[GC_CARD_CHANS];
@@ -151,6 +152,38 @@ s32 __CARDPutControlBlock(GcCardControl *card, s32 result)
     }
     else if (card->result == -1) { // CARD_RESULT_BUSY
         card->result = result;
+    }
+    OSRestoreInterrupts(enabled);
+    return result;
+}
+
+s32 __CARDGetControlBlock(s32 chan, GcCardControl **pcard)
+{
+    int enabled;
+    s32 result;
+    GcCardControl *card;
+
+    if (chan < 0 || chan >= GC_CARD_CHANS) {
+        return CARD_RESULT_FATAL_ERROR;
+    }
+
+    card = &gc_card_block[chan];
+    if (card->disk_id == 0) {
+        return CARD_RESULT_FATAL_ERROR;
+    }
+
+    enabled = OSDisableInterrupts();
+    if (!card->attached) {
+        result = CARD_RESULT_NOCARD;
+    } else if (card->result == CARD_RESULT_BUSY) {
+        result = CARD_RESULT_BUSY;
+    } else {
+        card->result = CARD_RESULT_BUSY;
+        card->api_callback = 0;
+        if (pcard) {
+            *pcard = card;
+        }
+        result = CARD_RESULT_READY;
     }
     OSRestoreInterrupts(enabled);
     return result;

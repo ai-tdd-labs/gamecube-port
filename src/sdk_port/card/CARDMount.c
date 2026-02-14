@@ -100,6 +100,7 @@ s32 __CARDReadStatus(s32 chan, u8* status);
 s32 __CARDEnableInterrupt(s32 chan, int enable);
 s32 __CARDRead(s32 chan, u32 addr, s32 length, void* dst, CARDCallback callback);
 s32 __CARDPutControlBlock(GcCardControl* card, s32 result);
+s32 __CARDGetControlBlock(s32 chan, GcCardControl** pcard);
 
 // From sdk_port/card/CARDCheck.c
 s32 __CARDVerify(GcCardControl* card);
@@ -413,4 +414,14 @@ s32 CARDMount(s32 chan, void* workArea, CARDCallback attachCb) {
   // Full DoMount + __CARDSync modeling will be added under the CARDMount trace replay task.
   s32 result = CARDMountAsync(chan, workArea, attachCb, __CARDDefaultApiCallback);
   return result;
+}
+
+s32 CARDUnmount(s32 chan) {
+  GcCardControl* card;
+  s32 result = __CARDGetControlBlock(chan, &card);
+  if (result < 0) {
+    return result;
+  }
+  DoUnmount(chan, CARD_RESULT_NOCARD);
+  return CARD_RESULT_READY;
 }

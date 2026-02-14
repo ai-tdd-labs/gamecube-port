@@ -57,6 +57,10 @@ u32 gc_exi_last_imm_data[MAX_CHAN];
 u32 gc_exi_deselect_calls[MAX_CHAN];
 u32 gc_exi_unlock_calls[MAX_CHAN];
 
+// Instrumentation: current callbacks (observable for deterministic unit tests).
+uintptr_t gc_exi_exi_callback_ptr[MAX_CHAN];
+uintptr_t gc_exi_ext_callback_ptr[MAX_CHAN];
+
 // Optional DMA hook used to model device-backed transfers (e.g. CARD).
 // If NULL, EXIDma returns FALSE.
 //
@@ -115,6 +119,7 @@ EXICallback EXISetExiCallback(s32 channel, EXICallback callback) {
   }
   EXICallback prev = s_ecb[channel].exi_cb;
   s_ecb[channel].exi_cb = callback;
+  gc_exi_exi_callback_ptr[channel] = (uintptr_t)callback;
   return prev;
 }
 
@@ -137,6 +142,8 @@ void EXIInit(void) {
     gc_exi_last_imm_data[i] = 0;
     gc_exi_deselect_calls[i] = 0;
     gc_exi_unlock_calls[i] = 0;
+    gc_exi_exi_callback_ptr[i] = 0;
+    gc_exi_ext_callback_ptr[i] = 0;
   }
 }
 
@@ -379,6 +386,7 @@ BOOL EXIAttach(s32 channel, EXICallback callback) {
   if (channel < 0 || channel >= MAX_CHAN) return FALSE;
   if (!gc_exi_attach_ok[channel]) return FALSE;
   s_ecb[channel].ext_cb = callback;
+  gc_exi_ext_callback_ptr[channel] = (uintptr_t)callback;
   s_ecb[channel].state |= EXI_STATE_ATTACHED;
   return TRUE;
 }
@@ -387,6 +395,7 @@ BOOL EXIDetach(s32 channel) {
   if (channel < 0 || channel >= MAX_CHAN) return FALSE;
   s_ecb[channel].state &= ~EXI_STATE_ATTACHED;
   s_ecb[channel].ext_cb = 0;
+  gc_exi_ext_callback_ptr[channel] = 0;
   return TRUE;
 }
 

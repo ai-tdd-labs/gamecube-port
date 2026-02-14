@@ -1,0 +1,14 @@
+diff --git a/src/sdk_port/card/CARDMount.c b/src/sdk_port/card/CARDMount.c
+--- a/src/sdk_port/card/CARDMount.c
++++ b/src/sdk_port/card/CARDMount.c
+@@ -184,7 +184,7 @@ static void DoUnmount(s32 chan, s32 result) {
+   int enabled = OSDisableInterrupts();
+   if (card->attached) {
+     EXISetExiCallback(chan, 0);
+-    EXIDetach(chan);
++    (void)EXIGetState(chan); // MUTANT: skip EXIDetach
+     OSCancelAlarm(&card->alarm_cancel_calls);
+     card->attached = 0;
+     card->result = result;
+     card->mount_step = 0;
+   }
