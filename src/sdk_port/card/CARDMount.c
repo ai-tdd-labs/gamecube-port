@@ -17,6 +17,7 @@ enum {
   CARD_RESULT_BUSY = -1,
   CARD_RESULT_WRONGDEVICE = -2,
   CARD_RESULT_NOCARD = -3,
+  CARD_RESULT_UNLOCKED = -4,
   CARD_RESULT_IOERROR = -5,
   CARD_RESULT_FATAL_ERROR = -128,
 };
@@ -96,6 +97,12 @@ static int IsCard(u32 id) {
 // From sdk_port/card/card_bios.c
 s32 __CARDClearStatus(s32 chan);
 s32 __CARDReadStatus(s32 chan, u8* status);
+s32 __CARDEnableInterrupt(s32 chan, int enable);
+s32 __CARDRead(s32 chan, u32 addr, s32 length, void* dst, CARDCallback callback);
+s32 __CARDPutControlBlock(GcCardControl* card, s32 result);
+
+// From sdk_port/card/CARDCheck.c
+s32 __CARDVerify(GcCardControl* card);
 
 // Deterministic stub (for now): implemented in sdk_port/card/card_unlock.c.
 s32 __CARDUnlock(s32 chan, u8 flashID[12]);
@@ -103,6 +110,8 @@ s32 __CARDUnlock(s32 chan, u8 flashID[12]);
 // From sdk_port/os/OSRtc.c (host model).
 OSSramEx* __OSLockSramEx(void);
 BOOL __OSUnlockSramEx(BOOL commit);
+
+static s32 DoMount(s32 chan);
 
 s32 CARDProbeEx(s32 chan, s32* memSize, s32* sectorSize) {
   u32 id = 0;
@@ -157,7 +166,16 @@ static void __CARDDefaultApiCallback(s32 chan, s32 result) {
   (void)result;
 }
 
+enum { CARD_SYSTEM_BLOCK_SIZE = 8 * 1024 };
+enum { CARD_WORKAREA_SIZE = 5 * CARD_SYSTEM_BLOCK_SIZE };
+enum { CARD_MAX_MOUNT_STEP = 7 };
+
 static void __CARDExtHandler(s32 chan, void* context) {
+  (void)chan;
+  (void)context;
+}
+
+static void __CARDExiHandler(s32 chan, void* context) {
   (void)chan;
   (void)context;
 }
@@ -167,9 +185,61 @@ static void __CARDUnlockedHandler(s32 chan, void* context) {
   (void)context;
 }
 
+static void DoUnmount(s32 chan, s32 result) {
+  GcCardControl* card = &gc_card_block[chan];
+  int enabled = OSDisableInterrupts();
+  if (card->attached) {
+    EXISetExiCallback(chan, 0);
+    EXIDetach(chan);
+    OSCancelAlarm(&card->alarm_cancel_calls);
+    card->attached = 0;
+    card->result = result;
+    card->mount_step = 0;
+  }
+  OSRestoreInterrupts(enabled);
+}
+
 static void __CARDMountCallback(s32 chan, s32 result) {
-  (void)chan;
-  (void)result;
+  GcCardControl* card = &gc_card_block[chan];
+  CARDCallback callback;
+
+  switch (result) {
+    case CARD_RESULT_READY:
+      if (++card->mount_step < CARD_MAX_MOUNT_STEP) {
+        result = DoMount(chan);
+        if (0 <= result) {
+          return;
+        }
+      } else {
+        result = __CARDVerify(card);
+      }
+      break;
+    case CARD_RESULT_UNLOCKED:
+      card->unlock_callback = (uintptr_t)__CARDMountCallback;
+      if (!EXILock(chan, 0, (EXICallback)__CARDUnlockedHandler)) {
+        return;
+      }
+      card->unlock_callback = 0;
+
+      result = DoMount(chan);
+      if (0 <= result) {
+        return;
+      }
+      break;
+    case CARD_RESULT_IOERROR:
+    case CARD_RESULT_NOCARD:
+      DoUnmount(chan, result);
+      break;
+    default:
+      break;
+  }
+
+  callback = (CARDCallback)(uintptr_t)card->api_callback;
+  card->api_callback = 0;
+  __CARDPutControlBlock(card, result);
+  if (callback) {
+    callback(chan, result);
+  }
 }
 
 static s32 DoMount(s32 chan) {
@@ -180,6 +250,7 @@ static s32 DoMount(s32 chan) {
   OSSramEx* sram;
   int i;
   u8 checkSum;
+  int step;
 
   if (card->mount_step == 0) {
     if (!EXIGetID(chan, 0, &id)) {
@@ -193,6 +264,7 @@ static s32 DoMount(s32 chan) {
 
     card->cid = id;
     card->size_mb = (s32)(id & 0xFCu);
+    card->size_u16 = (uint16_t)(id & 0xFCu);
     card->sector_size = (s32)SectorSizeTable[(id & 0x00003800u) >> 11];
     card->cblock = (u32)((card->size_mb * 1024u * 1024u / 8u) / (u32)card->sector_size);
     card->latency = LatencyTable[(id & 0x00000700u) >> 8];
@@ -235,18 +307,47 @@ static s32 DoMount(s32 chan) {
       result = CARD_RESULT_IOERROR;
       goto error;
     }
-
-    // Partial port: stop after step0 until later DoMount steps are implemented.
-    return CARD_RESULT_READY;
   }
 
-  // Not implemented yet.
-  return CARD_RESULT_BUSY;
+  if (card->mount_step == 1) {
+    if (card->cid == 0x80000004u) {
+      uint16_t vendorID = 0;
+      sram = __OSLockSramEx();
+      vendorID = (uint16_t)(((uint16_t)sram->flashID[chan][0] << 8) | (uint16_t)sram->flashID[chan][1]);
+      (void)__OSUnlockSramEx(0);
+
+      if (s_card_vendor_id == 0xFFFFu || vendorID != s_card_vendor_id) {
+        result = CARD_RESULT_WRONGDEVICE;
+        goto error;
+      }
+    }
+
+    card->mount_step = 2;
+
+    result = __CARDEnableInterrupt(chan, 1);
+    if (result < 0) goto error;
+
+    EXISetExiCallback(chan, (EXICallback)__CARDExiHandler);
+    EXIUnlock(chan);
+    // Cache modeling is out-of-scope for the host port; the mount workflow
+    // correctness is validated via expected.bin vs actual.bin dumps.
+  }
+
+  step = (int)(card->mount_step - 2);
+  result = __CARDRead(
+      chan,
+      (u32)card->sector_size * (u32)step,
+      (s32)CARD_SYSTEM_BLOCK_SIZE,
+      (u8*)(uintptr_t)card->work_area + (uintptr_t)CARD_SYSTEM_BLOCK_SIZE * (uintptr_t)step,
+      __CARDMountCallback);
+  if (result < 0) {
+    __CARDPutControlBlock(card, result);
+  }
+  return result;
 
 error:
-  (void)EXIUnlock(chan);
-  card->result = result;
-  card->attached = 0;
+  EXIUnlock(chan);
+  DoUnmount(chan, result);
   return result;
 }
 
