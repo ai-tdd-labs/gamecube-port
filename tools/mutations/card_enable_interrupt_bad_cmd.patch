@@ -1,6 +1,12 @@
 diff --git a/src/sdk_port/card/card_bios.c b/src/sdk_port/card/card_bios.c
 --- a/src/sdk_port/card/card_bios.c
 +++ b/src/sdk_port/card/card_bios.c
-@@
+@@ -124,7 +124,7 @@ s32 __CARDEnableInterrupt(s32 chan, BOOL enable)
+ 
+     // Decomp (MP4 SDK): cmd = enable ? 0x81010000 : 0x81000000, sent as 2 bytes.
+     // Use explicit bytes so host endianness does not affect the transfer.
 -    cmd[0] = 0x81;
 +    cmd[0] = 0x80;
+     cmd[1] = enable ? 0x01 : 0x00;
+ 
+     err = FALSE;
