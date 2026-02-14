@@ -112,3 +112,24 @@ s32 __CARDClearStatus(s32 chan)
 
     return err ? CARD_RESULT_NOCARD : CARD_RESULT_READY;
 }
+
+s32 __CARDEnableInterrupt(s32 chan, BOOL enable)
+{
+    BOOL err;
+    u8 cmd[2];
+
+    if (!EXISelect(chan, 0, 4)) {
+        return CARD_RESULT_NOCARD;
+    }
+
+    // Decomp (MP4 SDK): cmd = enable ? 0x81010000 : 0x81000000, sent as 2 bytes.
+    // Use explicit bytes so host endianness does not affect the transfer.
+    cmd[0] = 0x81;
+    cmd[1] = enable ? 0x01 : 0x00;
+
+    err = FALSE;
+    err |= !EXIImm(chan, cmd, 2, EXI_WRITE, 0);
+    err |= !EXISync(chan);
+    err |= !EXIDeselect(chan);
+    return err ? CARD_RESULT_NOCARD : CARD_RESULT_READY;
+}
