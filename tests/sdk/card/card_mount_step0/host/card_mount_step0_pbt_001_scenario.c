@@ -23,7 +23,7 @@ enum {
 
 typedef void (*CARDCallback)(s32 chan, s32 result);
 
-s32 CARDMountAsync(s32 chan, void* workArea, CARDCallback detachCallback, CARDCallback attachCallback);
+s32 CARDMountAsync_step0(s32 chan, void* workArea, CARDCallback detachCallback, CARDCallback attachCallback);
 
 // Deterministic unlock stub knobs (sdk_port).
 extern u32 gc_card_unlock_ok[2];
@@ -90,7 +90,7 @@ void gc_scenario_run(GcRam* ram) {
     gc_exi_id[0] = 0x00000004u;
     gc_exi_card_status[0] = 0x40u;
     set_sram_flashid(0, sram_id0);
-    s32 r0 = CARDMountAsync(0, (void*)0x1234, 0, 0);
+    s32 r0 = CARDMountAsync_step0(0, (void*)0x1234, 0, 0);
     l0 = h32(l0, (u32)r0);
     l0 = hash_card(l0, 0);
     l0 = h32(l0, gc_exi_card_status_reads[0]);
@@ -111,7 +111,7 @@ void gc_scenario_run(GcRam* ram) {
     memset(gc_card_unlock_calls, 0, sizeof(gc_card_unlock_calls));
     gc_card_unlock_ok[0] = 1;
     memcpy(gc_card_unlock_flash_id[0], unlock_id0, 12);
-    s32 r1 = CARDMountAsync(0, (void*)0x1234, 0, 0);
+    s32 r1 = CARDMountAsync_step0(0, (void*)0x1234, 0, 0);
     l1 = h32(l1, (u32)r1);
     l1 = hash_card(l1, 0);
     l1 = h32(l1, gc_card_unlock_calls[0]);
@@ -133,7 +133,7 @@ void gc_scenario_run(GcRam* ram) {
         s->flashIDCheckSum[0] ^= 0x01u;
         (void)__OSUnlockSramEx(0);
     }
-    s32 r2 = CARDMountAsync(0, (void*)0x1234, 0, 0);
+    s32 r2 = CARDMountAsync_step0(0, (void*)0x1234, 0, 0);
     l2 = h32(l2, (u32)r2);
     l2 = hash_card(l2, 0);
 

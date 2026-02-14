@@ -3573,3 +3573,20 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
   - `./tools/run_gx_set_tev_kcolor_pbt.sh` (PASS)
   - `./tools/run_host_scenario.sh tests/workload/mp4/mp4_mainloop_thousand_iter_tick_001_scenario.c` (PASS)
   - `./tools/run_host_scenario.sh tests/workload/mp4/mp4_husysinit_001_scenario.c` (PASS; ensures local `GXNtsc480Prog` definitions do not conflict)
+
+## 2026-02-14: CARDMount step0/trace-replay split and stability
+
+- `src/sdk_port/card/CARDMount.c`
+  - Refactored `DoMount` so step0 logic lives in `DoMount_step0`.
+  - Added `CARDMountAsync_step0(s32 chan, void* workArea, CARDCallback detachCallback, CARDCallback attachCallback)` so DOL-host parity suites can execute the exact preflight step0 path.
+  - Updated `DoMount_step0` error path to match oracle behavior (`EXIUnlock` + `card->result` + `card->attached`), avoiding `DoUnmount` state resets that were causing hash drift.
+- `tests/sdk/card/card_mount_step0/host/card_mount_step0_pbt_001_scenario.c`
+  - Switched to `CARDMountAsync_step0(...)` for `card_mount_step0_pbt_001`.
+- `tests/sdk/card/card_init/host/card_init_pbt_001_scenario.c`
+  - Fixed `GcCardControl` type mismatch by including `sdk_port/card/card_bios.h`.
+
+Evidence:
+- `./tools/run_card_mount_step0_pbt.sh` -> PASS
+- `./tools/run_card_mount_preflight_pbt.sh` -> PASS
+- `./tools/run_card_mount_pbt.sh` -> PASS
+- `./tools/run_card_init_pbt.sh` -> PASS

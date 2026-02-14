@@ -3,24 +3,12 @@
 #include "harness/gc_host_ram.h"
 #include "harness/gc_host_scenario.h"
 #include "harness/gc_host_test.h"
+#include "sdk_port/card/card_bios.h"
 
 typedef uint32_t u32;
 typedef int32_t s32;
 
 enum { CARD_RESULT_NOCARD = -3 };
-
-typedef struct GcCardControl {
-    s32 result;
-    u32 thread_queue_inited;
-    u32 alarm_created;
-    uintptr_t disk_id;
-} GcCardControl;
-
-void CARDInit(void);
-extern GcCardControl gc_card_block[2];
-extern u32 gc_card_dsp_init_calls;
-extern u32 gc_card_os_init_alarm_calls;
-extern u32 gc_card_os_register_reset_calls;
 
 enum { L0 = 8, L1 = 16, L2 = 8, L3 = 2048, L4 = 6, L5 = 4 };
 
