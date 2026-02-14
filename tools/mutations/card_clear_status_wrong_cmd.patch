@@ -1,6 +1,12 @@
 diff --git a/src/sdk_port/card/card_bios.c b/src/sdk_port/card/card_bios.c
 --- a/src/sdk_port/card/card_bios.c
 +++ b/src/sdk_port/card/card_bios.c
-@@
+@@ -103,7 +103,7 @@ s32 __CARDClearStatus(s32 chan)
+     }
+ 
+     // Decomp (MP4 SDK): cmd = 0x89000000 sent as 1 byte.
 -    cmd = 0x89;
 +    cmd = 0x88;
+ 
+     err = FALSE;
+     err |= !EXIImm(chan, &cmd, 1, EXI_WRITE, 0);
