@@ -3287,3 +3287,39 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
   - AC: `decomp_animal_crossing/src/static/dolphin/card/CARDMount.c` calls `__CARDVerify(card)` in the same mount callback slot.
 - Cross-decomp note:
   - TP’s `VerifyID` checks `id->encode != __CARDGetFontEncode()` (not `OSGetFontEncode()`), and checks it after the flashID/LCG loop. (`decomp_twilight_princess/src/dolphin/card/CARDCheck.c`)
+
+## 2026-02-14: __CARDVerify deterministic test design (unified DOL PBT)
+
+- Oracle strategy (DOL side):
+  - Implement `oracle___CARDVerify` based on MP4 `decomp_mario_party_4/src/dolphin/card/CARDCheck.c`.
+  - Stub dependencies deterministically:
+    - `OSGetFontEncode()` returns `oracle_font_encode`.
+    - `__OSLockSramEx/__OSUnlockSramEx` return a static `OSSramEx` containing per-channel `flashID[2][12]`.
+- WorkArea layout under test:
+  - `workArea + 0x0000`: `CARDID` (512 bytes)
+  - `workArea + 0x2000`: Dir copy 0 (8 KiB)
+  - `workArea + 0x4000`: Dir copy 1 (8 KiB)
+  - `workArea + 0x6000`: FAT copy 0 (8 KiB)
+  - `workArea + 0x8000`: FAT copy 1 (8 KiB)
+- Key side effects to assert:
+  - `card->currentDir` and `card->currentFat` selection when both copies are valid and current pointers are NULL.
+  - `memcpy(dir[current], dir[current^1], 0x2000)` and `memcpy(fat[current], fat[current^1], 0x2000)` happen in the “current==NULL, both valid” branch.
+- Proposed unified cases (pbt_001):
+  - Case A (pass + select/copy):
+    - Valid ID (deviceID=0, size matches, checksum ok, encode matches).
+    - SRAMEx flashID seeded; choose `id->serial[12..19] = 0` so the LCG yields 0 and `id->serial[0..11] == flashID[chan]` satisfies the flashID check.
+    - Both dir copies checksum-valid, different `checkCode` values to force deterministic selection (e.g. dir0.checkCode < dir1.checkCode).
+    - Both FAT copies checksum-valid and `fat[FREEBLOCKS]` matches the counted `CARD_FAT_AVAIL` entries.
+    - Expect: `oracle___CARDVerify` returns READY and sets `currentDir/currentFat` to the selected copies; selected copy is overwritten with the other copy via memcpy.
+  - Case B (ID checksum fail):
+    - Corrupt `CARDID.checkSum` or `checkSumInv`.
+    - Expect: returns BROKEN; no dir/fat work performed.
+  - Case C (encoding fail):
+    - Keep ID checksum ok, but set `id->encode != oracle_font_encode`.
+    - Expect: returns ENCODING.
+  - Case D (dir copy checksum fail):
+    - One dir copy has bad checksum; FAT valid.
+    - Expect: returns BROKEN (MP4 `errors==1` path).
+  - Case E (FAT freeblock mismatch):
+    - FAT checksum ok but `fat[FREEBLOCKS]` does not equal counted free blocks.
+    - Expect: returns BROKEN.
