@@ -20,6 +20,7 @@ OUT_DIR=${3:?out_dir required}
 TIMEOUT=${4:-30}
 HIT_COUNT=${5:-1}
 DELAY=${DOLPHIN_START_DELAY:-2}
+MOVIE=${DOLPHIN_MOVIE:-}
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 
@@ -32,6 +33,20 @@ if [[ "$OUT_DIR" != /* ]]; then
 fi
 
 mkdir -p "$OUT_DIR"
+
+# Optional deterministic input movie (.dtm). Use env-var to avoid changing
+# call signatures of existing scripts.
+movie_args=()
+if [[ -n "$MOVIE" ]]; then
+  if [[ "$MOVIE" != /* ]]; then
+    MOVIE="$repo_root/$MOVIE"
+  fi
+  if [[ ! -f "$MOVIE" ]]; then
+    echo "fatal: DOLPHIN_MOVIE set but file not found: $MOVIE" >&2
+    exit 2
+  fi
+  movie_args=(--movie "$MOVIE")
+fi
 
 # Regions are chosen from MP4 symbols.txt (GMPE01_00):
 # - __OSCurrHeap = 0x801D38B8
@@ -82,6 +97,7 @@ for i in "${!NAMES[@]}"; do
 
     PYTHONUNBUFFERED=1 python3 -u tools/ram_dump.py \
       --exec "$EXEC_PATH" \
+      "${movie_args[@]}" \
       --breakpoint "$PC_ADDR" \
       --bp-timeout "$TIMEOUT" \
       --bp-hit-count "$HIT_COUNT" \
@@ -100,6 +116,7 @@ for i in "${!NAMES[@]}"; do
       echo "[rvz-probe] breakpoint unsupported; falling back to PC polling" >&2
       PYTHONUNBUFFERED=1 python3 -u tools/ram_dump.py \
         --exec "$EXEC_PATH" \
+        "${movie_args[@]}" \
         --pc-breakpoint "$PC_ADDR" \
         --pc-timeout "$TIMEOUT" \
         --pc-hit-count "$HIT_COUNT" \

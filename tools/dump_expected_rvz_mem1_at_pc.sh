@@ -15,6 +15,7 @@ PC_ADDR=${2:?pc_addr_hex required}
 OUT_BIN=${3:?out_bin required}
 TIMEOUT=${4:-30}
 HIT_COUNT=${5:-1}
+MOVIE=${DOLPHIN_MOVIE:-}
 
 ADDR=0x80000000
 SIZE=0x01800000
@@ -34,11 +35,26 @@ fi
 
 mkdir -p "$(dirname "$OUT_BIN")"
 
+# Optional deterministic input movie (.dtm). Use env-var to avoid changing
+# call signatures of existing scripts.
+movie_args=()
+if [[ -n "$MOVIE" ]]; then
+  if [[ "$MOVIE" != /* ]]; then
+    MOVIE="$repo_root/$MOVIE"
+  fi
+  if [[ ! -f "$MOVIE" ]]; then
+    echo "fatal: DOLPHIN_MOVIE set but file not found: $MOVIE" >&2
+    exit 2
+  fi
+  movie_args=(--movie "$MOVIE")
+fi
+
 # Kill stale headless Dolphin instances bound to the GDB port.
 pkill -f "Dolphin -b -d" >/dev/null 2>&1 || true
 
 PYTHONUNBUFFERED=1 python3 -u tools/ram_dump.py \
   --exec "$EXEC_PATH" \
+  "${movie_args[@]}" \
   --breakpoint "$PC_ADDR" \
   --bp-timeout "$TIMEOUT" \
   --bp-hit-count "$HIT_COUNT" \
@@ -57,6 +73,7 @@ fi
 echo "[dump_expected_rvz_mem1_at_pc] breakpoint unsupported; falling back to PC polling" >&2
 PYTHONUNBUFFERED=1 python3 -u tools/ram_dump.py \
   --exec "$EXEC_PATH" \
+  "${movie_args[@]}" \
   --pc-breakpoint "$PC_ADDR" \
   --pc-timeout "$TIMEOUT" \
   --pc-hit-count "$HIT_COUNT" \
