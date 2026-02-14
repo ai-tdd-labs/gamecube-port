@@ -37,17 +37,17 @@ void gc_scenario_run(GcRam *ram) {
 
   // Configure memcard backing store.
   const char *mc_path = "../actual/exi_dma_card_proto_pbt_001_memcard.raw";
-  const uint32_t mc_size = 0x4000u;
+  const uint32_t mc_size = 0x40000u;
   if (gc_memcard_insert(0, mc_path, mc_size) != 0) die("gc_memcard_insert failed");
 
-  // Fill image with deterministic bytes, and seed a known read window @0x1000.
+  // Fill image with deterministic bytes, and seed a known read window @0x21000.
   uint8_t tmp[512];
   for (uint32_t i = 0; i < mc_size; i += (uint32_t)sizeof(tmp)) {
     for (uint32_t j = 0; j < (uint32_t)sizeof(tmp); j++) tmp[j] = (uint8_t)((i + j) ^ 0xA5u);
     if (gc_memcard_write(0, i, tmp, (uint32_t)sizeof(tmp)) != 0) die("gc_memcard_write fill failed");
   }
   for (uint32_t i = 0; i < (uint32_t)sizeof(tmp); i++) tmp[i] = (uint8_t)(0xC0u ^ (uint8_t)i);
-  if (gc_memcard_write(0, 0x1000u, tmp, (uint32_t)sizeof(tmp)) != 0) die("gc_memcard_write seed failed");
+  if (gc_memcard_write(0, 0x21000u, tmp, (uint32_t)sizeof(tmp)) != 0) die("gc_memcard_write seed failed");
 
   EXIInit();
   gc_exi_dma_hook = gc_memcard_exi_dma;
@@ -55,24 +55,24 @@ void gc_scenario_run(GcRam *ram) {
   if (!EXILock(0, 0, 0)) die("EXILock failed");
   if (!EXISelect(0, 0, 4)) die("EXISelect failed");
 
-  // Read 512 bytes @0x1000.
+  // Read 512 bytes @0x21000 (exercises cmd1 nonzero).
   uint8_t cmd[5];
-  encode_cmd(cmd, 0x52, 0x1000u);
+  encode_cmd(cmd, 0x52, 0x21000u);
   if (!EXIImmEx(0, cmd, 5, EXI_WRITE)) die("EXIImmEx(cmd read) failed");
   uint8_t buf[512];
   memset(buf, 0, sizeof(buf));
   int rd_ok = EXIDma(0, buf, (s32)sizeof(buf), EXI_READ, 0);
   uint32_t rd_h = hash_bytes(buf, (uint32_t)sizeof(buf));
 
-  // Write 128 bytes @0x1200 then read-back via backend.
-  encode_cmd(cmd, 0xF2, 0x1200u);
+  // Write 128 bytes @0x22000 then read-back via backend.
+  encode_cmd(cmd, 0xF2, 0x22000u);
   if (!EXIImmEx(0, cmd, 5, EXI_WRITE)) die("EXIImmEx(cmd write) failed");
   uint8_t wr[128];
   for (uint32_t i = 0; i < (uint32_t)sizeof(wr); i++) wr[i] = (uint8_t)(0x5Au ^ (uint8_t)i);
   int wr_ok = EXIDma(0, wr, (s32)sizeof(wr), EXI_WRITE, 0);
   uint8_t back[128];
   memset(back, 0, sizeof(back));
-  int bk_ok = (gc_memcard_read(0, 0x1200u, back, (uint32_t)sizeof(back)) == 0);
+  int bk_ok = (gc_memcard_read(0, 0x22000u, back, (uint32_t)sizeof(back)) == 0);
   uint32_t bk_h = hash_bytes(back, (uint32_t)sizeof(back));
 
   EXIDeselect(0);
@@ -88,4 +88,3 @@ void gc_scenario_run(GcRam *ram) {
   // Keep the file deterministic for later suites by flushing after writes.
   (void)gc_memcard_flush(0);
 }
-

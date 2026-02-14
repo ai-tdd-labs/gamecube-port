@@ -50,9 +50,9 @@ int main(void) {
   oracle_EXILock(0, 0, 0);
   oracle_EXISelect(0, 0, 4);
 
-  // Read 512 bytes @0x1000.
+  // Read 512 bytes @0x21000 (exercises cmd1 nonzero).
   uint8_t cmd[5];
-  encode_cmd(cmd, 0x52, 0x1000u);
+  encode_cmd(cmd, 0x52, 0x21000u);
   oracle_EXIImmEx(0, cmd, 5, EXI_WRITE);
 
   uint8_t buf[512];
@@ -60,15 +60,15 @@ int main(void) {
   int rd_ok = oracle_EXIDma(0, buf, (s32)sizeof(buf), EXI_READ, 0);
   u32 rd_h = hash_bytes(buf, (u32)sizeof(buf));
 
-  // Write 128 bytes @0x1200 then read-back from oracle store.
-  encode_cmd(cmd, 0xF2, 0x1200u);
+  // Write 128 bytes @0x22000 then read-back from oracle store.
+  encode_cmd(cmd, 0xF2, 0x22000u);
   oracle_EXIImmEx(0, cmd, 5, EXI_WRITE);
   uint8_t wr[128];
   for (u32 i = 0; i < (u32)sizeof(wr); i++) wr[i] = (uint8_t)(0x5Au ^ (uint8_t)i);
   int wr_ok = oracle_EXIDma(0, wr, (s32)sizeof(wr), EXI_WRITE, 0);
   uint8_t back[128];
   memset(back, 0, sizeof(back));
-  int bk_ok = oracle_card_peek(0x1200u, back, (u32)sizeof(back));
+  int bk_ok = oracle_card_peek(0x22000u, back, (u32)sizeof(back));
   u32 bk_h = hash_bytes(back, (u32)sizeof(back));
 
   oracle_EXIDeselect(0);
@@ -84,4 +84,3 @@ int main(void) {
   while (1) { __asm__ volatile("nop"); }
   return 0;
 }
-

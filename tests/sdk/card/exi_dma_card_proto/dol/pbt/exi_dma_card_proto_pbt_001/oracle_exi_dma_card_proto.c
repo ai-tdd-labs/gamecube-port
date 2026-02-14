@@ -10,8 +10,9 @@ static int s_selected;
 static int s_has_addr;
 static u32 s_addr;
 
-// Tiny "device image" used as the oracle backing store.
-static uint8_t s_card_img[0x4000];
+// "Device image" used as the oracle backing store.
+// Keep it large enough that command address high bits are exercised.
+static uint8_t s_card_img[0x40000];
 
 void oracle_EXIInit(void) {
   s_selected = 0;
@@ -19,7 +20,7 @@ void oracle_EXIInit(void) {
   s_addr = 0;
   for (u32 i = 0; i < (u32)sizeof(s_card_img); i++) s_card_img[i] = (uint8_t)(i ^ 0xA5u);
   // Seed a known read window.
-  for (u32 i = 0; i < 512u; i++) s_card_img[0x1000u + i] = (uint8_t)(0xC0u ^ (uint8_t)i);
+  for (u32 i = 0; i < 512u; i++) s_card_img[0x21000u + i] = (uint8_t)(0xC0u ^ (uint8_t)i);
 }
 
 int oracle_EXILock(s32 chan, u32 dev, void* cb) { (void)chan; (void)dev; (void)cb; return 1; }
@@ -71,4 +72,3 @@ int oracle_card_peek(u32 addr, void* dst, u32 len) {
   memcpy(dst, &s_card_img[addr], len);
   return 1;
 }
-
