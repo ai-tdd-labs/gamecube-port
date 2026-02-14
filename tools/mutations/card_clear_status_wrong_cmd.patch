@@ -1,0 +1,6 @@
+diff --git a/src/sdk_port/card/card_bios.c b/src/sdk_port/card/card_bios.c
+--- a/src/sdk_port/card/card_bios.c
++++ b/src/sdk_port/card/card_bios.c
+@@
+-    cmd = 0x89;
++    cmd = 0x88;

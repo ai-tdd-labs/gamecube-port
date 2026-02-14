@@ -1,8 +1,12 @@
 #include <stdint.h>
 #include "card_bios.h"
+#include "dolphin/exi.h"
 
 /* CARD results (mp4-decomp dolphin/card.h). */
-enum { CARD_RESULT_NOCARD = -3 };
+enum {
+    CARD_RESULT_READY = 0,
+    CARD_RESULT_NOCARD = -3,
+};
 
 GcCardControl gc_card_block[GC_CARD_CHANS];
 
@@ -65,4 +69,46 @@ void CARDInit(void)
 
     __CARDSetDiskID((uintptr_t)OSPhysicalToCached(0));
     OSRegisterResetFunction((void *)0);
+}
+
+s32 __CARDReadStatus(s32 chan, u8 *status)
+{
+    BOOL err;
+    u8 cmd[2];
+
+    if (!EXISelect(chan, 0, 4)) {
+        return CARD_RESULT_NOCARD;
+    }
+
+    // Decomp (MP4 SDK): cmd = 0x83000000 sent as 2 bytes.
+    cmd[0] = 0x83;
+    cmd[1] = 0x00;
+
+    err = FALSE;
+    err |= !EXIImm(chan, cmd, 2, EXI_WRITE, 0);
+    err |= !EXISync(chan);
+    err |= !EXIImm(chan, status, 1, EXI_READ, 0);
+    err |= !EXISync(chan);
+    err |= !EXIDeselect(chan);
+    return err ? CARD_RESULT_NOCARD : CARD_RESULT_READY;
+}
+
+s32 __CARDClearStatus(s32 chan)
+{
+    BOOL err;
+    u8 cmd;
+
+    if (!EXISelect(chan, 0, 4)) {
+        return CARD_RESULT_NOCARD;
+    }
+
+    // Decomp (MP4 SDK): cmd = 0x89000000 sent as 1 byte.
+    cmd = 0x89;
+
+    err = FALSE;
+    err |= !EXIImm(chan, &cmd, 1, EXI_WRITE, 0);
+    err |= !EXISync(chan);
+    err |= !EXIDeselect(chan);
+
+    return err ? CARD_RESULT_NOCARD : CARD_RESULT_READY;
 }

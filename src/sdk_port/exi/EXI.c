@@ -42,6 +42,17 @@ u32 gc_exi_getid_ok[MAX_CHAN];
 u32 gc_exi_id[MAX_CHAN];
 u32 gc_exi_attach_ok[MAX_CHAN];
 
+// Minimal CARD device status register model used by __CARDReadStatus/__CARDClearStatus.
+// This is a host-test knob (real hardware status bits are device-defined).
+u32 gc_exi_card_status[MAX_CHAN];
+u32 gc_exi_card_status_reads[MAX_CHAN];
+u32 gc_exi_card_status_clears[MAX_CHAN];
+
+// Instrumentation: last immediate transfer per channel (MSB-first packed into u32).
+u32 gc_exi_last_imm_len[MAX_CHAN];
+u32 gc_exi_last_imm_type[MAX_CHAN];
+u32 gc_exi_last_imm_data[MAX_CHAN];
+
 // Optional DMA hook used to model device-backed transfers (e.g. CARD).
 // If NULL, EXIDma returns FALSE.
 //
@@ -64,6 +75,7 @@ typedef struct GcExiCardProto {
   uint8_t cmd0;
   u32 addr;
   int has_addr;
+  int pending_status_read;
 } GcExiCardProto;
 
 static GcExiCardProto s_card[MAX_CHAN];
@@ -113,6 +125,12 @@ void EXIInit(void) {
     gc_exi_getid_ok[i] = 0;
     gc_exi_id[i] = 0;
     gc_exi_attach_ok[i] = 1;
+    gc_exi_card_status[i] = 0;
+    gc_exi_card_status_reads[i] = 0;
+    gc_exi_card_status_clears[i] = 0;
+    gc_exi_last_imm_len[i] = 0;
+    gc_exi_last_imm_type[i] = 0;
+    gc_exi_last_imm_data[i] = 0;
   }
 }
 
@@ -204,6 +222,21 @@ BOOL EXIImm(s32 channel, void* buffer, s32 length, u32 type, EXICallback callbac
   exi->imm_len = (int)length;
   exi->imm_buf = (uint8_t*)buffer;
 
+  gc_exi_last_imm_len[channel] = (u32)length;
+  gc_exi_last_imm_type[channel] = type;
+  gc_exi_last_imm_data[channel] = 0;
+
+  // Device->host immediate reads for a minimal CARD status register.
+  if (type == EXI_READ) {
+    if (length == 1 && exi->dev == 0 && s_card[channel].pending_status_read) {
+      s_card[channel].pending_status_read = 0;
+      gc_exi_card_status_reads[channel]++;
+      // complete_transfer() copies from IMM MSB-first.
+      *regp(channel, 4) = (gc_exi_card_status[channel] & 0xFFu) << 24;
+      gc_exi_last_imm_data[channel] = *regp(channel, 4);
+    }
+  }
+
   // Pack immediate write data into IMM register (MSB-first).
   if (type != EXI_READ) {
     const uint8_t* b = (const uint8_t*)buffer;
@@ -212,6 +245,21 @@ BOOL EXIImm(s32 channel, void* buffer, s32 length, u32 type, EXICallback callbac
       data |= (u32)b[i] << ((3 - (u32)i) * 8);
     }
     *regp(channel, 4) = data;
+    gc_exi_last_imm_data[channel] = data;
+
+    // Minimal CARD status command decode:
+    // - 0x83: read status (next 1-byte EXI_READ returns status)
+    // - 0x89: clear status
+    if (exi->dev == 0 && length >= 1 && buffer) {
+      uint8_t cmd = b[0];
+      if (cmd == 0x83u) {
+        s_card[channel].pending_status_read = 1;
+      } else if (cmd == 0x89u) {
+        s_card[channel].pending_status_read = 0;
+        gc_exi_card_status[channel] = 0;
+        gc_exi_card_status_clears[channel]++;
+      }
+    }
   }
 
   exi->state |= EXI_STATE_IMM;
