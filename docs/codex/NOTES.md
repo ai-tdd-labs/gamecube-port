@@ -1900,6 +1900,9 @@ Notes:
 - Validation:
   - `bash tools/run_exi_min_chain_pbt.sh`
   - Result: PASS (bit-exact expected vs actual).
+- Mutation check:
+  - `bash tools/run_mutation_check.sh tools/mutations/exi_imm_pack_lsb.patch -- bash tools/run_exi_min_chain_pbt.sh`
+  - Result: PASS (suite fails under mutant).
 - Evidence source used for behavior (register packing/state machine shape):
   - `decomp_mario_party_4/src/dolphin/exi/EXIBios.c`
 
