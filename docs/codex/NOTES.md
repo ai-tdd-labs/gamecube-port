@@ -2056,7 +2056,40 @@ Notes:
   - `bash tools/run_mutation_check.sh tools/mutations/card_mount_step0_unlock_branch_inverted.patch -- bash tools/run_card_mount_step0_pbt.sh`
   - Result: PASS (suite fails under mutant).
 - Note:
-  - This is an incremental DoMount port: later DoMount stages (mountStep 1/2 + system block reads + interrupt enable) are not implemented yet.
+  - Later DoMount stages + mount callback loop are implemented and tested in the CARDMountAsync suite below.
+
+## 2026-02-14: CARDMountAsync full DoMount + __CARDMountCallback unified DOL PBT suite
+
+- Decomp contract (MP4 Dolphin SDK):
+  - `decomp_mario_party_4/src/dolphin/card/CARDMount.c`:
+    - `DoMount` when `mountStep == 1`:
+      - If `cid == 0x80000004`, reads SRAMEx `vendorID = *(u16*)sram->flashID[chan]` and rejects with `CARD_RESULT_WRONGDEVICE` when `__CARDVendorID == 0xFFFF || vendorID != __CARDVendorID`.
+      - Sets `mountStep = 2`, calls `__CARDEnableInterrupt(chan, TRUE)`, sets `EXISetExiCallback(chan, __CARDExiHandler)`, unlocks EXI, and invalidates `workArea` cache.
+    - Reads system blocks:
+      - `step = mountStep - 2`
+      - Calls `__CARDRead(chan, sectorSize * step, CARD_SYSTEM_BLOCK_SIZE, workArea + (0x2000 * step), __CARDMountCallback)`.
+    - `__CARDMountCallback`:
+      - On `CARD_RESULT_READY`: increments `mountStep`; if `< CARD_MAX_MOUNT_STEP` continues `DoMount`, else calls `__CARDVerify(card)`.
+      - On `CARD_RESULT_UNLOCKED`: arranges `unlockCallback`, re-locks EXI, then resumes `DoMount`.
+      - On `CARD_RESULT_IOERROR` / `CARD_RESULT_NOCARD`: calls `DoUnmount(chan, result)`.
+      - Always: captures `apiCallback`, clears it, calls `__CARDPutControlBlock(card, result)`, then calls `apiCallback(chan, result)`.
+- Added sdk_port implementation:
+  - `src/sdk_port/card/CARDMount.c`:
+    - Implemented `DoUnmount` + `DoMount` through `mountStep==1/2` and the 5-system-block `__CARDRead` loop.
+    - Implemented `__CARDMountCallback` state machine to advance `mount_step` and call `__CARDVerify` before invoking the API callback.
+    - Sets `card->size_u16` from `id & 0xFC` so `__CARDVerify` ID-size check can pass.
+- Added unified PPC-vs-host suite:
+  - Runner: `tools/run_card_mount_pbt.sh`
+  - DOL: `tests/sdk/card/card_mount/dol/pbt/card_mount_pbt_001/`
+  - Host: `tests/sdk/card/card_mount/host/card_mount_pbt_001_scenario.c`
+- Test design facts (pbt_001):
+  - Uses `id=0x00000004` so `sectorSize = 8KiB` and system blocks are read into `workArea` offsets `0x0000/0x2000/0x4000/0x6000/0x8000`.
+  - Forces `status & 0x40 != 0` so the DoMount step0 unlock branch is skipped.
+  - Uses the host memcard backend EXI DMA hook so `__CARDRead` reads from the inserted raw image deterministically.
+- Validation:
+  - `bash tools/run_card_mount_pbt.sh` -> PASS (bit-exact expected == actual)
+- Mutation check:
+  - `bash tools/run_mutation_check.sh tools/mutations/card_mount_step0_unlock_branch_inverted.patch -- bash tools/run_card_mount_pbt.sh` -> PASS (mutant killed; suite failed as expected)
 
 ## 2026-02-14: __CARDEnableInterrupt unified DOL PBT suite
 
