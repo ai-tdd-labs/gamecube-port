@@ -92,6 +92,7 @@ Rules:
   - `src/sdk_port/card/CARDOpen.c` now requests a `gc_mem_ptr` view length that covers the selected `fileNo` directory entry startBlock read:
     `need_len = fileNo*PORT_CARD_DIR_SIZE + PORT_CARD_DIR_OFF_STARTBLOCK + 2`.
   - This avoids out-of-bounds reads under the `gc_mem_ptr` contract when `fileNo > 0`.
+  - Mutation patch sanity: `tools/mutations/card_open_iBlock_plus1.patch` was updated to mutate `iBlock` without renaming/deleting `CARDOpen.c` (so the failure reason is output mismatch, not a missing source file).
 
 ### CARDMount sync-path trace replay parity (2026-02-14)
 - `CARDMount` in `src/sdk_port/card/CARDMount.c` now uses the `__CARDSync` wait path after `CARDMountAsync`.
