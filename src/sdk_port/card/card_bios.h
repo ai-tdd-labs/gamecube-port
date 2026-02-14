@@ -8,6 +8,8 @@
 
 enum { GC_CARD_CHANS = 2 };
 
+typedef void (*CARDCallback)(int32_t chan, int32_t result);
+
 typedef struct GcCardControl {
     int32_t result;
     uint32_t thread_queue_inited;
@@ -37,6 +39,19 @@ typedef struct GcCardControl {
     uint32_t  cblock;
     uint32_t  latency;
     uint8_t   id[12];
+
+    // __CARDRead/__CARDReadSegment state (subset of real CARDControl).
+    // Keep appended for offset stability across existing suites.
+    uint8_t   cmd[9];
+    int32_t   cmdlen;
+    uint32_t  mode;
+    int32_t   retry;
+    int32_t   repeat;
+    uint32_t  addr;
+    uintptr_t buffer;
+    int32_t   xferred;
+    uintptr_t tx_callback;
+    uintptr_t xfer_callback;
 } GcCardControl;
 
 extern GcCardControl gc_card_block[GC_CARD_CHANS];
@@ -45,5 +60,6 @@ extern GcCardControl gc_card_block[GC_CARD_CHANS];
 extern uint32_t gc_card_dsp_init_calls;
 extern uint32_t gc_card_os_init_alarm_calls;
 extern uint32_t gc_card_os_register_reset_calls;
+extern uint32_t gc_card_tx_calls[GC_CARD_CHANS];
 
 void CARDInit(void);

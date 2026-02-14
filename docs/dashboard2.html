@@ -79,7 +79,7 @@
               <td><span class="tag warn">In Progress</span></td>
               <td>
                 Host memcard backend (raw image), CARDInit, CARDProbeEx (L0-L5), and selected CARDBios ops
-                (<span class="mono">__CARDReadStatus/__CARDClearStatus/__CARDEnableInterrupt/__CARDPutControlBlock/__CARDSync</span>)
+                (<span class="mono">__CARDReadStatus/__CARDClearStatus/__CARDEnableInterrupt/__CARDPutControlBlock/__CARDSync/__CARDRead/__CARDReadSegment</span>)
                 modeled + tested.
                 <div class="muted" style="margin-top:6px;">
                   Remaining: CARDMount/CARDCheck/CARDRead/Write/Format chains (hardware-heavy).
@@ -92,7 +92,8 @@
 	                tools/run_card_status_pbt.sh<br/>
 	                tools/run_card_enable_interrupt_pbt.sh<br/>
 	                tools/run_card_sync_pbt.sh<br/>
-	                tools/run_card_mount_step0_pbt.sh
+	                tools/run_card_mount_step0_pbt.sh<br/>
+	                tools/run_card_read_pbt.sh
 	              </td>
 	            </tr>
             <tr>

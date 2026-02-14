@@ -3251,3 +3251,19 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - DOL test implementation (built):
   - `tests/sdk/card/card_read/dol/pbt/card_read_pbt_001/*`
   - Build: `make -C tests/sdk/card/card_read/dol/pbt/card_read_pbt_001`
+  - Expected dump (Dolphin): `tools/dump_expected.sh tests/sdk/card/card_read/dol/pbt/card_read_pbt_001/card_read_pbt_001.dol tests/sdk/card/card_read/expected/card_read_pbt_001.bin 0x80300000 0x80 0.7`
+
+## 2026-02-14: __CARDRead/__CARDReadSegment unified DOL-vs-host compare (pbt_001)
+
+- Added unified suite:
+  - `tests/sdk/card/card_read/dol/pbt/card_read_pbt_001/*`
+  - `tests/sdk/card/card_read/host/card_read_pbt_001_scenario.c`
+  - `tools/run_card_read_pbt.sh`
+- Host port notes:
+  - `src/sdk_port/card/card_bios.c`: modeled `__CARDStart/__CARDReadSegment/__CARDRead/__CARDTxHandler` (subset) against the MP4 decomp flow.
+  - `__CARDTxHandler` result depends on `EXIProbe(chan)`; host scenarios must set `gc_exi_probeex_ret[chan] > 0` for "device present".
+  - Added instrumentation counters for deterministic assertions:
+    - `src/sdk_port/exi/EXI.c`: `gc_exi_deselect_calls[]`, `gc_exi_unlock_calls[]`
+    - `src/sdk_port/card/card_bios.c`: `gc_card_tx_calls[]`
+- Validation:
+  - `tools/run_card_read_pbt.sh` -> PASS (bit-exact expected == actual)

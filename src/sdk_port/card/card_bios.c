@@ -7,6 +7,7 @@
 enum {
     CARD_RESULT_READY = 0,
     CARD_RESULT_NOCARD = -3,
+    CARD_RESULT_BUSY = -1,
 };
 
 GcCardControl gc_card_block[GC_CARD_CHANS];
@@ -14,6 +15,10 @@ GcCardControl gc_card_block[GC_CARD_CHANS];
 uint32_t gc_card_dsp_init_calls;
 uint32_t gc_card_os_init_alarm_calls;
 uint32_t gc_card_os_register_reset_calls;
+uint32_t gc_card_tx_calls[GC_CARD_CHANS];
+
+// Forward decls (used by internal callbacks).
+s32 __CARDReadSegment(s32 chan, CARDCallback callback);
 
 static void DSPInit(void) { gc_card_dsp_init_calls++; }
 static void OSInitAlarm(void) { gc_card_os_init_alarm_calls++; }
@@ -178,4 +183,179 @@ s32 __CARDSync(s32 chan)
     }
     OSRestoreInterrupts(enabled);
     return result;
+}
+
+static void __CARDUnlockedHandler(s32 chan, OSContext *context)
+{
+    (void)context;
+    if (chan < 0 || chan >= GC_CARD_CHANS) {
+        return;
+    }
+    GcCardControl *card = &gc_card_block[chan];
+    if (card->unlock_callback) {
+        CARDCallback cb = (CARDCallback)(uintptr_t)card->unlock_callback;
+        card->unlock_callback = 0;
+        cb(chan, EXIProbe(chan) ? CARD_RESULT_READY : CARD_RESULT_NOCARD);
+    }
+}
+
+static s32 __CARDStart(s32 chan, CARDCallback txCallback, CARDCallback exiCallback)
+{
+    int enabled;
+    GcCardControl *card;
+    s32 result;
+
+    if (chan < 0 || chan >= GC_CARD_CHANS) {
+        return -128; // CARD_RESULT_FATAL_ERROR
+    }
+
+    enabled = OSDisableInterrupts();
+    card = &gc_card_block[chan];
+    if (!card->attached) {
+        result = CARD_RESULT_NOCARD;
+    } else {
+        if (txCallback) {
+            card->tx_callback = (uintptr_t)txCallback;
+        }
+        if (exiCallback) {
+            card->exi_callback = (uintptr_t)exiCallback;
+        }
+
+        // Decomp uses an "unlocked handler" callback while waiting for EXILock.
+        // In our host model EXILock is synchronous; we keep the same call shape
+        // because tests exercise the BUSY lock path.
+        card->unlock_callback = 0;
+        if (!EXILock(chan, 0, __CARDUnlockedHandler)) {
+            result = CARD_RESULT_BUSY;
+        } else {
+            card->unlock_callback = 0;
+            if (!EXISelect(chan, 0, 4)) {
+                EXIUnlock(chan);
+                result = CARD_RESULT_NOCARD;
+            } else {
+                // SetupTimeoutAlarm(card) not modeled yet.
+                result = CARD_RESULT_READY;
+            }
+        }
+    }
+    OSRestoreInterrupts(enabled);
+    return result;
+}
+
+void __CARDTxHandler(s32 chan, OSContext *context)
+{
+    (void)context;
+    if (chan < 0 || chan >= GC_CARD_CHANS) {
+        return;
+    }
+
+    GcCardControl *card = &gc_card_block[chan];
+    CARDCallback callback;
+    BOOL err;
+
+    err = !EXIDeselect(chan);
+    EXIUnlock(chan);
+
+    callback = (CARDCallback)(uintptr_t)card->tx_callback;
+    if (callback) {
+        card->tx_callback = 0;
+        gc_card_tx_calls[chan]++;
+        callback(chan, (!err && EXIProbe(chan)) ? CARD_RESULT_READY : CARD_RESULT_NOCARD);
+    }
+}
+
+static void BlockReadCallback(s32 chan, s32 result)
+{
+    GcCardControl *card;
+    CARDCallback callback;
+
+    card = &gc_card_block[chan];
+    if (result < 0) {
+        goto error;
+    }
+
+    card->xferred += 512;
+    card->addr += 512;
+    card->buffer += 512;
+    if (--card->repeat <= 0) {
+        goto error;
+    }
+
+    result = __CARDReadSegment(chan, BlockReadCallback);
+    if (result < 0) {
+        goto error;
+    }
+    return;
+
+error:
+    if (card->api_callback == 0) {
+        __CARDPutControlBlock(card, result);
+    }
+    callback = (CARDCallback)(uintptr_t)card->xfer_callback;
+    if (callback) {
+        card->xfer_callback = 0;
+        callback(chan, result);
+    }
+}
+
+#define AD1(x) ((u8)(((x) >> 17) & 0x7f))
+#define AD2(x) ((u8)(((x) >> 9) & 0xff))
+#define AD3(x) ((u8)(((x) >> 7) & 0x03))
+#define BA(x)  ((u8)((x)&0x7f))
+
+enum { CARDID_SIZE = 512 };
+
+s32 __CARDReadSegment(s32 chan, CARDCallback callback)
+{
+    GcCardControl *card;
+    s32 result;
+
+    if (chan < 0 || chan >= GC_CARD_CHANS) {
+        return -128; // CARD_RESULT_FATAL_ERROR
+    }
+
+    card = &gc_card_block[chan];
+    card->cmd[0] = 0x52;
+    card->cmd[1] = AD1(card->addr);
+    card->cmd[2] = AD2(card->addr);
+    card->cmd[3] = AD3(card->addr);
+    card->cmd[4] = BA(card->addr);
+    card->cmdlen = 5;
+    card->mode = 0;
+    card->retry = 0;
+
+    result = __CARDStart(chan, callback, 0);
+    if (result == CARD_RESULT_BUSY) {
+        return CARD_RESULT_READY;
+    } else if (result >= 0) {
+        if (!EXIImmEx(chan, card->cmd, card->cmdlen, EXI_WRITE) ||
+            !EXIImmEx(chan, (u8 *)(uintptr_t)card->work_area + CARDID_SIZE, (s32)card->latency, EXI_WRITE) ||
+            !EXIDma(chan, (void *)(uintptr_t)card->buffer, 512, card->mode, __CARDTxHandler)) {
+            card->tx_callback = 0;
+            EXIDeselect(chan);
+            EXIUnlock(chan);
+            result = CARD_RESULT_NOCARD;
+        } else {
+            result = CARD_RESULT_READY;
+        }
+    }
+    return result;
+}
+
+s32 __CARDRead(s32 chan, u32 addr, s32 length, void *dst, CARDCallback callback)
+{
+    GcCardControl *card;
+    if (chan < 0 || chan >= GC_CARD_CHANS) {
+        return -128; // CARD_RESULT_FATAL_ERROR
+    }
+    card = &gc_card_block[chan];
+    if (!card->attached) {
+        return CARD_RESULT_NOCARD;
+    }
+
+    card->xfer_callback = (uintptr_t)callback;
+    card->repeat = (int)(length / 512);
+    card->addr = addr;
+    card->buffer = (uintptr_t)dst;
+    return __CARDReadSegment(chan, BlockReadCallback);
 }

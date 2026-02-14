@@ -53,6 +53,10 @@ u32 gc_exi_last_imm_len[MAX_CHAN];
 u32 gc_exi_last_imm_type[MAX_CHAN];
 u32 gc_exi_last_imm_data[MAX_CHAN];
 
+// Instrumentation counters.
+u32 gc_exi_deselect_calls[MAX_CHAN];
+u32 gc_exi_unlock_calls[MAX_CHAN];
+
 // Optional DMA hook used to model device-backed transfers (e.g. CARD).
 // If NULL, EXIDma returns FALSE.
 //
@@ -131,6 +135,8 @@ void EXIInit(void) {
     gc_exi_last_imm_len[i] = 0;
     gc_exi_last_imm_type[i] = 0;
     gc_exi_last_imm_data[i] = 0;
+    gc_exi_deselect_calls[i] = 0;
+    gc_exi_unlock_calls[i] = 0;
   }
 }
 
@@ -162,6 +168,7 @@ BOOL EXIUnlock(s32 channel) {
   }
 
   exi->state &= ~EXI_STATE_LOCKED;
+  gc_exi_unlock_calls[channel]++;
   return TRUE;
 }
 
@@ -199,6 +206,7 @@ BOOL EXIDeselect(s32 channel) {
   }
 
   exi->state &= ~EXI_STATE_SELECTED;
+  gc_exi_deselect_calls[channel]++;
   return TRUE;
 }
 

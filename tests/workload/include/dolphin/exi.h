@@ -58,6 +58,10 @@ extern u32 gc_exi_last_imm_len[3];
 extern u32 gc_exi_last_imm_type[3];
 extern u32 gc_exi_last_imm_data[3];
 
+// Instrumentation counters (sdk_port EXI).
+extern u32 gc_exi_deselect_calls[3];
+extern u32 gc_exi_unlock_calls[3];
+
 // Optional DMA hook for device-backed transfers (e.g. CARD).
 // If NULL, EXIDma returns FALSE.
 extern int (*gc_exi_dma_hook)(s32 channel, u32 exi_addr, void* buffer, s32 length, u32 type);
