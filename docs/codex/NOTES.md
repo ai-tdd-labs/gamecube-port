@@ -77,6 +77,18 @@ Rules:
   - mutant patch: `tools/mutations/dvd_cancel_null_to_zero.patch`
   - runner: `tools/mutations/dvd_cancel_null_to_zero.sh`
 
+### CARDOpen/CARDClose trace replay parity (2026-02-14)
+- `CARDOpen` and `CARDClose` now have a completed deterministic trace replay chain from decomp to host:
+  - `src/sdk_port/card/CARDOpen.c` implements file lookup + open/close state transitions using `__CARDGetControlBlock` + `__CARDGetFileNo`.
+  - `src/sdk_port/card/card_bios.h` exports `CARDFileInfo` layout and API prototypes used by suites.
+  - `tests/sdk/card/card_open/dol/pbt/card_open_pbt_001/oracle_card_open.c` contains a strict oracle mirror of `CARDOpen`/`CARDClose` behavior under:
+    - found file, missing file, invalid start block, invalid channel, no card attached, close success, close without open.
+  - `tests/sdk/card/card_open/host/card_open_pbt_001_scenario.c` produces exactly matching host output and includes poisoned input fields (`0x55` pattern) to verify non-written outputs stay unchanged.
+  - `tools/run_card_open_pbt.sh` now regenerates expected, runs host scenario, and compares output.
+- Evidence:
+  - `bash tools/run_card_open_pbt.sh` => PASS (expected.bin == actual.bin)
+  - Mutation gate: `bash tools/run_mutation_check.sh tools/mutations/card_open_iBlock_plus1.patch -- tools/run_card_open_pbt.sh` => PASS (mutant fails)
+
 ### CARDMount sync-path trace replay parity (2026-02-14)
 - `CARDMount` in `src/sdk_port/card/CARDMount.c` now uses the `__CARDSync` wait path after `CARDMountAsync`.
 - DOL oracle for `CARDMount` was completed in `tests/sdk/card/card_mount/dol/pbt/card_mount_pbt_001/oracle_card_mount.c`:

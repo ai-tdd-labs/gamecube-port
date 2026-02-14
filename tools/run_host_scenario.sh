@@ -288,6 +288,7 @@ case "$subsystem" in
 	      "$repo_root/src/sdk_port/card/CARDMount.c"
 	      "$repo_root/src/sdk_port/card/card_dir.c"
 	      "$repo_root/src/sdk_port/card/card_fat.c"
+	      "$repo_root/src/sdk_port/card/CARDOpen.c"
 	      "$repo_root/src/sdk_port/card/card_unlock.c"
       "$repo_root/src/sdk_port/card/memcard_backend.c"
     )

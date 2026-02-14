@@ -60,6 +60,16 @@ typedef struct GcCardControl {
     uintptr_t current_fat_ptr;
 } GcCardControl;
 
+/* CARDFileInfo (host-side, mirrors decomp layout). */
+typedef struct {
+    int32_t chan;
+    int32_t fileNo;
+    int32_t offset;
+    int32_t length;
+    uint16_t iBlock;
+    uint16_t __padding;
+} CARDFileInfo;
+
 extern GcCardControl gc_card_block[GC_CARD_CHANS];
 
 /* Observable side-effect counters for CARDInit. */
@@ -74,3 +84,7 @@ void CARDInit(void);
 int32_t __CARDGetControlBlock(int32_t chan, GcCardControl** pcard);
 int32_t __CARDSync(int32_t chan);
 void __CARDSyncCallback(int32_t chan, int32_t result);
+
+/* CARD open / close API (decomp: external/mp4-decomp/src/dolphin/card/CARDOpen.c). */
+int32_t CARDOpen(int32_t chan, const char* fileName, CARDFileInfo* fileInfo);
+int32_t CARDClose(CARDFileInfo* fileInfo);
