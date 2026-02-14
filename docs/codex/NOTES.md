@@ -3215,3 +3215,35 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
   - `decomp_animal_crossing/src/static/dolphin/card/CARDBios.c`: `__CARDReadSegment` asserts `card->addr % CARD_SEG_SIZE == 0` and `card->addr < size*MiB/8` before issuing the EXI transfers.
 - Game callsites:
   - MP4: `decomp_mario_party_4/src/game/card.c` calls `CARDRead(...)` (SDK wrapper) for save/load flows.
+
+## 2026-02-14: __CARDRead/__CARDReadSegment deterministic test design (unified DOL PBT)
+
+- Ground truth source (MP4 Dolphin SDK decomp):
+  - `decomp_mario_party_4/src/dolphin/card/CARDRdwr.c` (`__CARDRead`, BlockReadCallback)
+  - `decomp_mario_party_4/src/dolphin/card/CARDBios.c` (`__CARDStart`, `__CARDReadSegment`, `__CARDTxHandler`)
+  - `decomp_mario_party_4/include/dolphin/CARDPriv.h` (CARDControl fields used)
+- Deterministic oracle strategy (DOL side):
+  - Do NOT use Dolphin's emulated memcard hardware.
+  - Stub EXI functions in the DOL oracle (same pattern as `tests/sdk/card/exi_dma_card_proto/...`):
+    - `EXILock/EXIUnlock/EXISelect/EXIDeselect/EXIImmEx/EXIDma/EXIProbe`
+    - Use an in-memory deterministic "card image" backing store.
+    - Decode EXI 5-byte command packets for op `0x52` and compute `addr` using `(cmd1<<17)|(cmd2<<9)|((cmd3&3)<<7)|(cmd4&0x7f)`.
+    - `EXIDma(EXI_READ)` copies from the backing store at decoded addr.
+  - Provide knobs for negative paths:
+    - `oracle_exi_lock_ok`, `oracle_exi_select_ok`, `oracle_exi_dma_ok`, `oracle_exi_probe_ok`.
+- Unified suite design (host side):
+  - Use existing host EXI model + memcard backend hook (same mechanism as `tests/sdk/card/exi_dma_card_proto/...`):
+    - `gc_exi_dma_hook = gc_memcard_exi_dma` and seed a deterministic raw image.
+- Proposed cases:
+  - L0 minimal: `__CARDReadSegment` single read
+    - Setup: `attached=TRUE`, `addr=0x21000`, `buffer` points to 512-byte dst, `latency=0` (so last imm is the 5-byte cmd).
+    - Expect: returns `CARD_RESULT_READY (0)`, dst matches backing store bytes `[0x21000..0x211FF]`.
+  - L1 accumulation: `__CARDRead` 2 segments chained via callback
+    - Setup: `attached=TRUE`, `addr=0x21000`, `length=1024`, dst size 1024, deterministic initial fill.
+    - Expect: final callback receives READY; dst[0..1023] matches backing store, `xferred` increments by `2*CARD_SEG_SIZE`.
+  - L5 edge: BUSY lock path does not start IO
+    - Setup: `oracle_exi_lock_ok=0` (or host EXILock forced fail), call `__CARDReadSegment`.
+    - Expect: returns READY (MP4: `BUSY` coerced to `READY`), but no DMA occurs and callback is not invoked.
+  - Error path: DMA failure returns NOCARD and cleans up
+    - Setup: `oracle_exi_dma_ok=0` (or host `gc_exi_dma_hook = 0`), call `__CARDReadSegment`.
+    - Expect: returns `CARD_RESULT_NOCARD (-3)` and does `EXIDeselect+EXIUnlock` (observable via host EXI state).
