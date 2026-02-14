@@ -10,7 +10,35 @@
  * CARDRand  (lines 39-43):  LCG PRNG
  */
 #include <stdint.h>
+#include <string.h>
 #include "card_unlock.h"
+
+typedef uint8_t u8;
+typedef int32_t s32;
+
+enum { CARD_RESULT_READY = 0, CARD_RESULT_NOCARD = -3 };
+
+// Deterministic host-test knobs for DoMount step0.
+//
+// This is NOT a full port of __CARDUnlock (which uses EXI transfers and DSP work).
+// It exists so CARDMount step0 can be validated deterministically while the full
+// unlock/DSP chain is implemented incrementally.
+uint32_t gc_card_unlock_ok[2];
+u8 gc_card_unlock_flash_id[2][12];
+uint32_t gc_card_unlock_calls[2];
+
+s32 __CARDUnlock(s32 chan, u8 flashID[12])
+{
+    if (chan < 0 || chan >= 2 || !flashID) {
+        return CARD_RESULT_NOCARD;
+    }
+    gc_card_unlock_calls[chan]++;
+    if (!gc_card_unlock_ok[chan]) {
+        return CARD_RESULT_NOCARD;
+    }
+    memcpy(flashID, gc_card_unlock_flash_id[chan], 12);
+    return CARD_RESULT_READY;
+}
 
 /* ── exnor_1st (CARDUnlock.c:63-75) ── */
 

@@ -251,6 +251,8 @@ esac
 case "$subsystem" in
   card)
     port_srcs+=(
+      "$repo_root/src/sdk_port/os/OSInterrupts.c"
+      "$repo_root/src/sdk_port/os/OSRtc.c"
       "$repo_root/src/sdk_port/exi/EXI.c"
       "$repo_root/src/sdk_port/card/card_bios.c"
       "$repo_root/src/sdk_port/card/CARDMount.c"

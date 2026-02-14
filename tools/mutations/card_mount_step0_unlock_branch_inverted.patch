@@ -1,0 +1,8 @@
+diff --git a/src/sdk_port/card/CARDMount.c b/src/sdk_port/card/CARDMount.c
+--- a/src/sdk_port/card/CARDMount.c
++++ b/src/sdk_port/card/CARDMount.c
+@@
+-    if ((status & 0x40u) == 0) {
++    if ((status & 0x40u) != 0) {
+       result = __CARDUnlock(chan, card->id);
+       if (result < 0) goto error;

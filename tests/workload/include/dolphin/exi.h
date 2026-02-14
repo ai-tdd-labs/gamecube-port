@@ -48,6 +48,16 @@ extern u32 gc_exi_getid_ok[3];    /* 0 => EXIGetID fails, 1 => succeeds */
 extern u32 gc_exi_id[3];          /* returned by EXIGetID when enabled */
 extern u32 gc_exi_attach_ok[3];   /* 0 => EXIAttach fails, 1 => succeeds */
 
+// Minimal CARD status register model (sdk_port EXI).
+extern u32 gc_exi_card_status[3];
+extern u32 gc_exi_card_status_reads[3];
+extern u32 gc_exi_card_status_clears[3];
+
+// Instrumentation: last immediate transfer (MSB-first packed).
+extern u32 gc_exi_last_imm_len[3];
+extern u32 gc_exi_last_imm_type[3];
+extern u32 gc_exi_last_imm_data[3];
+
 // Optional DMA hook for device-backed transfers (e.g. CARD).
 // If NULL, EXIDma returns FALSE.
 extern int (*gc_exi_dma_hook)(s32 channel, u32 exi_addr, void* buffer, s32 length, u32 type);

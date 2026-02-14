@@ -31,6 +31,12 @@ typedef struct GcCardControl {
     uint32_t  alarm_cancel_calls;
     int32_t   current_dir;
     int32_t   current_fat;
+
+    // DoMount step0 modeled fields (subset of real CARDControl).
+    uint32_t  cid;
+    uint32_t  cblock;
+    uint32_t  latency;
+    uint8_t   id[12];
 } GcCardControl;
 
 extern GcCardControl gc_card_block[GC_CARD_CHANS];
