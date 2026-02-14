@@ -1999,6 +1999,16 @@ Notes:
   - `bash tools/run_mutation_check.sh tools/mutations/card_mount_async_busy_check_inverted.patch -- bash tools/run_card_mount_preflight_pbt.sh`
   - Result: PASS (suite fails under mutant).
 
+## 2026-02-14: dump_expected.sh supports isolated Dolphin userdir + config overrides
+
+- Updated tooling:
+  - `tools/dump_expected.sh` now supports environment variables:
+    - `DOLPHIN_USERDIR`: passed to `tools/ram_dump.py --dolphin-userdir` and auto-writes a minimal `Config/Dolphin.ini` with `GDBPort=9090` if missing.
+    - `DOLPHIN_CONFIG`: semicolon-separated Dolphin `-C` overrides mapped to repeated `--dolphin-config` args.
+- Smoke validation:
+  - `DOLPHIN_USERDIR=tests/build/dolphin_userdir_smoke_* DOLPHIN_CONFIG="Core.MMU=True" tools/dump_expected.sh <dol> <bin> ...`
+  - Result: PASS (expected dump produced under isolated userdir).
+
 ## 2026-02-14: Host memcard backend (raw file image) for CARD port
 
 - Added host-only memcard backend used by sdk_port to simulate a memory card image:

@@ -32,12 +32,53 @@ mkdir -p "$(dirname "$OUT_BIN")"
 # might still be bound to the GDB stub port (e.g. after a crash).
 pkill -f "Dolphin -b -d -e" >/dev/null 2>&1 || true
 
+# Optional: isolate Dolphin user/config for determinism (memcard/SRAM/etc).
+#
+# Environment variables:
+# - DOLPHIN_USERDIR: passed to ram_dump.py --dolphin-userdir
+# - DOLPHIN_CONFIG: semicolon-separated list of Dolphin -C overrides, e.g.
+#     DOLPHIN_CONFIG="Core.MMU=True;Core.MemcardAPath=/tmp/CardA.raw"
+userdir_arg=()
+if [[ -n "${DOLPHIN_USERDIR:-}" ]]; then
+  userdir_arg=(--dolphin-userdir "$DOLPHIN_USERDIR")
+
+  # Ensure the stub listens on the expected port under an isolated userdir.
+  # Dolphin reads this from the userdir's Config/Dolphin.ini.
+  cfg_dir="$DOLPHIN_USERDIR/Config"
+  cfg_ini="$cfg_dir/Dolphin.ini"
+  mkdir -p "$cfg_dir"
+  if [[ ! -f "$cfg_ini" ]]; then
+    cat >"$cfg_ini" <<EOF
+[General]
+GDBPort = 9090
+[Interface]
+ShowDebuggingUI = True
+DebugModeEnabled = True
+ConfirmStop = False
+EOF
+  fi
+fi
+
+config_args=()
+if [[ -n "${DOLPHIN_CONFIG:-}" ]]; then
+  # Split on ';' into multiple --dolphin-config args.
+  IFS=';' read -r -a __cfgs <<<"$DOLPHIN_CONFIG"
+  for c in "${__cfgs[@]}"; do
+    c="${c#"${c%%[![:space:]]*}"}" # ltrim
+    c="${c%"${c##*[![:space:]]}"}" # rtrim
+    [[ -n "$c" ]] || continue
+    config_args+=(--dolphin-config "$c")
+  done
+fi
+
 # Occasional transient failures can happen while Dolphin is starting up.
 # Retry a few times to keep the workflow deterministic and low-friction.
 for attempt in 1 2 3; do
   if PYTHONUNBUFFERED=1 python3 -u tools/ram_dump.py \
       --exec "$DOL_PATH" \
       --enable-mmu \
+      "${userdir_arg[@]+${userdir_arg[@]}}" \
+      "${config_args[@]+${config_args[@]}}" \
       --addr "$ADDR" \
       --size "$SIZE" \
       --out "$OUT_BIN" \
