@@ -114,6 +114,20 @@ Rules:
   - `tools/run_card_mount_pbt.sh` => PASS (expected/actual match with `CMT0` + `CMT1` blocks).
   - Mutation file added: `tools/mutations/card_mount_sync_callback_reordered.patch`.
 
+### CARDSetStatus trace replay parity (2026-02-14)
+- `CARDSetStatus` is now implemented in `src/sdk_port/card/CARDSetStatus.c` with parity to decomp contract for async/sync flows.
+- New deterministic parity chain is added:
+  - DOL oracle: `tests/sdk/card/card_set_status/dol/pbt/card_set_status_pbt_001/oracle_card_set_status.c`
+  - DOL driver: `tests/sdk/card/card_set_status/dol/pbt/card_set_status_pbt_001/card_set_status_pbt_001.c`
+  - Host runner: `tests/sdk/card/card_set_status/host/card_set_status_pbt_001_scenario.c`
+  - Runner: `tools/run_card_set_status_pbt.sh`
+  - Mutation check: `tools/mutations/card_set_status_skip_icon_addr_guard.patch`
+- Validation:
+  - `./tools/run_card_set_status_pbt.sh` => PASS
+  - `./tools/run_mutation_check.sh tools/mutations/card_set_status_skip_icon_addr_guard.patch -- ./tools/run_card_set_status_pbt.sh` => PASS (mutant fails)
+- Wiring change: `tools/run_host_scenario.sh` now links `src/sdk_port/card/CARDSetStatus.c` in the card subsystem.
+
+
 ### CARDGetSerialNo trace replay parity (2026-02-14)
 - `CARDGetSerialNo` is now implemented in `src/sdk_port/card/CARDGetSerialNo.c` and wired into card test harnessing:
   - `src/sdk_port/card/card_bios.h` exports `CARDGetSerialNo` prototype.
