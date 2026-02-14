@@ -3464,3 +3464,14 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
   - `tests/workload/mp4/mp4_mainloop_hundred_iter_tick_001_scenario.c` (marker `MP4Y`)
 - Evidence:
   - `./tools/run_mp4_workload_ladder.sh` -> `DONE` (includes the new `mp4_mainloop_hundred_iter_tick_001` and `mp4_process_*` steps).
+
+## 2026-02-14: MP4 workload slices upgraded (wipe + pfDrawFonts, host-safe)
+
+- WipeExecAlways slice:
+  - `tests/workload/mp4/slices/wipeexecalways_decomp_blank.c` now models the decomp state machine for `WIPE_MODE_IN`/`WIPE_MODE_OUT` (fade dispatch + cleanup), while keeping GX draw calls as no-ops for host workloads.
+  - Host-only determinism: provides weak `HuSysVWaitGet()` returning `1` (so `wipe->time` advances deterministically per call).
+- pfDrawFonts slice:
+  - `tests/workload/mp4/slices/pfdrawfonts_gx_setup_only.c` expanded to mirror MP4 decomp’s GX state setup more closely (vtx desc/attr fmt, `GXSetArray`, tev/chan setup, zcomp/alpha/blend).
+  - Enum values are copied from `external/mp4-decomp/include/dolphin/gx/GXEnum.h` (avoid guessing).
+- Evidence:
+  - `./tools/run_mp4_workload_ladder.sh --from 10` -> `DONE` after the slice upgrades.

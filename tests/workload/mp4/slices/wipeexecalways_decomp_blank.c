@@ -11,6 +11,10 @@
 #include "dolphin/gx.h"
 #include "dolphin/types.h"
 
+#ifdef GC_HOST_WORKLOAD
+#include <stdint.h>
+#endif
+
 #define WIPE_TYPE_PREV -1
 #define WIPE_TYPE_NORMAL 0
 #define WIPE_TYPE_CROSS 1
@@ -46,6 +50,49 @@ int wipeFadeInF;
 static void WipeColorFill(GXColor color) { (void)color; }
 static void WipeFrameStill(GXColor color) { (void)color; }
 
+// Host-only: keep time progression deterministic without needing the full
+// HuSysVWaitGet implementation linked into the workload.
+#ifdef GC_HOST_WORKLOAD
+__attribute__((weak)) s16 HuSysVWaitGet(s16 old) { (void)old; return 1; }
+__attribute__((weak)) void HuMemDirectFree(void *ptr) { (void)ptr; }
+#endif
+
+typedef s32 (*fadeFunc)(void);
+
+static s32 WipeNormalFade(void);
+static s32 WipeCrossFade(void);
+static s32 WipeDummyFade(void);
+
+static fadeFunc fadeInFunc[3] = { WipeNormalFade, WipeCrossFade, WipeDummyFade };
+static fadeFunc fadeOutFunc[3] = { WipeNormalFade, WipeCrossFade, WipeDummyFade };
+
+static s32 WipeDummyFade(void) { return 0; }
+
+static s32 WipeNormalFade(void)
+{
+    u8 alpha;
+    WipeState *wipe = &wipeData;
+    if (wipe->duration == 0) return 0;
+
+    alpha = (u8)((wipe->time / wipe->duration) * 255.0f);
+    switch (wipe->mode) {
+    case WIPE_MODE_IN:
+        wipe->color.a = (u8)(255u - alpha);
+        break;
+    case WIPE_MODE_OUT:
+        wipe->color.a = alpha;
+        break;
+    default:
+        return 0;
+    }
+    WipeColorFill(wipe->color);
+    return (wipe->time >= wipe->duration) ? 0 : 1;
+}
+
+// Host workloads: do not model crossfade texture copy yet. Keep the control flow
+// deterministic and return "done" immediately (so WipeExecAlways cleanup paths run).
+static s32 WipeCrossFade(void) { return 0; }
+
 void WipeInit(GXRenderModeObj *rmode)
 {
     WipeState *wipe = &wipeData;
@@ -71,6 +118,7 @@ void WipeInit(GXRenderModeObj *rmode)
 
 void WipeExecAlways(void)
 {
+    s32 i;
     WipeState *wipe = &wipeData;
     switch (wipe->mode) {
     case WIPE_MODE_BLANK:
@@ -83,12 +131,42 @@ void WipeExecAlways(void)
         }
         break;
     case WIPE_MODE_IN:
+        if (wipe->type < WIPE_TYPE_DUMMY) {
+            wipe->stat = (u8)fadeInFunc[wipe->type]();
+        } else {
+            wipe->stat = 0;
+        }
+        wipe->time += (float)HuSysVWaitGet(0);
+        if (wipe->stat) return;
+
+        if (wipe->copy_data) {
+            if (!wipe->keep_copy) {
+                HuMemDirectFree(wipe->copy_data);
+            }
+            wipe->copy_data = 0;
+        }
+        for (i = 0; i < 8; i++) {
+            if (wipe->unk10[i]) {
+                HuMemDirectFree(wipe->unk10[i]);
+                wipe->unk10[i] = 0;
+            }
+        }
+        wipe->unk0C = 0;
+        wipe->time = 0;
+        wipe->mode = 0;
+        break;
     case WIPE_MODE_OUT:
-        // Not reached in our current host workloads; keep behavior minimal.
-        // Full parity requires implementing WipeNormalFade/WipeCrossFade helpers + GX.
+        if (wipe->type < WIPE_TYPE_DUMMY) {
+            wipe->stat = (u8)fadeOutFunc[wipe->type]();
+        } else {
+            wipe->stat = 0;
+        }
+        wipe->time += (float)HuSysVWaitGet(0);
+        if (wipe->stat) return;
+        wipe->time = 0;
+        wipe->mode = WIPE_MODE_BLANK;
         break;
     default:
         break;
     }
 }
-
