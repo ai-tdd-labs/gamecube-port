@@ -3444,3 +3444,10 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
   - `tools/run_host_scenario.sh`: MP4 `mp4_mainloop_*` scenarios link `pfdrawfonts_gx_setup_only.c` instead of `pfdrawfonts_stub.c`.
 - Evidence:
   - `./tools/run_mp4_workload_ladder.sh` -> `DONE` (steps 0..13 reach markers through `mp4_mainloop_two_iter_tick_001`).
+
+## 2026-02-14: MP4 workload mainloop extended to 10 ticks (reachability)
+
+- Added scenario:
+  - `tests/workload/mp4/mp4_mainloop_ten_iter_tick_001_scenario.c`
+- Evidence:
+  - `./tools/run_mp4_workload_ladder.sh --from 14 --to 14` -> `OK` marker `MP4X` (`mp4_mainloop_ten_iter_tick_001.bin`).

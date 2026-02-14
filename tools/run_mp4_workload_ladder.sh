@@ -85,6 +85,7 @@ scenarios=(
   "$repo_root/tests/workload/mp4/mp4_mainloop_one_iter_tick_001_scenario.c"
   "$repo_root/tests/workload/mp4/mp4_mainloop_two_iter_001_scenario.c"
   "$repo_root/tests/workload/mp4/mp4_mainloop_two_iter_tick_001_scenario.c"
+  "$repo_root/tests/workload/mp4/mp4_mainloop_ten_iter_tick_001_scenario.c"
 )
 
 idx=0

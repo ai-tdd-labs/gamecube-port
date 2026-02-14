@@ -121,7 +121,7 @@ case "$subsystem" in
 
     # Only link heavy-module stubs for scenarios that explicitly need them.
     case "$scenario_base" in
-      mp4_init_to_viwait_001_scenario|mp4_mainloop_one_iter_001_scenario|mp4_mainloop_one_iter_tick_001_scenario|mp4_mainloop_two_iter_001_scenario|mp4_mainloop_two_iter_tick_001_scenario)
+      mp4_init_to_viwait_001_scenario|mp4_mainloop_one_iter_001_scenario|mp4_mainloop_one_iter_tick_001_scenario|mp4_mainloop_two_iter_001_scenario|mp4_mainloop_two_iter_tick_001_scenario|mp4_mainloop_ten_iter_tick_001_scenario)
         extra_srcs+=("$repo_root/tests/workload/mp4/slices/post_sprinit_stubs.c")
         ;;
     esac
@@ -135,13 +135,13 @@ case "$subsystem" in
     # so we can later swap in a decomp slice without editing the scenario. For now,
     # we link a minimal decomp slice that does not emulate GX drawing.
     case "$scenario_base" in
-      mp4_mainloop_one_iter_001_scenario|mp4_mainloop_one_iter_tick_001_scenario|mp4_mainloop_two_iter_001_scenario|mp4_mainloop_two_iter_tick_001_scenario)
+      mp4_mainloop_one_iter_001_scenario|mp4_mainloop_one_iter_tick_001_scenario|mp4_mainloop_two_iter_001_scenario|mp4_mainloop_two_iter_tick_001_scenario|mp4_mainloop_ten_iter_tick_001_scenario)
         extra_srcs+=("$repo_root/tests/workload/mp4/slices/wipeexecalways_decomp_blank.c")
         ;;
     esac
     # pfDrawFonts() is game-specific and GX-heavy; keep it as a host-safe slice.
     case "$scenario_base" in
-      mp4_mainloop_one_iter_001_scenario|mp4_mainloop_one_iter_tick_001_scenario|mp4_mainloop_two_iter_001_scenario|mp4_mainloop_two_iter_tick_001_scenario)
+      mp4_mainloop_one_iter_001_scenario|mp4_mainloop_one_iter_tick_001_scenario|mp4_mainloop_two_iter_001_scenario|mp4_mainloop_two_iter_tick_001_scenario|mp4_mainloop_ten_iter_tick_001_scenario)
         extra_srcs+=("$repo_root/tests/workload/mp4/slices/pfdrawfonts_gx_setup_only.c")
         ;;
     esac
