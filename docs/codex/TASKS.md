@@ -1,7 +1,13 @@
 # Tasks
 
-This file is the session-to-session TODO list. Keep it short, concrete, and
-evidence-based. Mark items DONE with a commit hash.
+This file is legacy.
+
+Authoritative task tracking is in **bd**:
+- `bd ready` for unblocked work
+- `bd show <id>` for details
+- evidence must be recorded in `docs/codex/NOTES.md` before closing tasks
+
+When this file and bd disagree, **bd wins**.
 
 ## Now (priority order)
 

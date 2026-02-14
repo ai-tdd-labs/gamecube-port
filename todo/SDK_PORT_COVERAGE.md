@@ -1,6 +1,6 @@
 # SDK Port Coverage — Mario Party 4
 
-Last updated: 2026-02-13
+Last updated: 2026-02-14
 
 ## Summary
 
@@ -36,6 +36,10 @@ Current migration status:
 - AI `AISetStreamVolLeft` now includes unified L0-L5 DOL-PBT coverage (`tools/run_ai_set_stream_vol_left_pbt.sh`, mutation-checked with `tools/mutations/ai_set_stream_vol_left_wrong_shift.patch`).
 - AI `AISetStreamVolRight` now includes unified L0-L5 DOL-PBT coverage (`tools/run_ai_set_stream_vol_right_pbt.sh`, mutation-checked with `tools/mutations/ai_set_stream_vol_right_no_shift.patch`).
 - AI `AIStartDMA` now includes unified L0-L5 DOL-PBT coverage (`tools/run_ai_start_dma_pbt.sh`, mutation-checked with `tools/mutations/ai_start_dma_wrong_bit.patch`).
+- MP4 host workload reachability ladder now includes:
+  - `mp4_mainloop_thousand_iter_tick_001` (1000 VI ticks)
+  - wipe MTX scenarios including crossfade (`mp4_wipe_crossfade_mtx_001`)
+  - a pfDrawFonts opt-in minimal draw step (`mp4_mainloop_one_iter_tick_pf_draw_001`, guarded by `GC_HOST_WORKLOAD_PF_DRAW=1`)
 
 ## Remaining test workload snapshot
 

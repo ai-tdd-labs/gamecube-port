@@ -3546,3 +3546,9 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Evidence:
   - `./tools/run_mp4_workload_ladder.sh --from 9 --to 13` -> `DONE` and shows `mp4_mainloop_one_iter_tick_pf_draw_001` marker `4d504644 deadbeef`.
   - `./tools/run_mp4_workload_ladder.sh` -> `DONE` including the pfDrawFonts draw step.
+
+## 2026-02-14: Todo docs updated for MP4 workload ladder progress
+
+- Updated:
+  - `todo/REMAINING_TEST_STRATEGY.md` (added ladder reachability + knobs section)
+  - `todo/SDK_PORT_COVERAGE.md` (added note about 1000-tick + wipe crossfade + pfDrawFonts draw step)

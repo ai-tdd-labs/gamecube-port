@@ -3,6 +3,7 @@ import os
 import re
 import sys
 from dataclasses import dataclass
+from fnmatch import fnmatch
 from pathlib import Path
 from typing import Optional
 
@@ -58,6 +59,90 @@ def parse_workload_extra_srcs(run_host_scenario_sh: Path) -> list[Path]:
             m = re.search(r'"\$repo_root/([^"]+)"', line)
             if m:
                 out.append(Path(m.group(1)))
+    return out
+
+
+@dataclass(frozen=True)
+class WorkloadCaseAdd:
+    patterns: tuple[str, ...]
+    relpaths: tuple[Path, ...]
+
+
+def parse_workload_case_additions(run_host_scenario_sh: Path) -> list[WorkloadCaseAdd]:
+    """
+    Parse scenario-dependent extra_srcs additions from tools/run_host_scenario.sh.
+
+    We don't try to fully interpret bash; we just extract the common pattern used in this repo:
+      case "$scenario_base" in
+        a|b|c)
+          extra_srcs+=("$repo_root/path/to/file.c")
+          ...
+          ;;
+      esac
+    """
+    txt = run_host_scenario_sh.read_text(encoding="utf-8", errors="replace").splitlines()
+
+    in_workload = False
+    in_case = False
+    in_scenario_case = False
+
+    cur_patterns: list[str] = []
+    cur_paths: list[Path] = []
+    out: list[WorkloadCaseAdd] = []
+
+    def flush() -> None:
+        nonlocal cur_patterns, cur_paths
+        if cur_patterns and cur_paths:
+            out.append(WorkloadCaseAdd(patterns=tuple(cur_patterns), relpaths=tuple(cur_paths)))
+        cur_patterns = []
+        cur_paths = []
+
+    for line in txt:
+        if re.match(r"\s*workload\)\s*$", line):
+            in_workload = True
+            continue
+        if not in_workload:
+            continue
+
+        if re.match(r"^\s*case\s+\"\$scenario_base\"\s+in\s*$", line):
+            in_case = True
+            continue
+        if in_case and re.match(r"^\s*esac\s*$", line):
+            flush()
+            in_case = False
+            in_scenario_case = False
+            continue
+
+        if not in_case:
+            continue
+
+        # Pattern line: "mp4_a|mp4_b|mp4_process_*)"
+        m = re.match(r"^\s*([a-zA-Z0-9_.*|]+)\)\s*$", line)
+        if m:
+            flush()
+            cur_patterns = [p.strip() for p in m.group(1).split("|") if p.strip()]
+            in_scenario_case = True
+            continue
+
+        if in_scenario_case:
+            # Collect extra_srcs additions.
+            m2 = re.search(r'extra_srcs\+\=\(\s*"\$repo_root/([^"]+)"\s*\)', line)
+            if m2:
+                cur_paths.append(Path(m2.group(1)))
+                continue
+
+            # Also handle the style: extra_srcs+=( "<line>" "<line>" )
+            m3 = re.search(r'"\$repo_root/([^"]+)"', line)
+            if "extra_srcs+=" in line and m3:
+                cur_paths.append(Path(m3.group(1)))
+                continue
+
+            if re.match(r"^\s*;;\s*$", line):
+                flush()
+                in_scenario_case = False
+                continue
+
+    flush()
     return out
 
 
@@ -154,17 +239,47 @@ def main() -> int:
     run_host = rr / "tools" / "run_host_scenario.sh"
     extra_rel = parse_workload_extra_srcs(run_host)
     extra_srcs = [rr / p for p in extra_rel]
+    case_adds = parse_workload_case_additions(run_host)
 
+    # Keep the scenario set aligned with tools/run_mp4_workload_ladder.sh (reachability ladder).
     scenarios = {
-        "boot_init_to_viwait": rr / "tests" / "workload" / "mp4" / "mp4_init_to_viwait_001_scenario.c",
+        "husysinit": rr / "tests" / "workload" / "mp4" / "mp4_husysinit_001_scenario.c",
+        "huprcinit": rr / "tests" / "workload" / "mp4" / "mp4_huprcinit_001_scenario.c",
+        "hupadinit": rr / "tests" / "workload" / "mp4" / "mp4_hupadinit_001_scenario.c",
+        "gwinit": rr / "tests" / "workload" / "mp4" / "mp4_gwinit_001_scenario.c",
+        "pfinit": rr / "tests" / "workload" / "mp4" / "mp4_pfinit_001_scenario.c",
+        "husprinit": rr / "tests" / "workload" / "mp4" / "mp4_husprinit_001_scenario.c",
+        "hu3dinit": rr / "tests" / "workload" / "mp4" / "mp4_hu3dinit_001_scenario.c",
+        "hudatainit": rr / "tests" / "workload" / "mp4" / "mp4_hudatainit_001_scenario.c",
+        "huperfinit": rr / "tests" / "workload" / "mp4" / "mp4_huperfinit_001_scenario.c",
+        "init_to_viwait": rr / "tests" / "workload" / "mp4" / "mp4_init_to_viwait_001_scenario.c",
+        "mainloop_one_iter": rr / "tests" / "workload" / "mp4" / "mp4_mainloop_one_iter_001_scenario.c",
         "mainloop_one_iter_tick": rr / "tests" / "workload" / "mp4" / "mp4_mainloop_one_iter_tick_001_scenario.c",
+        "mainloop_one_iter_tick_pf_draw": rr / "tests" / "workload" / "mp4" / "mp4_mainloop_one_iter_tick_pf_draw_001_scenario.c",
+        "mainloop_two_iter": rr / "tests" / "workload" / "mp4" / "mp4_mainloop_two_iter_001_scenario.c",
         "mainloop_two_iter_tick": rr / "tests" / "workload" / "mp4" / "mp4_mainloop_two_iter_tick_001_scenario.c",
+        "mainloop_ten_iter_tick": rr / "tests" / "workload" / "mp4" / "mp4_mainloop_ten_iter_tick_001_scenario.c",
+        "mainloop_hundred_iter_tick": rr / "tests" / "workload" / "mp4" / "mp4_mainloop_hundred_iter_tick_001_scenario.c",
+        "mainloop_thousand_iter_tick": rr / "tests" / "workload" / "mp4" / "mp4_mainloop_thousand_iter_tick_001_scenario.c",
+        "wipe_frame_still_mtx": rr / "tests" / "workload" / "mp4" / "mp4_wipe_frame_still_mtx_001_scenario.c",
+        "wipe_crossfade_mtx": rr / "tests" / "workload" / "mp4" / "mp4_wipe_crossfade_mtx_001_scenario.c",
+        "process_scheduler": rr / "tests" / "workload" / "mp4" / "mp4_process_scheduler_001_scenario.c",
+        "process_sleep": rr / "tests" / "workload" / "mp4" / "mp4_process_sleep_001_scenario.c",
+        "process_vsleep": rr / "tests" / "workload" / "mp4" / "mp4_process_vsleep_001_scenario.c",
     }
+
+    def scenario_extra_srcs(scenario_path: Path) -> list[Path]:
+        scen_base = scenario_path.stem
+        out: list[Path] = []
+        for add in case_adds:
+            if any(fnmatch(scen_base, pat) for pat in add.patterns):
+                out.extend(rr / p for p in add.relpaths)
+        return out
 
     # Collect calls per scenario based on the exact source set compiled by the runner.
     per_scenario: dict[str, set[str]] = {}
     for label, scen in scenarios.items():
-        files = [scen] + extra_srcs
+        files = [scen] + extra_srcs + scenario_extra_srcs(scen)
         calls: set[str] = set()
         for f in files:
             if f.suffix not in (".c", ".S"):

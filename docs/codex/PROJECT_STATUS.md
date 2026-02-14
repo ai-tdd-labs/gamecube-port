@@ -1,6 +1,6 @@
 # Gamecube SDK Port — Project Status
 
-Last updated: 2026-02-11
+Last updated: 2026-02-14
 
 ## Overview
 
@@ -10,6 +10,22 @@ big-endian to a host-side C implementation with `gc_mem` big-endian emulation.
 **Decomp source:** `external/mp4-decomp/src/dolphin/`
 **Port source:** `src/sdk_port/`
 **Tests:** `tests/sdk/*/property/`, `tests/pbt/`
+
+## Ground Truth / Where To Look
+
+- Evidence log (facts only): `docs/codex/NOTES.md`
+- Dashboard view: `docs/dashboard2.html`
+- MP4 SDK coverage + remaining strategy: `todo/SDK_PORT_COVERAGE.md`, `todo/REMAINING_TEST_STRATEGY.md`
+- MP4 host workload ladder + per-scenario SDK evidence scan: `docs/codex/MP4_WORKLOAD_SDK_COVERAGE.md`
+- Issue tracking / what to do next: `bd ready` (bd is the authoritative TODO list)
+
+## MP4 Workload Ladder (Reachability)
+
+The MP4 host workload ladder is a reachability/regression tool (not a correctness oracle).
+Current notable steps include:
+- 1000 VI ticks mainloop checkpoint: `mp4_mainloop_thousand_iter_tick_001` (marker `MP4Z`)
+- Wipe scenarios under MTX: `mp4_wipe_frame_still_mtx_001` and `mp4_wipe_crossfade_mtx_001`
+- pfDrawFonts opt-in minimal draw step: `mp4_mainloop_one_iter_tick_pf_draw_001` (marker `MPFD`)
 
 ---
 

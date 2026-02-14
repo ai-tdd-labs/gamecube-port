@@ -1,12 +1,23 @@
 # Remaining Functions — Test Strategy
 
-Last updated: 2026-02-13
+Last updated: 2026-02-14
 
 ## Context
 
 The game needs **~305 SDK functions**. Currently **~213 are ported**.
 The remaining **~85 functions** are all hardware-coupled — every pure-computation
 function is already covered by PBT (18 suites, ~250M+ checks).
+
+MP4 workload reachability ladder (host, regression only):
+- `tools/run_mp4_workload_ladder.sh` currently reaches:
+  - `mp4_mainloop_thousand_iter_tick_001` (1000 VI ticks)
+  - `mp4_process_*` scheduler scenarios
+  - MTX variants + wipe scenarios (`mp4_wipe_frame_still_mtx_001`, `mp4_wipe_crossfade_mtx_001`)
+  - pfDrawFonts opt-in minimal draw step (`mp4_mainloop_one_iter_tick_pf_draw_001`)
+- Knobs:
+  - `GC_HOST_WORKLOAD_MTX=1` links MTX into selected workload steps.
+  - `GC_HOST_WORKLOAD_WIPE_CROSSFADE=1` enables WipeCrossFade texture-copy subset (scenario-specific).
+  - `GC_HOST_WORKLOAD_PF_DRAW=1` enables a tiny opt-in quad draw inside the pfDrawFonts host slice (scenario-specific).
 
 Method migration queue (current):
 - `VISetBlack` has been migrated to unified L0-L5 DOL-PBT (`tools/run_vi_set_black_pbt.sh`).
