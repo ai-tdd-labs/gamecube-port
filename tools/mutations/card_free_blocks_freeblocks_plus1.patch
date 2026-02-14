@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/card/CARDFreeBlocks.c b/src/sdk_port/card/CARDFreeBlocks.c
+--- a/src/sdk_port/card/CARDFreeBlocks.c
++++ b/src/sdk_port/card/CARDFreeBlocks.c
+@@ -40,7 +40,7 @@
+ 
+     if (byteNotUsed) {
+         u16 freeBlocks = load_u16be((u32)card->current_fat_ptr + (u32)PORT_CARD_FAT_FREEBLOCKS * 2u);
+-        *byteNotUsed = (s32)(freeBlocks * card->sector_size);
++        *byteNotUsed = (s32)((freeBlocks + 1u) * card->sector_size);
+     }
+ 
+     if (filesNotUsed) {

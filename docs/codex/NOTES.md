@@ -3618,3 +3618,32 @@ Evidence:
 - `./tools/run_card_mount_preflight_pbt.sh` -> PASS
 - `./tools/run_card_mount_pbt.sh` -> PASS
 - `./tools/run_card_init_pbt.sh` -> PASS
+
+## 2026-02-14: CARDFreeBlocks and CARDGetSectorSize unified DOL-host PBT
+
+- Decomp contract source:
+  - `decomp_mario_party_4/src/dolphin/card/CARDBios.c`:
+    - `CARDFreeBlocks`:
+      - Uses `__CARDGetControlBlock`.
+      - Reads `fat = __CARDGetFatBlock(card)` and `dir = __CARDGetDirBlock(card)`.
+      - Returns `CARD_RESULT_BROKEN` when either `fat` or `dir` is null.
+      - When `byteNotUsed != NULL`, stores `card->sectorSize * fat[CARD_FAT_FREEBLOCKS]`.
+      - When `filesNotUsed != NULL`, counts free dir entries by scanning `dir[fileNo].fileName[0] == 0xFF` over `CARD_MAX_FILE`.
+      - Returns `__CARDPutControlBlock(card, CARD_RESULT_READY)`.
+    - `CARDGetSectorSize`:
+      - Uses `__CARDGetControlBlock`.
+      - Stores `card->sectorSize` in `*size`.
+      - Returns `__CARDPutControlBlock(card, 0)`.
+- Implementation added:
+  - `src/sdk_port/card/card_bios.h`: added API declarations for `CARDFreeBlocks` and `CARDGetSectorSize`.
+  - `src/sdk_port/card/CARDFreeBlocks.c`: implemented in-memory `CARDOpen`-state-compatible behavior using guest RAM reads (`gc_mem_ptr`) and same null/BROKEN semantics.
+  - `src/sdk_port/card/CARDGetSectorSize.c`: implemented simple `*size = card->sector_size` assignment through control block path.
+  - `tools/run_host_scenario.sh`: includes new CARD source files for scenario runs.
+- Added unified trace-replay suite:
+  - Runner: `tools/run_card_free_blocks_pbt.sh`
+  - DOL: `tests/sdk/card/card_free_blocks/dol/pbt/card_free_blocks_pbt_001/oracle_card_free_blocks.c`
+  - Host scenario: `tests/sdk/card/card_free_blocks/host/card_free_blocks_pbt_001_scenario.c`
+  - Mutation patch: `tools/mutations/card_free_blocks_freeblocks_plus1.patch` (mutates byte-used math by +1 free block).
+- Validation:
+  - `bash tools/run_card_free_blocks_pbt.sh` -> PASS (expected.bin == actual.bin)
+  - `bash tools/run_mutation_check.sh tools/mutations/card_free_blocks_freeblocks_plus1.patch -- bash tools/run_card_free_blocks_pbt.sh` -> PASS (suite fails under mutant)
