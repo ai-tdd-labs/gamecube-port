@@ -7,7 +7,7 @@ diff --git a/src/sdk_port/card/CARDGetSerialNo.c b/src/sdk_port/card/CARDGetSeri
  
          for (b = 0; b < 8; b++) {
 -            piece = (piece << 8) | (u64)serial[b];
-+            piece = (piece << 8) | (u64)(serial[b] ^ 0x01u);
++            piece = (piece << 7) | (u64)serial[b];
          }
          code ^= piece;
      }
