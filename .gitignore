@@ -113,6 +113,14 @@ tests/workload/mp4/tests/
 # Trace harvesting outputs (breakpoint-driven snapshot collection).
 /tests/traces/**
 
+# Dolphin runtime artifacts (headless harvest runs create per-run userdirs/FIFOs).
+/tests/trace-harvest/**/dolphin_user_*/
+
+# Keep canonical trace-harvest directories (e.g. mp4_rvz_pipe_v1) trackable, but ignore
+# ad-hoc smoke/timestamp runs.
+/tests/trace-harvest/os_unlink/mp4_rvz_pipe_smoke_*/
+/tests/trace-harvest/os_unlink/mp4_rvz_pipe_v1_*/
+
 # Repo-local convenience symlinks (never publish)
 /local/
 

@@ -1858,6 +1858,25 @@ Notes:
   - `tests/trace-harvest/os_unlink/probes/20260212_145716/`
   - `omOvlGotoEx` now consistently hits with default delay 12; unload path probes (`omOvlKill`/`omDLLNumEnd`/`OSUnlink`) still miss without DTM trigger input.
 
+## 2026-02-14: OSUnlink hit acquisition via Dolphin Pipe input (headless, no .dtm)
+
+- Implemented headless RVZ input automation using Dolphin's "Pipe" input backend:
+  - `tools/harvest_and_replay_os_unlink_pipe.sh` (creates isolated `--user` dir + FIFO + controller mapping; writes `PRESS/RELEASE` commands)
+  - `tools/trace_pc_entry_exit.py` now supports `--dolphin-userdir` for isolated runs.
+- Evidence (OSUnlink PC is hit under scripted pipe inputs):
+  - Harvest run:
+    - `bash tools/harvest_and_replay_os_unlink_pipe.sh "" tests/trace-harvest/os_unlink/mp4_rvz_pipe_v1_20260214b 220`
+    - Output: `tests/trace-harvest/os_unlink/mp4_rvz_pipe_v1_20260214b/` contains:
+      - `hit_000001_pc_800B8180_lr_80032338/`
+      - `hit_000002_pc_800B8180_lr_80032338/`
+      - `hit_000003_pc_800B8180_lr_80032338/`
+  - Host replay sanity (1 case):
+    - `GC_ALLOW_DIRTY=1 bash tools/replay_trace_case_os_unlink.sh tests/trace-harvest/os_unlink/mp4_rvz_pipe_smoke_002/hit_000001_pc_800B8180_lr_80032338`
+    - Result: `marker=0xDEADBEEF` (expect vs actual matched for the replay harness checks).
+- Replays (all harvested cases):
+  - `GC_ALLOW_DIRTY=1 bash tools/run_os_unlink_trace_replays.sh tests/trace-harvest/os_unlink/mp4_rvz_pipe_v1`
+  - Result: PASS (3 cases).
+
 ## 2026-02-12: GXPixModeSync added + deterministic PPC-vs-host suite
 
 - Added sdk_port function in `src/sdk_port/gx/GX.c`:

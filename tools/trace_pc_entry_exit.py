@@ -168,6 +168,11 @@ def main() -> None:
     ap.add_argument("--max-hits", type=int, default=2000, help="Hard cap on total breakpoint hits processed")
     ap.add_argument("--delay", type=float, default=8.0, help="Seconds to wait after starting Dolphin")
     ap.add_argument("--movie", default=None, help="Optional Dolphin DTM movie file (passed to Dolphin -m)")
+    ap.add_argument(
+        "--dolphin-userdir",
+        default=None,
+        help="Optional Dolphin user dir (passed as -u). Use to keep per-harvest configs isolated.",
+    )
     ap.add_argument("--timeout", type=float, default=60.0, help="Overall time limit in seconds")
     ap.add_argument("--gdb-host", default="127.0.0.1", help="Dolphin GDB host")
     ap.add_argument("--gdb-port", type=int, default=9090, help="Dolphin GDB port")
@@ -192,7 +197,12 @@ def main() -> None:
     if args.enable_mmu:
         config_overrides.append("Core.MMU=True")
 
-    dolphin_proc = start_dolphin(args.rvz, config_overrides=config_overrides, movie_path=args.movie)
+    dolphin_proc = start_dolphin(
+        args.rvz,
+        user_dir=args.dolphin_userdir,
+        config_overrides=config_overrides,
+        movie_path=args.movie,
+    )
     if dolphin_proc is None:
         raise SystemExit(1)
     time.sleep(args.delay)
