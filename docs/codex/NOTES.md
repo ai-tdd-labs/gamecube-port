@@ -2105,6 +2105,23 @@ Notes:
     - `macro_no_test_needed` for SDK macros (e.g. `PADButtonDown`)
   - This is a static source scan; it does not prove the full decomp boot path beyond what the current host workload scenarios compile and execute.
 
+## 2026-02-14: MP4 workload ladder runner (progress checkpoints)
+
+- Added a helper runner to quickly see how far the host MP4 workloads get (ordered “ladder”):
+  - `tools/run_mp4_workload_ladder.sh`
+- What it does (facts):
+  - Runs a fixed list of `tests/workload/mp4/mp4_*_scenario.c` workloads in order.
+  - After each success, prints the first 8 bytes of the output bin (marker word + `DEADBEEF`) and the absolute path to the bin.
+  - Captures compiler warnings into `tests/build/workload_logs/<scenario>.log` (gitignored build dir).
+- Example run (boot -> mainloop ticks):
+  - `bash tools/run_mp4_workload_ladder.sh --from 9 --to 13`
+  - Observed markers:
+    - `mp4_init_to_viwait_001`: `MP46` (`0x4D503436`) + `DEADBEEF`
+    - `mp4_mainloop_one_iter_001`: `MP47` (`0x4D503437`) + `DEADBEEF`
+    - `mp4_mainloop_one_iter_tick_001`: `MP4P` (`0x4D503450`) + `DEADBEEF`
+    - `mp4_mainloop_two_iter_001`: `MP49` (`0x4D503439`) + `DEADBEEF`
+    - `mp4_mainloop_two_iter_tick_001`: `MP4Q` (`0x4D503451`) + `DEADBEEF`
+
 ## 2026-02-14: __CARDEnableInterrupt unified DOL PBT suite
 
 - Decomp contract (MP4 Dolphin SDK):
