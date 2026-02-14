@@ -275,6 +275,14 @@ static void WipeFrameStill(GXColor color) {
 #ifdef GC_HOST_WORKLOAD
 __attribute__((weak)) s16 HuSysVWaitGet(s16 old) { (void)old; return 1; }
 __attribute__((weak)) void HuMemDirectFree(void *ptr) { (void)ptr; }
+__attribute__((weak)) void *HuMemDirectMallocNum(int heap, uint32_t size, uint32_t align) {
+    (void)heap;
+    (void)size;
+    (void)align;
+    // Host workload reachability only: return a stable non-NULL pointer. GXCopyTex
+    // in sdk_port does not dereference the destination pointer.
+    return (void *)(uintptr_t)0x80010000u;
+}
 #endif
 
 typedef s32 (*fadeFunc)(void);
@@ -309,9 +317,58 @@ static s32 WipeNormalFade(void)
     return (wipe->time >= wipe->duration) ? 0 : 1;
 }
 
-// Host workloads: do not model crossfade texture copy yet. Keep the control flow
-// deterministic and return "done" immediately (so WipeExecAlways cleanup paths run).
-static s32 WipeCrossFade(void) { return 0; }
+static s32 WipeCrossFade(void)
+{
+#if !defined(GC_HOST_WORKLOAD_MTX) || !defined(GC_HOST_WORKLOAD_WIPE_CROSSFADE)
+    // Default (ladder-stable) behavior: keep crossfade a deterministic no-op unless
+    // the scenario explicitly opts in.
+    return 0;
+#else
+    // Host-safe subset of MP4 decomp WipeCrossFade.
+    u32 size;
+    u8 alpha;
+    WipeState *wipe = &wipeData;
+
+    // Extra GX entry points not present in the workload's minimal gx.h.
+    void GXSetTexCopySrc(u16 left, u16 top, u16 wd, u16 ht);
+    void GXSetTexCopyDst(u16 wd, u16 ht, u32 fmt, u32 mipmap);
+    void GXCopyTex(void *dest, u32 clear);
+    u32 GXGetTexBufferSize(u16 width, u16 height, u32 format, u8 mipmap, u8 max_lod);
+    void DCStoreRangeNoSync(void *addr, u32 nbytes);
+
+    enum { GX_TF_RGB565 = 0x4 }; // external/mp4-decomp/include/dolphin/gx/GXEnum.h
+
+    if (wipe->duration == 0) {
+        return 0;
+    }
+
+    if (wipe->copy_data == 0) {
+        size = GXGetTexBufferSize(wipe->w, wipe->h, (u32)GX_TF_RGB565, (u8)GX_FALSE, 0);
+        wipe->copy_data = HuMemDirectMallocNum(0, size, 0x20000000u);
+
+        // Texture copy setup (observable gx register writes via sdk_port).
+        GXSetTexCopySrc(wipe->x, wipe->y, wipe->w, wipe->h);
+        GXSetTexCopyDst(wipe->w, wipe->h, (u32)GX_TF_RGB565, (u32)GX_FALSE);
+        GXCopyTex(wipe->copy_data, (u32)GX_FALSE);
+        DCStoreRangeNoSync(wipe->copy_data, size);
+    }
+
+    alpha = (u8)((wipe->time / wipe->duration) * 255.0f);
+    switch (wipe->mode) {
+    case WIPE_MODE_IN:
+        wipe->color.a = (u8)(255u - alpha);
+        break;
+    case WIPE_MODE_OUT:
+        wipe->color.a = alpha;
+        break;
+    default:
+        return 0;
+    }
+
+    WipeFrameStill(wipe->color);
+    return (wipe->time >= wipe->duration) ? 0 : 1;
+#endif
+}
 
 void WipeInit(GXRenderModeObj *rmode)
 {

@@ -73,7 +73,7 @@ show_marker() {
 is_mtx_step() {
   local scenario_base="$1"
   case "$scenario_base" in
-    mp4_mainloop_one_iter_001_scenario|mp4_mainloop_one_iter_tick_001_scenario|mp4_mainloop_two_iter_001_scenario|mp4_mainloop_two_iter_tick_001_scenario|mp4_mainloop_ten_iter_tick_001_scenario|mp4_mainloop_hundred_iter_tick_001_scenario|mp4_wipe_frame_still_mtx_001_scenario)
+    mp4_mainloop_one_iter_001_scenario|mp4_mainloop_one_iter_tick_001_scenario|mp4_mainloop_two_iter_001_scenario|mp4_mainloop_two_iter_tick_001_scenario|mp4_mainloop_ten_iter_tick_001_scenario|mp4_mainloop_hundred_iter_tick_001_scenario|mp4_wipe_frame_still_mtx_001_scenario|mp4_wipe_crossfade_mtx_001_scenario)
       return 0
       ;;
     *)
@@ -100,6 +100,7 @@ scenarios=(
   "$repo_root/tests/workload/mp4/mp4_mainloop_ten_iter_tick_001_scenario.c"
   "$repo_root/tests/workload/mp4/mp4_mainloop_hundred_iter_tick_001_scenario.c"
   "$repo_root/tests/workload/mp4/mp4_wipe_frame_still_mtx_001_scenario.c"
+  "$repo_root/tests/workload/mp4/mp4_wipe_crossfade_mtx_001_scenario.c"
   "$repo_root/tests/workload/mp4/mp4_process_scheduler_001_scenario.c"
   "$repo_root/tests/workload/mp4/mp4_process_sleep_001_scenario.c"
   "$repo_root/tests/workload/mp4/mp4_process_vsleep_001_scenario.c"
@@ -122,6 +123,9 @@ for s in "${scenarios[@]}"; do
   run_env=()
   if is_mtx_step "$scenario_base"; then
     run_env+=(GC_HOST_WORKLOAD_MTX=1)
+  fi
+  if [[ "$scenario_base" == "mp4_wipe_crossfade_mtx_001_scenario" ]]; then
+    run_env+=(GC_HOST_WORKLOAD_WIPE_CROSSFADE=1)
   fi
 
   if env "${run_env[@]+${run_env[@]}}" "$repo_root/tools/run_host_scenario.sh" "$s" >/dev/null 2>"$log"; then

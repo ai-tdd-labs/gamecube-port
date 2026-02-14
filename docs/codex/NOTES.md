@@ -3501,3 +3501,21 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
     - `WipeFrameStill()` now includes a host-safe GX+MTX state-setup subset under `GC_HOST_WORKLOAD_MTX=1` (still no real texture-copy plumbing).
 - Evidence:
   - `./tools/run_mp4_workload_ladder.sh` -> `DONE` including the new wipe step.
+
+## 2026-02-14: MP4 wipe crossfade workload scenario (reachability; scenario-specific compile define)
+
+- New scenario:
+  - `tests/workload/mp4/mp4_wipe_crossfade_mtx_001_scenario.c`
+    - Forces `wipeData.type=WIPE_TYPE_CROSS`, `wipeData.mode=WIPE_MODE_IN`, `wipeData.copy_data=NULL`, then calls `WipeExecAlways()`.
+    - Marker: `XCFA` (`0x58434641`) in `tests/actual/workload/mp4_wipe_crossfade_mtx_001.bin`.
+- Runner change:
+  - `tools/run_host_scenario.sh` maps `GC_HOST_WORKLOAD_WIPE_CROSSFADE=1` to `-DGC_HOST_WORKLOAD_WIPE_CROSSFADE=1` for workload builds.
+- Slice change:
+  - `tests/workload/mp4/slices/wipeexecalways_decomp_blank.c`:
+    - `WipeCrossFade()` is a deterministic no-op by default.
+    - When both `GC_HOST_WORKLOAD_MTX=1` and `GC_HOST_WORKLOAD_WIPE_CROSSFADE=1` are enabled, it runs a host-safe subset of MP4 decomp:
+      - Calls `GXGetTexBufferSize`, `GXSetTexCopySrc`, `GXSetTexCopyDst`, `GXCopyTex`, `DCStoreRangeNoSync`
+      - Calls `WipeFrameStill()` (which already runs GX+MTX state setup under `GC_HOST_WORKLOAD_MTX=1`)
+- Evidence:
+  - `./tools/run_mp4_workload_ladder.sh` -> `DONE` (includes `mp4_wipe_crossfade_mtx_001`)
+  - `./tools/run_mp4_workload_ladder.sh --from 14 --to 20` -> `DONE` and shows `mp4_wipe_crossfade_mtx_001` marker `58434641 deadbeef`.

@@ -146,11 +146,11 @@ case "$subsystem" in
     # mp4_mainloop_* scenarios call WipeExecAlways(). Keep it out of the scenario TU
     # so we can later swap in a decomp slice without editing the scenario. For now,
     # we link a minimal decomp slice that does not emulate GX drawing.
-    case "$scenario_base" in
-      mp4_mainloop_one_iter_001_scenario|mp4_mainloop_one_iter_tick_001_scenario|mp4_mainloop_two_iter_001_scenario|mp4_mainloop_two_iter_tick_001_scenario|mp4_mainloop_ten_iter_tick_001_scenario|mp4_mainloop_hundred_iter_tick_001_scenario|mp4_wipe_frame_still_mtx_001_scenario)
-        extra_srcs+=("$repo_root/tests/workload/mp4/slices/wipeexecalways_decomp_blank.c")
-        ;;
-    esac
+	    case "$scenario_base" in
+	      mp4_mainloop_one_iter_001_scenario|mp4_mainloop_one_iter_tick_001_scenario|mp4_mainloop_two_iter_001_scenario|mp4_mainloop_two_iter_tick_001_scenario|mp4_mainloop_ten_iter_tick_001_scenario|mp4_mainloop_hundred_iter_tick_001_scenario|mp4_wipe_frame_still_mtx_001_scenario|mp4_wipe_crossfade_mtx_001_scenario)
+	        extra_srcs+=("$repo_root/tests/workload/mp4/slices/wipeexecalways_decomp_blank.c")
+	        ;;
+	    esac
     # pfDrawFonts() is game-specific and GX-heavy; keep it as a host-safe slice.
     case "$scenario_base" in
       mp4_mainloop_one_iter_001_scenario|mp4_mainloop_one_iter_tick_001_scenario|mp4_mainloop_two_iter_001_scenario|mp4_mainloop_two_iter_tick_001_scenario|mp4_mainloop_ten_iter_tick_001_scenario|mp4_mainloop_hundred_iter_tick_001_scenario)
@@ -170,6 +170,11 @@ case "$subsystem" in
       subsystem="os+dvd+vi+pad+gx+mtx"
     else
       subsystem="os+dvd+vi+pad+gx"
+    fi
+
+    # Scenario-specific workload compile-time toggles (keep defaults minimal).
+    if [[ "${GC_HOST_WORKLOAD_WIPE_CROSSFADE:-0}" == "1" ]]; then
+      extra_cflags+=(-DGC_HOST_WORKLOAD_WIPE_CROSSFADE=1)
     fi
     ;;
 esac
