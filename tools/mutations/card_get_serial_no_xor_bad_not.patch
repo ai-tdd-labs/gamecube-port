@@ -1,13 +1,10 @@
 diff --git a/src/sdk_port/card/CARDGetSerialNo.c b/src/sdk_port/card/CARDGetSerialNo.c
 --- a/src/sdk_port/card/CARDGetSerialNo.c
 +++ b/src/sdk_port/card/CARDGetSerialNo.c
-@@ -36,7 +36,7 @@
-         u64 piece = 0;
-         u8* serial = (u8*)(uintptr_t)card->work_area + (u32)(u32)i * 8u;
- 
-         for (b = 0; b < 8; b++) {
--            piece = (piece << 8) | (u64)serial[b];
-+            piece = (piece << 7) | (u64)serial[b];
-         }
-         code ^= piece;
+@@ -43,5 +43,5 @@
+     if (serialNo) {
+         *serialNo = code;
      }
+-    return __CARDPutControlBlock(card, CARD_RESULT_READY);
++    return __CARDPutControlBlock(card, CARD_RESULT_BROKEN);
+ }
