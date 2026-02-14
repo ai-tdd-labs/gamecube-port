@@ -1,0 +1,13 @@
+diff --git a/src/sdk_port/dvd/DVD.c b/src/sdk_port/dvd/DVD.c
+index f98ad9e..2c04eaf 100644
+--- a/src/sdk_port/dvd/DVD.c
++++ b/src/sdk_port/dvd/DVD.c
+@@ -275,7 +275,7 @@ s32 DVDCancel(DVDCommandBlock *block) {
+     s32 state;
+ 
+     if (!block) {
+-        return -1;
++        return 0;
+     }
+ 
+     state = block->state;

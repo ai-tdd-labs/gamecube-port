@@ -67,6 +67,16 @@ Rules:
 - ARQ property suite now randomizes `has_callback` input and enforces strict normalization parity in addition to existing adapted-oracle parity checks.
   Evidence: `tests/sdk/ar/property/arq_property_test.c`.
 
+### DVDCancel trace replay parity
+- `DVDCancel` now has a completed MP4 host/real PPC trace-parity trace:
+  - host scenario: `tests/sdk/dvd/dvd_cancel/host/dvd_cancel_generic_001_scenario.c`
+  - DOL harness: `tests/sdk/dvd/dvd_cancel/dol/generic/dvd_cancel_generic_001/dvd_cancel_generic_001.c`
+  - expected/actual compare script: `tools/run_dvd_cancel_trace.sh`
+  - evidence file: `tests/sdk/dvd/dvd_cancel/expected/dvd_cancel_generic_001.bin`
+- Mutation check added for null-block guard and confirmed to fail under mutant:
+  - mutant patch: `tools/mutations/dvd_cancel_null_to_zero.patch`
+  - runner: `tools/mutations/dvd_cancel_null_to_zero.sh`
+
 ### Dolphin GDB Stub (macOS build on this machine)
 - Stop packets include PC/NIP in reg `0x40` (usable for PC-polling checkpoints).
   Evidence: `tools/ram_dump.py` `parse_stop_pc()`; observed stop example `T0540:800ba2f0;01:8019d798;` from real MP4 RVZ.
