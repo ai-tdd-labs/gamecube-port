@@ -21,6 +21,16 @@ typedef struct GcCardControl {
     int32_t mount_step;
     int32_t size_mb;      // logical size (id & 0xFC) as used by CARDProbeEx
     int32_t sector_size;  // bytes
+
+    // CARDMountAsync preflight state (modeled).
+    uintptr_t work_area;
+    uintptr_t ext_callback;
+    uintptr_t api_callback;
+    uintptr_t exi_callback;
+    uintptr_t unlock_callback;
+    uint32_t  alarm_cancel_calls;
+    int32_t   current_dir;
+    int32_t   current_fat;
 } GcCardControl;
 
 extern GcCardControl gc_card_block[GC_CARD_CHANS];

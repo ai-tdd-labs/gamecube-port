@@ -40,6 +40,7 @@ u32 gc_exi_regs[16];
 s32 gc_exi_probeex_ret[MAX_CHAN] = { -1, -1, -1 };
 u32 gc_exi_getid_ok[MAX_CHAN];
 u32 gc_exi_id[MAX_CHAN];
+u32 gc_exi_attach_ok[MAX_CHAN];
 
 // Optional DMA hook used to model device-backed transfers (e.g. CARD).
 // If NULL, EXIDma returns FALSE.
@@ -111,6 +112,7 @@ void EXIInit(void) {
     gc_exi_probeex_ret[i] = -1;
     gc_exi_getid_ok[i] = 0;
     gc_exi_id[i] = 0;
+    gc_exi_attach_ok[i] = 1;
   }
 }
 
@@ -316,6 +318,7 @@ s32 EXIProbeEx(s32 channel) {
 
 BOOL EXIAttach(s32 channel, EXICallback callback) {
   if (channel < 0 || channel >= MAX_CHAN) return FALSE;
+  if (!gc_exi_attach_ok[channel]) return FALSE;
   s_ecb[channel].ext_cb = callback;
   s_ecb[channel].state |= EXI_STATE_ATTACHED;
   return TRUE;
