@@ -100,7 +100,8 @@ BOOL EXIImm(s32 channel, void* buffer, s32 length, u32 type, void* cb) {
       pending_status_read[channel] = 1;
     } else if (b[0] == 0x89u) {
       pending_status_read[channel] = 0;
-      oracle_exi_card_status[channel] = 0;
+      // Preserve non-error bits (inferred from MP4 SDK usage).
+      oracle_exi_card_status[channel] &= ~0x18u;
       oracle_exi_card_status_clears[channel]++;
     }
     return TRUE;
@@ -128,4 +129,3 @@ BOOL EXISync(s32 channel) {
   if (channel < 0 || channel >= MAX_CHAN) return FALSE;
   return TRUE;
 }
-

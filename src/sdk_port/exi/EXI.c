@@ -256,7 +256,10 @@ BOOL EXIImm(s32 channel, void* buffer, s32 length, u32 type, EXICallback callbac
         s_card[channel].pending_status_read = 1;
       } else if (cmd == 0x89u) {
         s_card[channel].pending_status_read = 0;
-        gc_exi_card_status[channel] = 0;
+        // Inferred from MP4 SDK usage: status bits 0x18 are treated as error flags
+        // (decomp_mario_party_4/src/dolphin/card/CARDBios.c). Preserve other bits
+        // like 0x40 (unlock indicator) so DoMount can observe it after clear+read.
+        gc_exi_card_status[channel] &= ~0x18u;
         gc_exi_card_status_clears[channel]++;
       }
     }
