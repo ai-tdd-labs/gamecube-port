@@ -1941,6 +1941,9 @@ Notes:
 - Validation:
   - `bash tools/run_exi_dma_card_proto_pbt.sh`
   - Result: PASS (bit-exact expected vs actual).
+- Mutation check:
+  - `bash tools/run_mutation_check.sh tools/mutations/exi_card_addr_shift16.patch -- bash tools/run_exi_dma_card_proto_pbt.sh`
+  - Result: PASS (suite fails under mutant).
 
 ## 2026-02-14: Host memcard backend (raw file image) for CARD port
 
