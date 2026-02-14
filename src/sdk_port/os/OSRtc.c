@@ -1,6 +1,10 @@
 #include <stdint.h>
+#include <string.h>
 
-// Minimal SRAM + OSGetProgressiveMode port for host scenarios.
+// Minimal SRAM/RTC port for deterministic host scenarios.
+//
+// Evidence (layout + lock/unlock semantics): decomp_mario_party_4/include/dolphin/OSRtcPriv.h
+// and decomp_mario_party_4/src/dolphin/os/OSRtc.c.
 
 typedef uint8_t u8;
 typedef uint32_t u32;
@@ -12,25 +16,157 @@ typedef int BOOL;
 #define FALSE 0
 #endif
 
+int OSDisableInterrupts(void);
+int OSRestoreInterrupts(int level);
+
 u8 gc_sram_flags;
 u32 gc_sram_unlock_calls;
 u64 gc_os_tick_counter;
 
+// Deterministic knobs (test-only): allow modeling ReadSram/WriteSram failure.
+u32 gc_os_sram_read_ok = 1;
+u32 gc_os_sram_write_ok = 1;
+
+// Test-only instrumentation: export modeled internal state.
+u32 gc_os_scb_locked;
+u32 gc_os_scb_enabled;
+u32 gc_os_scb_sync;
+u32 gc_os_scb_offset;
+u32 gc_os_sram_read_calls;
+u32 gc_os_sram_write_calls;
+
+#define RTC_SRAM_SIZE 64u
+
 typedef struct OSSram {
+    uint16_t checkSum;
+    uint16_t checkSumInv;
+    uint32_t ead0;
+    uint32_t ead1;
+    uint32_t counterBias;
+    int8_t displayOffsetH;
+    u8 ntd;
+    u8 language;
     u8 flags;
 } OSSram;
 
-static OSSram s_sram;
+typedef struct OSSramEx {
+    u8 flashID[2][12];
+    u32 wirelessKeyboardID;
+    uint16_t wirelessPadID[4];
+    u8 dvdErrorCode;
+    u8 _padding0;
+    u8 flashIDCheckSum[2];
+    uint16_t gbs;
+    u8 _padding1[2];
+} OSSramEx;
 
-OSSram *__OSLockSramHACK(void) {
-    s_sram.flags = gc_sram_flags;
-    return &s_sram;
+typedef struct {
+    u8 sram[RTC_SRAM_SIZE];
+    u32 offset;
+    BOOL enabled;
+    BOOL locked;
+    BOOL sync;
+} ScbT;
+
+static ScbT Scb;
+
+static inline void update_mirrors(void) {
+    gc_os_scb_locked = (u32)(Scb.locked != FALSE);
+    gc_os_scb_enabled = (u32)(Scb.enabled != FALSE);
+    gc_os_scb_sync = (u32)(Scb.sync != FALSE);
+    gc_os_scb_offset = Scb.offset;
 }
 
-void __OSUnlockSram(BOOL commit) {
-    (void)commit;
-    gc_sram_flags = s_sram.flags;
+static BOOL ReadSram(u8* buffer) {
+    gc_os_sram_read_calls++;
+    if (!gc_os_sram_read_ok) return FALSE;
+    memset(buffer, 0, RTC_SRAM_SIZE);
+    return TRUE;
+}
+
+static BOOL WriteSram(const u8* buffer, u32 offset, u32 size) {
+    (void)buffer;
+    (void)offset;
+    (void)size;
+    gc_os_sram_write_calls++;
+    return gc_os_sram_write_ok ? TRUE : FALSE;
+}
+
+void __OSInitSram(void) {
+    Scb.locked = Scb.enabled = FALSE;
+    Scb.sync = ReadSram(Scb.sram);
+    Scb.offset = RTC_SRAM_SIZE;
+    update_mirrors();
+}
+
+static void* LockSram(u32 offset) {
+    BOOL enabled = OSDisableInterrupts();
+
+    if (Scb.locked != FALSE) {
+        OSRestoreInterrupts(enabled);
+        update_mirrors();
+        return NULL;
+    }
+
+    Scb.enabled = enabled;
+    Scb.locked = TRUE;
+    update_mirrors();
+    return Scb.sram + offset;
+}
+
+OSSram* __OSLockSram(void) {
+    OSSram* s = (OSSram*)LockSram(0);
+    if (s) {
+        // Maintain legacy test knob used by OSGetProgressiveMode suites.
+        s->flags = gc_sram_flags;
+    }
+    return s;
+}
+
+OSSram* __OSLockSramHACK(void) { return __OSLockSram(); }
+
+OSSramEx* __OSLockSramEx(void) { return (OSSramEx*)LockSram((u32)sizeof(OSSram)); }
+
+static BOOL UnlockSram(BOOL commit, u32 offset) {
+    uint16_t* p;
+
+    if (commit) {
+        if (offset == 0) {
+            OSSram* sram = (OSSram*)Scb.sram;
+            sram->checkSum = 0;
+            sram->checkSumInv = 0;
+            for (p = (uint16_t*)&sram->counterBias; p < (uint16_t*)(Scb.sram + sizeof(OSSram)); p++) {
+                sram->checkSum += *p;
+                sram->checkSumInv += (uint16_t)~*p;
+            }
+        }
+
+        if (offset < Scb.offset) {
+            Scb.offset = offset;
+        }
+
+        Scb.sync = WriteSram(Scb.sram + Scb.offset, Scb.offset, RTC_SRAM_SIZE - Scb.offset);
+        if (Scb.sync) {
+            Scb.offset = RTC_SRAM_SIZE;
+        }
+    }
+
+    Scb.locked = FALSE;
+    // Keep gc_sram_flags in sync with SRAM flags field regardless of commit.
+    gc_sram_flags = ((OSSram*)Scb.sram)->flags;
     gc_sram_unlock_calls++;
+
+    OSRestoreInterrupts(Scb.enabled);
+    update_mirrors();
+    return Scb.sync;
+}
+
+BOOL __OSUnlockSram(BOOL commit) { return UnlockSram(commit, 0); }
+BOOL __OSUnlockSramEx(BOOL commit) { return UnlockSram(commit, (u32)sizeof(OSSram)); }
+
+BOOL __OSSyncSram(void) {
+    update_mirrors();
+    return Scb.sync;
 }
 
 u32 OSGetProgressiveMode(void) {
@@ -39,7 +175,7 @@ u32 OSGetProgressiveMode(void) {
 
     sram = __OSLockSramHACK();
     mode = (sram->flags & 0x80u) >> 7;
-    __OSUnlockSram(FALSE);
+    (void)__OSUnlockSram(FALSE);
     return mode;
 }
 
