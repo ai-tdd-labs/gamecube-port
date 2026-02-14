@@ -72,3 +72,5 @@ void CARDInit(void);
 
 // Internal CARDBios helpers (modeled subset).
 int32_t __CARDGetControlBlock(int32_t chan, GcCardControl** pcard);
+int32_t __CARDSync(int32_t chan);
+void __CARDSyncCallback(int32_t chan, int32_t result);

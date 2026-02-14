@@ -17,6 +17,7 @@ typedef uint32_t u32;
 typedef int32_t s32;
 
 s32 CARDMountAsync(s32 chan, void* workArea, void (*detachCallback)(s32, s32), void (*attachCallback)(s32, s32));
+s32 CARDMount(s32 chan, void* workArea, void (*attachCallback)(s32, s32));
 
 static u32 fnv1a32(const u8* p, u32 n) {
   u32 h = 2166136261u;
@@ -88,6 +89,9 @@ static void make_id_block(u8* base, u16 size_u16, u16 encode, const u8* flash_id
 static s32 g_attach_calls;
 static s32 g_attach_last;
 static void attach_cb(s32 chan, s32 result) { (void)chan; g_attach_calls++; g_attach_last = result; }
+static s32 g_sync_calls;
+static s32 g_sync_last;
+static void sync_cb(s32 chan, s32 result) { (void)chan; g_sync_calls++; g_sync_last = result; }
 
 const char* gc_scenario_label(void) { return "CARDMountAsync/pbt_001"; }
 const char* gc_scenario_out_path(void) { return "../actual/card_mount_pbt_001.bin"; }
@@ -174,5 +178,33 @@ void gc_scenario_run(GcRam* ram) {
   wr32be(out + off, h2); off += 4;
   wr32be(out + off, h3); off += 4;
   wr32be(out + off, h4); off += 4;
-}
 
+  g_sync_calls = 0;
+  g_sync_last = 0;
+  memset(gc_card_block, 0, sizeof(gc_card_block));
+  gc_card_block[0].attached = 1;
+  gc_card_block[0].work_area = (uintptr_t)work;
+  gc_card_block[0].current_dir_ptr = 0;
+  gc_card_block[0].current_fat_ptr = 0;
+
+  memset(work, 0, 5u * 8u * 1024u);
+  rc = CARDMount(0, work, sync_cb);
+
+  h0 = fnv1a32(work + 0x0000u, 0x2000u);
+  h1 = fnv1a32(work + 0x2000u, 0x2000u);
+  h2 = fnv1a32(work + 0x4000u, 0x2000u);
+  h3 = fnv1a32(work + 0x6000u, 0x2000u);
+  h4 = fnv1a32(work + 0x8000u, 0x2000u);
+
+  wr32be(out + off, 0x434D5431u); off += 4;
+  wr32be(out + off, (u32)rc); off += 4;
+  wr32be(out + off, (u32)gc_card_block[0].mount_step); off += 4;
+  wr32be(out + off, (u32)gc_card_block[0].result); off += 4;
+  wr32be(out + off, (u32)g_sync_calls); off += 4;
+  wr32be(out + off, (u32)g_sync_last); off += 4;
+  wr32be(out + off, h0); off += 4;
+  wr32be(out + off, h1); off += 4;
+  wr32be(out + off, h2); off += 4;
+  wr32be(out + off, h3); off += 4;
+  wr32be(out + off, h4); off += 4;
+}

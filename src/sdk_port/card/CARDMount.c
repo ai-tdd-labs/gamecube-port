@@ -453,10 +453,12 @@ s32 CARDMountAsync(s32 chan, void* workArea, CARDCallback detachCallback, CARDCa
 }
 
 s32 CARDMount(s32 chan, void* workArea, CARDCallback attachCb) {
-  // Preflight-only: CARDMountAsync returns READY when lock is held; do not attempt sync.
-  // Full DoMount + __CARDSync modeling will be added under the CARDMount trace replay task.
   s32 result = CARDMountAsync(chan, workArea, attachCb, __CARDDefaultApiCallback);
-  return result;
+  if (result < 0) {
+    return result;
+  }
+
+  return __CARDSync(chan);
 }
 
 s32 CARDUnmount(s32 chan) {

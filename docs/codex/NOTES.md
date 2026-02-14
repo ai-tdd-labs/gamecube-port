@@ -77,6 +77,17 @@ Rules:
   - mutant patch: `tools/mutations/dvd_cancel_null_to_zero.patch`
   - runner: `tools/mutations/dvd_cancel_null_to_zero.sh`
 
+### CARDMount sync-path trace replay parity (2026-02-14)
+- `CARDMount` in `src/sdk_port/card/CARDMount.c` now uses the `__CARDSync` wait path after `CARDMountAsync`.
+- DOL oracle for `CARDMount` was completed in `tests/sdk/card/card_mount/dol/pbt/card_mount_pbt_001/oracle_card_mount.c`:
+  - added `__CARDSync`, `__CARDSyncCallback`, thread queue stubs
+  - added `oracle_CARDMount` wrapper and sync-path output block (`CMT1`) in `card_mount_pbt_001.c`.
+- Host DOL parity test updated:
+  - `tests/sdk/card/card_mount/host/card_mount_pbt_001_scenario.c` now includes a `CARDMount` run + captured sync fields.
+- Evidence:
+  - `tools/run_card_mount_pbt.sh` => PASS (expected/actual match with `CMT0` + `CMT1` blocks).
+  - Mutation file added: `tools/mutations/card_mount_sync_callback_reordered.patch`.
+
 ### Dolphin GDB Stub (macOS build on this machine)
 - Stop packets include PC/NIP in reg `0x40` (usable for PC-polling checkpoints).
   Evidence: `tools/ram_dump.py` `parse_stop_pc()`; observed stop example `T0540:800ba2f0;01:8019d798;` from real MP4 RVZ.

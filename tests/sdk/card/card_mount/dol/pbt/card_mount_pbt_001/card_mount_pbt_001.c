@@ -16,6 +16,7 @@ extern u32 oracle_exi_id[3];
 extern u32 oracle_exi_card_status[3];
 
 typedef void (*CARDCallback)(s32 chan, s32 result);
+s32 oracle_CARDMount(s32 chan, void* workArea, CARDCallback attachCallback);
 s32 oracle_CARDMountAsync(s32 chan, void* workArea, CARDCallback detachCallback, CARDCallback attachCallback);
 
 typedef struct {
@@ -54,12 +55,19 @@ static u32 fnv1a32(const u8* p, u32 n) {
   return h;
 }
 
-static s32 g_attach_calls;
-static s32 g_attach_last;
+static s32 g_async_calls;
+static s32 g_async_last;
+static s32 g_sync_calls;
+static s32 g_sync_last;
 static void attach_cb(s32 chan, s32 result) {
   (void)chan;
-  g_attach_calls++;
-  g_attach_last = result;
+  g_async_calls++;
+  g_async_last = result;
+}
+static void sync_attach_cb(s32 chan, s32 result) {
+  (void)chan;
+  g_sync_calls++;
+  g_sync_last = result;
 }
 
 int main(void) {
@@ -93,8 +101,8 @@ int main(void) {
   __CARDBlock[0].currentDir = 0;
   __CARDBlock[0].currentFat = 0;
 
-  g_attach_calls = 0;
-  g_attach_last = 0;
+  g_async_calls = 0;
+  g_async_last = 0;
   s32 rc = oracle_CARDMountAsync(0, work, attach_cb, attach_cb);
 
   u32 h0 = fnv1a32(work + 0x0000u, 0x2000u);
@@ -107,8 +115,48 @@ int main(void) {
   wr32be(out + off, (u32)rc); off += 4;
   wr32be(out + off, (u32)__CARDBlock[0].mountStep); off += 4;
   wr32be(out + off, (u32)__CARDBlock[0].result); off += 4;
-  wr32be(out + off, (u32)g_attach_calls); off += 4;
-  wr32be(out + off, (u32)g_attach_last); off += 4;
+  wr32be(out + off, (u32)g_async_calls); off += 4;
+  wr32be(out + off, (u32)g_async_last); off += 4;
+  wr32be(out + off, h0); off += 4;
+  wr32be(out + off, h1); off += 4;
+  wr32be(out + off, h2); off += 4;
+  wr32be(out + off, h3); off += 4;
+  wr32be(out + off, h4); off += 4;
+
+  oracle_mount_init_defaults();
+  oracle_mount_seed_valid_card(0);
+
+  // Reconfigure EXI to present a 4Mb card with sectorSize index 0 (8KiB).
+  oracle_exi_probeex_ret[0] = 1;
+  oracle_exi_getid_ok[0] = 1;
+  oracle_exi_id[0] = 0x00000004u;
+
+  // status bit 0x40 set => skip unlock path.
+  oracle_exi_card_status[0] = 0x40u;
+
+  memset(__CARDBlock, 0, sizeof(__CARDBlock));
+  __CARDBlock[0].attached = 1;
+  __CARDBlock[0].workArea = work;
+  __CARDBlock[0].currentDir = 0;
+  __CARDBlock[0].currentFat = 0;
+
+  g_sync_calls = 0;
+  g_sync_last = 0;
+  memset(work, 0, sizeof(work));
+  rc = oracle_CARDMount(0, work, sync_attach_cb);
+
+  h0 = fnv1a32(work + 0x0000u, 0x2000u);
+  h1 = fnv1a32(work + 0x2000u, 0x2000u);
+  h2 = fnv1a32(work + 0x4000u, 0x2000u);
+  h3 = fnv1a32(work + 0x6000u, 0x2000u);
+  h4 = fnv1a32(work + 0x8000u, 0x2000u);
+
+  wr32be(out + off, 0x434D5431u); off += 4; // "CMT1"
+  wr32be(out + off, (u32)rc); off += 4;
+  wr32be(out + off, (u32)__CARDBlock[0].mountStep); off += 4;
+  wr32be(out + off, (u32)__CARDBlock[0].result); off += 4;
+  wr32be(out + off, (u32)g_sync_calls); off += 4;
+  wr32be(out + off, (u32)g_sync_last); off += 4;
   wr32be(out + off, h0); off += 4;
   wr32be(out + off, h1); off += 4;
   wr32be(out + off, h2); off += 4;
@@ -118,4 +166,3 @@ int main(void) {
   while (1) { __asm__ volatile("nop"); }
   return 0;
 }
-

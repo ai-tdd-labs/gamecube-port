@@ -56,6 +56,12 @@ static void __CARDSetDiskID(uintptr_t id)
     gc_card_block[1].disk_id = id;
 }
 
+void __CARDSyncCallback(s32 chan, s32 result)
+{
+    (void)result;
+    OSWakeupThread((OSThreadQueue *)&gc_card_block[chan].thread_queue_inited);
+}
+
 void CARDInit(void)
 {
     int chan;

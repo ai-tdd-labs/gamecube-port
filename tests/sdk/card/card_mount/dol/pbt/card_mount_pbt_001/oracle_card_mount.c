@@ -28,6 +28,12 @@ enum {
 
 typedef void (*CARDCallback)(s32 chan, s32 result);
 typedef void (*EXICallback)(s32 chan, void* context);
+typedef struct OSThreadQueue { void* head; void* tail; } OSThreadQueue;
+
+static int OSDisableInterrupts(void) { return 1; }
+static void OSRestoreInterrupts(int level) { (void)level; }
+static void OSSleepThread(OSThreadQueue* queue) { (void)queue; }
+static void OSWakeupThread(OSThreadQueue* queue) { (void)queue; }
 
 enum { EXI_STATE_ATTACHED = 0x08, EXI_STATE_LOCKED = 0x10 };
 
@@ -95,7 +101,6 @@ static BOOL EXIUnlock(s32 channel) {
   return TRUE;
 }
 static BOOL EXIProbe(s32 channel) { return (channel >= 0 && channel < 3) ? (oracle_exi_probeex_ret[channel] > 0) : FALSE; }
-static s32 EXIProbeEx(s32 channel) { return (channel >= 0 && channel < 3) ? oracle_exi_probeex_ret[channel] : -1; }
 static BOOL EXIGetID(s32 channel, u32 device, u32* id) {
   (void)device;
   if (channel < 0 || channel >= 3) return FALSE;
@@ -178,9 +183,40 @@ typedef struct {
   CARDCallback exiCallback;
   CARDCallback unlockCallback;
   u32 cid;
+  u32 thread_queue_inited;
 } CARDControl;
 
 CARDControl __CARDBlock[2];
+
+static s32 CARDGetResultCode(s32 chan) {
+  if (chan < 0 || 2 <= chan) {
+    return CARD_RESULT_FATAL_ERROR;
+  }
+  return __CARDBlock[chan].result;
+}
+
+void __CARDSyncCallback(s32 chan, s32 result) {
+  (void)result;
+  OSWakeupThread((OSThreadQueue*)&__CARDBlock[chan].thread_queue_inited);
+}
+
+static s32 oracle___CARDSync(s32 chan) {
+  s32 result;
+  int enabled;
+  CARDControl* block;
+
+  if (chan < 0 || 2 <= chan) {
+    return CARD_RESULT_FATAL_ERROR;
+  }
+
+  block = &__CARDBlock[chan];
+  enabled = OSDisableInterrupts();
+  while ((result = CARDGetResultCode(chan)) == CARD_RESULT_BUSY) {
+    OSSleepThread((OSThreadQueue*)&block->thread_queue_inited);
+  }
+  OSRestoreInterrupts(enabled);
+  return result;
+}
 
 static s32 __CARDPutControlBlock(CARDControl* card, s32 result) { card->result = result; return result; }
 
@@ -529,6 +565,14 @@ s32 oracle_CARDMountAsync(s32 chan, void* workArea, CARDCallback detachCallback,
   }
   card->unlockCallback = 0;
   return DoMount(chan);
+}
+
+s32 oracle_CARDMount(s32 chan, void* workArea, CARDCallback attachCallback) {
+  s32 result = oracle_CARDMountAsync(chan, workArea, attachCallback, __CARDDefaultApiCallback);
+  if (result < 0) {
+    return result;
+  }
+  return oracle___CARDSync(chan);
 }
 
 // Helpers exported for the DOL test to configure oracles.

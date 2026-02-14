@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/card/CARDMount.c b/src/sdk_port/card/CARDMount.c
+--- a/src/sdk_port/card/CARDMount.c
++++ b/src/sdk_port/card/CARDMount.c
+@@ -456,7 +456,7 @@ s32 CARDMount(s32 chan, void* workArea, CARDCallback attachCb) {
+-  s32 result = CARDMountAsync(chan, workArea, attachCb, __CARDDefaultApiCallback);
++  s32 result = CARDMountAsync(chan, workArea, __CARDDefaultApiCallback, attachCb);
+   if (result < 0) {
+     return result;
+   }
+ 
+   return __CARDSync(chan);
+ }
