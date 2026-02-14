@@ -121,6 +121,9 @@ tests/workload/mp4/tests/
 /tests/trace-harvest/os_unlink/mp4_rvz_pipe_smoke_*/
 /tests/trace-harvest/os_unlink/mp4_rvz_pipe_v1_*/
 
+# Host-only artifacts produced by memcard backend unit checks.
+/tests/sdk/**/actual/*.raw
+
 # Repo-local convenience symlinks (never publish)
 /local/
 
