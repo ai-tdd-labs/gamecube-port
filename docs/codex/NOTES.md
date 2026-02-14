@@ -2091,6 +2091,20 @@ Notes:
 - Mutation check:
   - `bash tools/run_mutation_check.sh tools/mutations/card_mount_step0_unlock_branch_inverted.patch -- bash tools/run_card_mount_pbt.sh` -> PASS (mutant killed; suite failed as expected)
 
+## 2026-02-14: MP4 workload SDK coverage audit (boot + mainloop slices)
+
+- Report (generated from workload build inputs wired in `tools/run_host_scenario.sh`):
+  - `docs/codex/MP4_WORKLOAD_SDK_COVERAGE.md`
+- Generation command:
+  - `python3 tools/helpers/mp4_workload_sdk_coverage_report.py > docs/codex/MP4_WORKLOAD_SDK_COVERAGE.md`
+- What it answers (facts):
+  - For `tests/workload/mp4/mp4_init_to_viwait_001_scenario.c` and the `mp4_mainloop_*_tick_001` workloads, lists every referenced SDK symbol and links it to existing evidence buckets:
+    - `unified_dol_vs_host` runner (`tools/run_<func>_pbt.sh`) when present
+    - `rvz_trace_replay` presence (host trace replay scenarios)
+    - `dol_vs_host_or_legacy` (a `tests/sdk/<module>/<suite>/` directory exists, but no unified runner detected)
+    - `macro_no_test_needed` for SDK macros (e.g. `PADButtonDown`)
+  - This is a static source scan; it does not prove the full decomp boot path beyond what the current host workload scenarios compile and execute.
+
 ## 2026-02-14: __CARDEnableInterrupt unified DOL PBT suite
 
 - Decomp contract (MP4 Dolphin SDK):
