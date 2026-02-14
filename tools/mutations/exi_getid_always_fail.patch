@@ -1,8 +1,7 @@
 diff --git a/src/sdk_port/exi/EXI.c b/src/sdk_port/exi/EXI.c
 --- a/src/sdk_port/exi/EXI.c
 +++ b/src/sdk_port/exi/EXI.c
-@@
- s32 EXIGetID(s32 channel, u32 device, u32* id) {
+@@ -280,10 +280,9 @@ s32 EXIGetID(s32 channel, u32 device, u32* id) {
    (void)device;
    if (channel < 0 || channel >= MAX_CHAN) return 0;
 -  if (!gc_exi_getid_ok[channel]) {
@@ -15,3 +14,4 @@ diff --git a/src/sdk_port/exi/EXI.c b/src/sdk_port/exi/EXI.c
 +  if (id) *id = 0;
 +  return 0;
  }
+
