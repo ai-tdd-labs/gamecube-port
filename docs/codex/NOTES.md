@@ -3268,3 +3268,22 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_card_read_pbt.sh` -> PASS (bit-exact expected == actual)
   - `tools/run_mutation_check.sh tools/mutations/card_read_segment_wrong_cmd.patch -- tools/run_card_read_pbt.sh` -> PASS (mutant fails as expected)
+
+## 2026-02-14: __CARDVerify scoping (decomp + callsites)
+
+- MP4 decomp implementation:
+  - `decomp_mario_party_4/src/dolphin/card/CARDCheck.c`:
+    - `__CARDVerify(card)` calls `VerifyID(card)` then `VerifyDir` + `VerifyFAT` (errors are summed).
+    - `VerifyID` checks:
+      - `id->deviceID == 0` and `id->size == card->size`
+      - `__CARDCheckSum(id, sizeof(CARDID)-sizeof(u32))` matches `id->checkSum/checkSumInv`
+      - `id->encode == OSGetFontEncode()`
+      - `id->serial[0..11]` matches SRAMEx `flashID[chan][i] + LCG(rand)` where `rand` seeds from `*(OSTime*)&id->serial[12]`
+    - `VerifyDir`/`VerifyFAT` compute checksums for both copies and may select/copy based on `checkCode` when `currentDir/currentFat` is NULL.
+    - `VerifyFAT` also validates `fat[FREEBLOCKS]` equals the count of `CARD_FAT_AVAIL` entries in `[CARD_NUM_SYSTEM_BLOCK..cBlock)`.
+- Callsites:
+  - MP4: `decomp_mario_party_4/src/dolphin/card/CARDMount.c` calls `__CARDVerify(card)` after reading all system blocks (`mountStep` reaches `CARD_MAX_MOUNT_STEP`), inside `__CARDMountCallback`.
+  - TP: `decomp_twilight_princess/src/dolphin/card/CARDMount.c` calls `__CARDVerify(card)` in the same mount callback slot.
+  - AC: `decomp_animal_crossing/src/static/dolphin/card/CARDMount.c` calls `__CARDVerify(card)` in the same mount callback slot.
+- Cross-decomp note:
+  - TP’s `VerifyID` checks `id->encode != __CARDGetFontEncode()` (not `OSGetFontEncode()`), and checks it after the flashID/LCG loop. (`decomp_twilight_princess/src/dolphin/card/CARDCheck.c`)
