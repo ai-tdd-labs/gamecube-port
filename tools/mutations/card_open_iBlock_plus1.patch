@@ -1,7 +1,7 @@
-diff --git a/src/sdk_port/card/CARDOpen.c b/tmp/CARDOpen_mut.card_open_iBlock_plus1.c
+diff --git a/src/sdk_port/card/CARDOpen.c b/src/sdk_port/card/CARDOpen.c
 index ccdd841..68a6386 100644
 --- a/src/sdk_port/card/CARDOpen.c
-+++ b/tmp/CARDOpen_mut.card_open_iBlock_plus1.c
++++ b/src/sdk_port/card/CARDOpen.c
 @@ -67,7 +67,7 @@ s32 CARDOpen(int32_t chan, const char* fileName, CARDFileInfo* fileInfo) {
              fileInfo->chan = chan;
              fileInfo->fileNo = fileNo;
