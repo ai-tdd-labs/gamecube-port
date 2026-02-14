@@ -121,8 +121,16 @@
             <tr>
               <td><strong>MP4 Workload</strong></td>
               <td><span class="tag warn">Partial</span></td>
-              <td>Host workload checkpoints run for reachability regressions (init to VIWait, mainloop slices).</td>
-              <td class="mono">tools/run_host_scenario.sh tests/workload/mp4/...</td>
+              <td>
+                Host workload checkpoints run for reachability regressions (init to VIWait, mainloop slices).
+                <div class="muted" style="margin-top:6px;">
+                  Note: <span class="mono">pfDrawFonts</span> uses a GX-setup-only slice to avoid pulling MTX/projection/render-loop code into the host workload build.
+                </div>
+              </td>
+              <td class="mono">
+                tools/run_host_scenario.sh tests/workload/mp4/...<br/>
+                tools/run_mp4_workload_ladder.sh
+              </td>
             </tr>
           </tbody>
         </table>

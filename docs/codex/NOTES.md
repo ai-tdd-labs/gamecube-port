@@ -3433,3 +3433,14 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_card_verify_pbt.sh` -> PASS (bit-exact expected == actual)
   - `tools/run_mutation_check.sh tools/mutations/card_verify_ignore_encode.patch -- tools/run_card_verify_pbt.sh` -> PASS (mutant fails as expected)
+
+## 2026-02-14: MP4 workload pfDrawFonts GX-setup-only slice (reachability)
+
+- Motivation:
+  - The host MP4 workload build does not link MTX; pulling the full decomp `pfDrawFonts()` implementation would introduce MTX/projection/render-loop dependencies and would conflict with the current host workload slice approach.
+  - For workload reachability (not correctness/oracle), we link a GX-setup-only subset that exercises the same GX state setup calls and returns.
+- Change:
+  - `tests/workload/mp4/slices/pfdrawfonts_gx_setup_only.c`: new slice implementing `pfDrawFonts()` with GX state setup + minimal texture init/load calls.
+  - `tools/run_host_scenario.sh`: MP4 `mp4_mainloop_*` scenarios link `pfdrawfonts_gx_setup_only.c` instead of `pfdrawfonts_stub.c`.
+- Evidence:
+  - `./tools/run_mp4_workload_ladder.sh` -> `DONE` (steps 0..13 reach markers through `mp4_mainloop_two_iter_tick_001`).
