@@ -3196,3 +3196,22 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_card_sync_pbt.sh` -> PASS
   - `tools/run_mutation_check.sh tools/mutations/card_sync_busy_cmp_wrong.patch -- tools/run_card_sync_pbt.sh` -> PASS (mutant fails as expected)
+
+## 2026-02-14: __CARDRead/__CARDReadSegment callsites + decomp notes (scoping)
+
+- MP4 decomp implementation:
+  - `decomp_mario_party_4/src/dolphin/card/CARDRdwr.c`:
+    - `__CARDRead(chan, addr, length, dst, cb)`:
+      - If `__CARDBlock[chan].attached` is false: returns `CARD_RESULT_NOCARD`.
+      - Sets `xferCallback/repeat/addr/buffer`, then calls `__CARDReadSegment(chan, BlockReadCallback)`.
+    - `BlockReadCallback`:
+      - On success: increments `xferred` by `CARD_SEG_SIZE`, advances `addr` and `buffer` by `CARD_SEG_SIZE`, decrements `repeat`, then chains another `__CARDReadSegment`.
+      - On completion/error: if `apiCallback == 0` calls `__CARDPutControlBlock(card, result)` and then calls `xferCallback` once.
+  - `decomp_mario_party_4/src/dolphin/card/CARDBios.c`:
+    - `__CARDReadSegment(chan, cb)` sets command `0x52` with `AD1/AD2/AD3/BA` address encoding, then calls `__CARDStart`.
+    - If start succeeds: sends `cmd` via `EXIImmEx`, then reads `latency` bytes into `(workArea + sizeof(CARDID))` via `EXIImmEx`, then reads 512 bytes via `EXIDma(..., __CARDTxHandler)`.
+- Animal Crossing decomp differences:
+  - `decomp_animal_crossing/src/static/dolphin/card/CARDRdwr.c`: `__CARDRead` has `ASSERTLINE` checks for `length % CARD_SEG_SIZE == 0` and `0 <= chan && chan < 2`.
+  - `decomp_animal_crossing/src/static/dolphin/card/CARDBios.c`: `__CARDReadSegment` asserts `card->addr % CARD_SEG_SIZE == 0` and `card->addr < size*MiB/8` before issuing the EXI transfers.
+- Game callsites:
+  - MP4: `decomp_mario_party_4/src/game/card.c` calls `CARDRead(...)` (SDK wrapper) for save/load flows.
