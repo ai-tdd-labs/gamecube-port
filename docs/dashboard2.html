@@ -78,20 +78,23 @@
               <td><strong>CARD</strong></td>
               <td><span class="tag warn">In Progress</span></td>
               <td>
-                Host memcard backend (raw image), CARDInit, CARDProbeEx (L0-L5), and CARD status ops
-                (<span class="mono">__CARDReadStatus/__CARDClearStatus</span>) modeled + tested.
+                Host memcard backend (raw image), CARDInit, CARDProbeEx (L0-L5), and selected CARDBios ops
+                (<span class="mono">__CARDReadStatus/__CARDClearStatus/__CARDEnableInterrupt/__CARDPutControlBlock/__CARDSync</span>)
+                modeled + tested.
                 <div class="muted" style="margin-top:6px;">
                   Remaining: CARDMount/CARDCheck/CARDRead/Write/Format chains (hardware-heavy).
                 </div>
               </td>
-              <td class="mono">
-                tools/run_memcard_backend_unit.sh<br/>
-                tools/run_card_init_pbt.sh<br/>
-                tools/run_card_probe_ex_pbt.sh<br/>
-                tools/run_card_status_pbt.sh<br/>
-                tools/run_card_mount_step0_pbt.sh
-              </td>
-            </tr>
+	              <td class="mono">
+	                tools/run_memcard_backend_unit.sh<br/>
+	                tools/run_card_init_pbt.sh<br/>
+	                tools/run_card_probe_ex_pbt.sh<br/>
+	                tools/run_card_status_pbt.sh<br/>
+	                tools/run_card_enable_interrupt_pbt.sh<br/>
+	                tools/run_card_sync_pbt.sh<br/>
+	                tools/run_card_mount_step0_pbt.sh
+	              </td>
+	            </tr>
             <tr>
               <td><strong>OSLink</strong></td>
               <td><span class="tag good">Covered</span></td>

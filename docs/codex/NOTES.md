@@ -3172,3 +3172,27 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_card_init_pbt.sh` -> PASS
   - `tools/run_mutation_check.sh tools/mutations/card_init_bad_cached_base.patch -- tools/run_card_init_pbt.sh` -> PASS (mutant fails as expected)
+
+## 2026-02-14: __CARDPutControlBlock + __CARDSync (minimal) unified DOL PBT suite
+
+- Decomp contract (MP4 Dolphin SDK):
+  - `decomp_mario_party_4/src/dolphin/card/CARDBios.c`:
+    - `__CARDPutControlBlock(card, result)`:
+      - Under `OSDisableInterrupts()`:
+        - If `card->attached`: `card->result = result`.
+        - Else if `card->result == CARD_RESULT_BUSY (-1)`: `card->result = result`.
+      - Restores interrupts; returns `result`.
+    - `__CARDSync(chan)`:
+      - `enabled = OSDisableInterrupts();`
+      - Loops while `CARDGetResultCode(chan) == -1` and calls `OSSleepThread(&block->threadQueue)`.
+      - Restores interrupts; returns last `result`.
+- Port notes:
+  - Host does not model real `OSThreadQueue` objects for CARD; `__CARDSync` uses `&gc_card_block[chan].thread_queue_inited` as a stable per-channel queue key.
+  - Added minimal host stubs `OSSleepThread/OSWakeupThread` under `src/sdk_port/os/OSThreadQueue.c` for deterministic tests.
+- Added unified suite:
+  - `tests/sdk/card/card_sync/dol/pbt/card_sync_pbt_001/*`
+  - `tests/sdk/card/card_sync/host/card_sync_pbt_001_scenario.c`
+  - `tools/run_card_sync_pbt.sh`
+- Validation:
+  - `tools/run_card_sync_pbt.sh` -> PASS
+  - `tools/run_mutation_check.sh tools/mutations/card_sync_busy_cmp_wrong.patch -- tools/run_card_sync_pbt.sh` -> PASS (mutant fails as expected)
