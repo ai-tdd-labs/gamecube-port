@@ -77,6 +77,15 @@ Rules:
   - mutant patch: `tools/mutations/dvd_cancel_null_to_zero.patch`
   - runner: `tools/mutations/dvd_cancel_null_to_zero.sh`
 
+### dump_expected concurrency fix (2026-02-14)
+- `tools/dump_expected.sh` no longer uses a global `pkill` for Dolphin; it now:
+  - acquires the repo lock `gc-trace-replay` (serializes Dolphin/GDB-stub usage across suites)
+  - optionally terminates only the process listening on TCP port `9090` when it is a `Dolphin` listener (stale stub cleanup)
+  Evidence:
+  - parallel run: `bash -lc '(bash tools/run_card_open_pbt.sh)&(bash tools/run_card_get_serial_no_pbt.sh)&wait'` => both PASS
+  - `bash tools/run_dvd_cancel_trace.sh` => PASS
+  - commit: `4ff5da0` (`tools: serialize dump_expected Dolphin runs with lock; remove global pkill`)
+
 ### CARDOpen/CARDClose trace replay parity (2026-02-14)
 - `CARDOpen` and `CARDClose` now have a completed deterministic trace replay chain from decomp to host:
   - `src/sdk_port/card/CARDOpen.c` implements file lookup + open/close state transitions using `__CARDGetControlBlock` + `__CARDGetFileNo`.
