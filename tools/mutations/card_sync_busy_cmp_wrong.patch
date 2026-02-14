@@ -1,10 +1,12 @@
 diff --git a/src/sdk_port/card/card_bios.c b/src/sdk_port/card/card_bios.c
 --- a/src/sdk_port/card/card_bios.c
 +++ b/src/sdk_port/card/card_bios.c
-@@
+@@ -171,7 +171,7 @@ s32 __CARDSync(s32 chan)
+ 
+     block = &gc_card_block[chan];
+     enabled = OSDisableInterrupts();
 -    while ((result = CARDGetResultCode(chan)) == -1) { // CARD_RESULT_BUSY
 +    while ((result = CARDGetResultCode(chan)) == -2) { // CARD_RESULT_BUSY
          // Our host port does not model real OSThreadQueue objects for CARD.
          // Use the address of an internal per-channel cookie as a stable queue key.
          OSSleepThread((OSThreadQueue *)&block->thread_queue_inited);
-     }
