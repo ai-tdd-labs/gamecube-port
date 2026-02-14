@@ -70,6 +70,18 @@ show_marker() {
   xxd -g 4 -l 8 "$out_abs" | awk '{print $2" "$3"  ("FILENAME")"}' FILENAME="$out_abs"
 }
 
+is_mtx_step() {
+  local scenario_base="$1"
+  case "$scenario_base" in
+    mp4_mainloop_one_iter_001_scenario|mp4_mainloop_one_iter_tick_001_scenario|mp4_mainloop_two_iter_001_scenario|mp4_mainloop_two_iter_tick_001_scenario|mp4_mainloop_ten_iter_tick_001_scenario|mp4_mainloop_hundred_iter_tick_001_scenario|mp4_wipe_frame_still_mtx_001_scenario)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 scenarios=(
   "$repo_root/tests/workload/mp4/mp4_husysinit_001_scenario.c"
   "$repo_root/tests/workload/mp4/mp4_huprcinit_001_scenario.c"
@@ -87,6 +99,7 @@ scenarios=(
   "$repo_root/tests/workload/mp4/mp4_mainloop_two_iter_tick_001_scenario.c"
   "$repo_root/tests/workload/mp4/mp4_mainloop_ten_iter_tick_001_scenario.c"
   "$repo_root/tests/workload/mp4/mp4_mainloop_hundred_iter_tick_001_scenario.c"
+  "$repo_root/tests/workload/mp4/mp4_wipe_frame_still_mtx_001_scenario.c"
   "$repo_root/tests/workload/mp4/mp4_process_scheduler_001_scenario.c"
   "$repo_root/tests/workload/mp4/mp4_process_sleep_001_scenario.c"
   "$repo_root/tests/workload/mp4/mp4_process_vsleep_001_scenario.c"
@@ -106,7 +119,12 @@ for s in "${scenarios[@]}"; do
   scenario_base="$(basename "$s" .c)"
   log="$repo_root/tests/build/workload_logs/${scenario_base}.log"
 
-  if "$repo_root/tools/run_host_scenario.sh" "$s" >/dev/null 2>"$log"; then
+  run_env=()
+  if is_mtx_step "$scenario_base"; then
+    run_env+=(GC_HOST_WORKLOAD_MTX=1)
+  fi
+
+  if env "${run_env[@]+${run_env[@]}}" "$repo_root/tools/run_host_scenario.sh" "$s" >/dev/null 2>"$log"; then
     echo -n "[$idx] OK  $rel  marker: "
     show_marker "$s" || true
     if [[ -s "$log" ]]; then

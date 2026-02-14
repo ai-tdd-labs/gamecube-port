@@ -3485,3 +3485,19 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Evidence:
   - Default ladder (no MTX): `./tools/run_mp4_workload_ladder.sh` -> `DONE`
   - MTX build quick check: `GC_HOST_WORKLOAD_MTX=1 ./tools/run_mp4_workload_ladder.sh --from 10 --to 11` -> `DONE`
+
+## 2026-02-14: MP4 workload ladder MTX variants + WipeFrameStill scenario (reachability)
+
+- Ladder change:
+  - `tools/run_mp4_workload_ladder.sh` now runs selected steps with `GC_HOST_WORKLOAD_MTX=1` automatically:
+    - `mp4_mainloop_*` steps
+    - `mp4_wipe_frame_still_mtx_001`
+- New scenario:
+  - `tests/workload/mp4/mp4_wipe_frame_still_mtx_001_scenario.c`:
+    - Calls `WipeInit`, forces `wipeData.copy_data != NULL`, calls `WipeExecAlways`.
+    - Marker: `WIPE` (`0x57495045`) in `tests/actual/workload/mp4_wipe_frame_still_mtx_001.bin`.
+- Slice change:
+  - `tests/workload/mp4/slices/wipeexecalways_decomp_blank.c`:
+    - `WipeFrameStill()` now includes a host-safe GX+MTX state-setup subset under `GC_HOST_WORKLOAD_MTX=1` (still no real texture-copy plumbing).
+- Evidence:
+  - `./tools/run_mp4_workload_ladder.sh` -> `DONE` including the new wipe step.

@@ -3,6 +3,9 @@
 // - When we need extra GX pieces (types/constants/prototypes) we define only
 //   values that are already proven elsewhere in this repo (GX oracle suites).
 #include "dolphin/gx.h"
+#ifdef GC_HOST_WORKLOAD_MTX
+#include "dolphin/mtx.h"
+#endif
 #include <stdint.h>
 
 // MP4 host workload slice: pfDrawFonts() GX setup only.
@@ -113,6 +116,18 @@ void pfDrawFonts(void)
     if (!RenderMode) {
         return;
     }
+
+#ifdef GC_HOST_WORKLOAD_MTX
+    // MTX-backed subset of MP4 decomp setup (still skips the render loop).
+    enum { GX_ORTHOGRAPHIC = 1, GX_PNMTX0 = 0 };
+    Mtx44 proj;
+    Mtx modelview;
+    MTXOrtho(proj, 0.0f, 480.0f, 0.0f, 640.0f, 0.0f, 10.0f);
+    GXSetProjection(proj, (u32)GX_ORTHOGRAPHIC);
+    MTXIdentity(modelview);
+    GXLoadPosMtxImm(modelview, (u32)GX_PNMTX0);
+    GXSetCurrentMtx((u32)GX_PNMTX0);
+#endif
 
     // Mirror the state setup in MP4 pfDrawFonts(), but skip MTXOrtho/Projection/Mtx loads.
     GXSetViewport(0, 0, (float)RenderMode->fbWidth, (float)RenderMode->efbHeight, 0.0f, 1.0f);

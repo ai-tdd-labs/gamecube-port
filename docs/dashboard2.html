@@ -135,6 +135,9 @@
                 <div class="muted" style="margin-top:6px;">
                   Optional: set <span class="mono">GC_HOST_WORKLOAD_MTX=1</span> to link MTX into host workloads (enables MTX-backed slices like WipeColorFill state setup).
                 </div>
+                <div class="muted" style="margin-top:6px;">
+                  Ladder MTX variants: mainloop steps are run with <span class="mono">GC_HOST_WORKLOAD_MTX=1</span> to exercise MTX-backed GX setup; includes <span class="mono">mp4_wipe_frame_still_mtx_001</span>.
+                </div>
               </td>
               <td class="mono">
                 tools/run_host_scenario.sh tests/workload/mp4/...<br/>

@@ -147,7 +147,7 @@ case "$subsystem" in
     # so we can later swap in a decomp slice without editing the scenario. For now,
     # we link a minimal decomp slice that does not emulate GX drawing.
     case "$scenario_base" in
-      mp4_mainloop_one_iter_001_scenario|mp4_mainloop_one_iter_tick_001_scenario|mp4_mainloop_two_iter_001_scenario|mp4_mainloop_two_iter_tick_001_scenario|mp4_mainloop_ten_iter_tick_001_scenario|mp4_mainloop_hundred_iter_tick_001_scenario)
+      mp4_mainloop_one_iter_001_scenario|mp4_mainloop_one_iter_tick_001_scenario|mp4_mainloop_two_iter_001_scenario|mp4_mainloop_two_iter_tick_001_scenario|mp4_mainloop_ten_iter_tick_001_scenario|mp4_mainloop_hundred_iter_tick_001_scenario|mp4_wipe_frame_still_mtx_001_scenario)
         extra_srcs+=("$repo_root/tests/workload/mp4/slices/wipeexecalways_decomp_blank.c")
         ;;
     esac
