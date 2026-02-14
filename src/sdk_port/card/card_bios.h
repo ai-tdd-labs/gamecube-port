@@ -52,6 +52,12 @@ typedef struct GcCardControl {
     int32_t   xferred;
     uintptr_t tx_callback;
     uintptr_t xfer_callback;
+
+    // __CARDVerify state (subset of real CARDControl).
+    uint16_t  size_u16; // CARDControl.size used by CARDCheck.c (ID validation)
+    uint16_t  _pad_verify0;
+    uintptr_t current_dir_ptr;
+    uintptr_t current_fat_ptr;
 } GcCardControl;
 
 extern GcCardControl gc_card_block[GC_CARD_CHANS];

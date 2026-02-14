@@ -3328,3 +3328,16 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
   - `tests/sdk/card/card_verify/dol/pbt/card_verify_pbt_001/*`
   - Build: `make -C tests/sdk/card/card_verify/dol/pbt/card_verify_pbt_001`
   - Expected dump (Dolphin): `tools/dump_expected.sh tests/sdk/card/card_verify/dol/pbt/card_verify_pbt_001/card_verify_pbt_001.dol tests/sdk/card/card_verify/expected/card_verify_pbt_001.bin 0x80300000 0x80 0.7`
+
+## 2026-02-14: __CARDVerify unified DOL-vs-host compare (pbt_001, cases A-C)
+
+- Added unified suite:
+  - `tests/sdk/card/card_verify/dol/pbt/card_verify_pbt_001/*`
+  - `tests/sdk/card/card_verify/host/card_verify_pbt_001_scenario.c`
+  - `tools/run_card_verify_pbt.sh`
+- Host port:
+  - `src/sdk_port/card/CARDCheck.c`: host-side `__CARDVerify(GcCardControl*)` with explicit big-endian reads over `work_area`.
+  - `src/sdk_port/os/OSFont.c`: `OSGetFontEncode()` modeled via knob `gc_os_font_encode` (default 0).
+- Validation:
+  - `tools/run_card_verify_pbt.sh` -> PASS (bit-exact expected == actual)
+  - `tools/run_mutation_check.sh tools/mutations/card_verify_ignore_encode.patch -- tools/run_card_verify_pbt.sh` -> PASS (mutant fails as expected)

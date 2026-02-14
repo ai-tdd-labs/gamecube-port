@@ -158,22 +158,23 @@ esac
 
 port_srcs=()
 case "$subsystem" in
-  os|os+dvd+vi+pad+gx)
-    port_srcs+=(
-      "$repo_root/src/sdk_port/os/OSArena.c"
-      "$repo_root/src/sdk_port/os/OSCache.c"
-      "$repo_root/src/sdk_port/os/OSAlloc.c"
-      "$repo_root/src/sdk_port/os/OSInterrupts.c"
-      "$repo_root/src/sdk_port/os/OSInit.c"
-      "$repo_root/src/sdk_port/os/OSFastCast.c"
-      "$repo_root/src/sdk_port/os/OSError.c"
-      "$repo_root/src/sdk_port/os/OSSystem.c"
-      "$repo_root/src/sdk_port/os/OSRtc.c"
-      "$repo_root/src/sdk_port/os/OSStopwatch.c"
-      "$repo_root/src/sdk_port/os/OSModule.c"
-    )
-    ;;
-esac
+	  os|os+dvd+vi+pad+gx)
+	    port_srcs+=(
+	      "$repo_root/src/sdk_port/os/OSArena.c"
+	      "$repo_root/src/sdk_port/os/OSCache.c"
+	      "$repo_root/src/sdk_port/os/OSAlloc.c"
+	      "$repo_root/src/sdk_port/os/OSInterrupts.c"
+	      "$repo_root/src/sdk_port/os/OSInit.c"
+	      "$repo_root/src/sdk_port/os/OSFastCast.c"
+	      "$repo_root/src/sdk_port/os/OSError.c"
+	      "$repo_root/src/sdk_port/os/OSSystem.c"
+	      "$repo_root/src/sdk_port/os/OSRtc.c"
+	      "$repo_root/src/sdk_port/os/OSFont.c"
+	      "$repo_root/src/sdk_port/os/OSStopwatch.c"
+	      "$repo_root/src/sdk_port/os/OSModule.c"
+	    )
+	    ;;
+	esac
 
 case "$subsystem" in
   si|os+dvd+vi+pad+gx)
@@ -249,17 +250,19 @@ case "$subsystem" in
 esac
 
 case "$subsystem" in
-  card)
-    port_srcs+=(
-      "$repo_root/src/sdk_port/os/OSInterrupts.c"
-      "$repo_root/src/sdk_port/os/OSRtc.c"
-      "$repo_root/src/sdk_port/os/OSThreadQueue.c"
-      "$repo_root/src/sdk_port/exi/EXI.c"
-      "$repo_root/src/sdk_port/card/card_bios.c"
-      "$repo_root/src/sdk_port/card/CARDMount.c"
-      "$repo_root/src/sdk_port/card/card_dir.c"
-      "$repo_root/src/sdk_port/card/card_fat.c"
-      "$repo_root/src/sdk_port/card/card_unlock.c"
+	  card)
+	    port_srcs+=(
+	      "$repo_root/src/sdk_port/os/OSInterrupts.c"
+	      "$repo_root/src/sdk_port/os/OSRtc.c"
+	      "$repo_root/src/sdk_port/os/OSFont.c"
+	      "$repo_root/src/sdk_port/os/OSThreadQueue.c"
+	      "$repo_root/src/sdk_port/exi/EXI.c"
+	      "$repo_root/src/sdk_port/card/card_bios.c"
+	      "$repo_root/src/sdk_port/card/CARDCheck.c"
+	      "$repo_root/src/sdk_port/card/CARDMount.c"
+	      "$repo_root/src/sdk_port/card/card_dir.c"
+	      "$repo_root/src/sdk_port/card/card_fat.c"
+	      "$repo_root/src/sdk_port/card/card_unlock.c"
       "$repo_root/src/sdk_port/card/memcard_backend.c"
     )
     ;;
