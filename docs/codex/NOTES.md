@@ -2025,6 +2025,39 @@ Notes:
   - `bash tools/run_mutation_check.sh tools/mutations/card_clear_status_wrong_cmd.patch -- bash tools/run_card_status_pbt.sh`
   - Result: PASS (suite fails under mutant).
 
+- Follow-up fix:
+  - `src/sdk_port/exi/EXI.c` clear-status (`0x89`) was refined to preserve non-error bits (notably `0x40`) and only clear bits `0x18` (inferred from `decomp_mario_party_4/src/dolphin/card/CARDBios.c` using `status & 0x18` as error flags). This is required for DoMount step0 to observe `status & 0x40` after a clear+read sequence.
+
+## 2026-02-14: CARDMount DoMount step0 modeled + unified DOL PBT suite
+
+- Decomp contract (MP4 Dolphin SDK):
+  - `decomp_mario_party_4/src/dolphin/card/CARDMount.c` `DoMount` step0 (when `card->mountStep == 0`):
+    - `EXIGetID` + `IsCard` gate; on success sets:
+      - `card->cid = id`
+      - `card->size = (id & 0xFC)`, `card->sectorSize = SectorSizeTable[(id & 0x3800)>>11]`
+      - `card->cBlock = (sizeMB * 1024*1024/8)/sectorSize`
+      - `card->latency = LatencyTable[(id & 0x700)>>8]`
+    - Calls `__CARDClearStatus`, then `__CARDReadStatus` into `status`, then `EXIProbe` must be true.
+    - If `!(status & 0x40)`: calls `__CARDUnlock(chan, card->id)` which fills `card->id[12]`, then writes SRAM `OSSramEx.flashID[chan][0..11]` and `flashIDCheckSum[chan] = ~sum(flashID)` and unlocks SRAM with commit `TRUE`.
+    - Else (`status & 0x40`): sets `mountStep = 1`, verifies SRAM flashID checksum matches; mismatch -> `CARD_RESULT_IOERROR`.
+- Added modeled host implementation (incremental):
+  - `src/sdk_port/card/CARDMount.c`: implemented DoMount through step0, including SRAM flashID + checksum branches.
+  - `src/sdk_port/card/card_bios.h`: extended `GcCardControl` with modeled fields `cid/cblock/latency/id[12]`.
+  - `src/sdk_port/card/card_unlock.c`: added a deterministic host-test stub `__CARDUnlock` controlled by knobs (`gc_card_unlock_ok/gc_card_unlock_flash_id`) to unblock step0 testing; full EXI+DSP unlock chain is still TODO.
+  - `src/sdk_port/exi/EXI.c`: status clear preserves `0x40` so step0 can observe unlock bit after clear+read.
+- Added unified PPC-vs-host suite:
+  - Runner: `tools/run_card_mount_step0_pbt.sh`
+  - DOL: `tests/sdk/card/card_mount_step0/dol/pbt/card_mount_step0_pbt_001/`
+  - Host: `tests/sdk/card/card_mount_step0/host/card_mount_step0_pbt_001_scenario.c`
+- Validation:
+  - `bash tools/run_card_mount_step0_pbt.sh`
+  - Result: PASS (bit-exact expected vs actual).
+- Mutation check:
+  - `bash tools/run_mutation_check.sh tools/mutations/card_mount_step0_unlock_branch_inverted.patch -- bash tools/run_card_mount_step0_pbt.sh`
+  - Result: PASS (suite fails under mutant).
+- Note:
+  - This is an incremental DoMount port: later DoMount stages (mountStep 1/2 + system block reads + interrupt enable) are not implemented yet.
+
 ## 2026-02-14: dump_expected.sh supports isolated Dolphin userdir + config overrides
 
 - Updated tooling:
