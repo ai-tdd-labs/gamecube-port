@@ -78,7 +78,8 @@
               <td><strong>CARD</strong></td>
               <td><span class="tag warn">In Progress</span></td>
               <td>
-                Host memcard backend (raw image), CARDInit, and CARDProbeEx (L0-L5) modeled + tested.
+                Host memcard backend (raw image), CARDInit, CARDProbeEx (L0-L5), and CARD status ops
+                (<span class="mono">__CARDReadStatus/__CARDClearStatus</span>) modeled + tested.
                 <div class="muted" style="margin-top:6px;">
                   Remaining: CARDMount/CARDCheck/CARDRead/Write/Format chains (hardware-heavy).
                 </div>
@@ -86,7 +87,8 @@
               <td class="mono">
                 tools/run_memcard_backend_unit.sh<br/>
                 tools/run_card_init_pbt.sh<br/>
-                tools/run_card_probe_ex_pbt.sh
+                tools/run_card_probe_ex_pbt.sh<br/>
+                tools/run_card_status_pbt.sh
               </td>
             </tr>
             <tr>

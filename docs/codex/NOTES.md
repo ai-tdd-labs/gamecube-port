@@ -1999,6 +1999,32 @@ Notes:
   - `bash tools/run_mutation_check.sh tools/mutations/card_mount_async_busy_check_inverted.patch -- bash tools/run_card_mount_preflight_pbt.sh`
   - Result: PASS (suite fails under mutant).
 
+## 2026-02-14: __CARDReadStatus/__CARDClearStatus + EXI status model unified DOL PBT suite
+
+- Decomp contract (MP4 Dolphin SDK):
+  - `decomp_mario_party_4/src/dolphin/card/CARDBios.c`:
+    - `__CARDReadStatus(chan, status)`:
+      - `EXISelect(chan, 0, 4)` must succeed, else `CARD_RESULT_NOCARD`.
+      - Sends command `0x83000000` as 2 bytes, then reads 1 byte `status` (`EXIImm` write + sync, then `EXIImm` read + sync), then `EXIDeselect`.
+      - Returns `CARD_RESULT_READY` on success, `CARD_RESULT_NOCARD` on any error.
+    - `__CARDClearStatus(chan)`:
+      - `EXISelect(chan, 0, 4)` must succeed, else `CARD_RESULT_NOCARD`.
+      - Sends command `0x89000000` as 1 byte (`EXIImm` write + sync), then `EXIDeselect`.
+      - Returns `CARD_RESULT_READY` on success, `CARD_RESULT_NOCARD` on any error.
+- Added sdk_port implementation + minimal EXI device model:
+  - `src/sdk_port/card/card_bios.c`: implemented `__CARDReadStatus` and `__CARDClearStatus` using explicit byte buffers for the EXI commands.
+  - `src/sdk_port/exi/EXI.c`: added per-channel `gc_exi_card_status[]` with `0x83` read-status and `0x89` clear-status decoding; includes instrumentation (`gc_exi_last_imm_*`) for suites.
+- Added unified PPC-vs-host suite:
+  - Runner: `tools/run_card_status_pbt.sh`
+  - DOL: `tests/sdk/card/card_status/dol/pbt/card_status_pbt_001/`
+  - Host: `tests/sdk/card/card_status/host/card_status_pbt_001_scenario.c`
+- Validation:
+  - `bash tools/run_card_status_pbt.sh`
+  - Result: PASS (bit-exact expected vs actual).
+- Mutation check:
+  - `bash tools/run_mutation_check.sh tools/mutations/card_clear_status_wrong_cmd.patch -- bash tools/run_card_status_pbt.sh`
+  - Result: PASS (suite fails under mutant).
+
 ## 2026-02-14: dump_expected.sh supports isolated Dolphin userdir + config overrides
 
 - Updated tooling:
