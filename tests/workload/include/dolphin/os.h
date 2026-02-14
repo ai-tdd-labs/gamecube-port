@@ -12,6 +12,7 @@ typedef u32 OSModuleID;
 typedef struct OSModuleInfo OSModuleInfo;
 typedef struct OSModuleQueue OSModuleQueue;
 typedef struct OSModuleLink OSModuleLink;
+typedef struct OSThreadQueue OSThreadQueue;
 
 struct OSModuleQueue {
     OSModuleInfo *head;
@@ -56,6 +57,15 @@ u32 OSGetProgressiveMode(void);
 
 int OSDisableInterrupts(void);
 int OSRestoreInterrupts(int level);
+
+// Minimal thread queue API used by CARD (__CARDSync, __CARDSyncCallback).
+struct OSThreadQueue {
+    void *head;
+    void *tail;
+};
+
+void OSSleepThread(OSThreadQueue *queue);
+void OSWakeupThread(OSThreadQueue *queue);
 
 void OSInitFastCast(void);
 

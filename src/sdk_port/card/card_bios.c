@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include "card_bios.h"
 #include "dolphin/exi.h"
+#include "dolphin/os.h"
 
 /* CARD results (mp4-decomp dolphin/card.h). */
 enum {
@@ -132,4 +133,49 @@ s32 __CARDEnableInterrupt(s32 chan, BOOL enable)
     err |= !EXISync(chan);
     err |= !EXIDeselect(chan);
     return err ? CARD_RESULT_NOCARD : CARD_RESULT_READY;
+}
+
+s32 __CARDPutControlBlock(GcCardControl *card, s32 result)
+{
+    int enabled;
+
+    // Minimal port: replicate CARDBios.c semantics for attached/busy updates.
+    enabled = OSDisableInterrupts();
+    if (card->attached) {
+        card->result = result;
+    }
+    else if (card->result == -1) { // CARD_RESULT_BUSY
+        card->result = result;
+    }
+    OSRestoreInterrupts(enabled);
+    return result;
+}
+
+s32 CARDGetResultCode(s32 chan)
+{
+    if (chan < 0 || chan >= 2) {
+        return -128; // CARD_RESULT_FATAL_ERROR
+    }
+    return gc_card_block[chan].result;
+}
+
+s32 __CARDSync(s32 chan)
+{
+    s32 result;
+    int enabled;
+    GcCardControl *block;
+
+    if (chan < 0 || chan >= 2) {
+        return -128;
+    }
+
+    block = &gc_card_block[chan];
+    enabled = OSDisableInterrupts();
+    while ((result = CARDGetResultCode(chan)) == -1) { // CARD_RESULT_BUSY
+        // Our host port does not model real OSThreadQueue objects for CARD.
+        // Use the address of an internal per-channel cookie as a stable queue key.
+        OSSleepThread((OSThreadQueue *)&block->thread_queue_inited);
+    }
+    OSRestoreInterrupts(enabled);
+    return result;
 }
