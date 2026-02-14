@@ -92,3 +92,6 @@ int32_t CARDClose(CARDFileInfo* fileInfo);
 /* CARD filesystem metric API (decomp: external/mp4-decomp/src/dolphin/card/CARDBios.c). */
 int32_t CARDFreeBlocks(int32_t chan, int32_t* byteNotUsed, int32_t* filesNotUsed);
 int32_t CARDGetSectorSize(int32_t chan, uint32_t* size);
+
+/* CARD serial API (decomp: external/mp4-decomp/src/dolphin/card/CARDNet.c). */
+int32_t CARDGetSerialNo(int32_t chan, uint64_t* serialNo);

@@ -105,6 +105,16 @@ Rules:
   - `tools/run_card_mount_pbt.sh` => PASS (expected/actual match with `CMT0` + `CMT1` blocks).
   - Mutation file added: `tools/mutations/card_mount_sync_callback_reordered.patch`.
 
+### CARDGetSerialNo trace replay parity (2026-02-14)
+- `CARDGetSerialNo` is now implemented in `src/sdk_port/card/CARDGetSerialNo.c` and wired into card test harnessing:
+  - `src/sdk_port/card/card_bios.h` exports `CARDGetSerialNo` prototype.
+  - `tools/run_host_scenario.sh` includes `CARDGetSerialNo.c` in CARD build chain.
+  - `tools/run_card_get_serial_no_pbt.sh` generates expected/actual and diffs.
+  - `tests/sdk/card/card_get_serial_no/host/card_get_serial_no_pbt_001_scenario.c` + `tests/sdk/card/card_get_serial_no/dol/pbt/card_get_serial_no_pbt_001/{oracle_card_get_serial_no.c,card_get_serial_no_pbt_001.c}` define the oracle/harness parity rows.
+- Behavior evidence:
+  - `bash tools/run_card_get_serial_no_pbt.sh` => PASS (`expected.bin == actual.bin`).
+  - Mutation gate prepared: `tools/mutations/card_get_serial_no_xor_bad_not.patch` (must cause suite fail in mutation check).
+
 ### Dolphin GDB Stub (macOS build on this machine)
 - Stop packets include PC/NIP in reg `0x40` (usable for PC-polling checkpoints).
   Evidence: `tools/ram_dump.py` `parse_stop_pc()`; observed stop example `T0540:800ba2f0;01:8019d798;` from real MP4 RVZ.
