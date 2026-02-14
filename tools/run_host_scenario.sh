@@ -290,6 +290,7 @@ case "$subsystem" in
       "$repo_root/src/sdk_port/card/card_fat.c"
       "$repo_root/src/sdk_port/card/CARDOpen.c"
       "$repo_root/src/sdk_port/card/CARDGetStatus.c"
+      "$repo_root/src/sdk_port/card/CARDSetStatus.c"
       "$repo_root/src/sdk_port/card/card_unlock.c"
       "$repo_root/src/sdk_port/card/CARDFreeBlocks.c"
       "$repo_root/src/sdk_port/card/CARDGetSerialNo.c"

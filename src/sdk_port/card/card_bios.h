@@ -131,6 +131,7 @@ void CARDInit(void);
 
 // Internal CARDBios helpers (modeled subset).
 int32_t __CARDGetControlBlock(int32_t chan, GcCardControl** pcard);
+int32_t __CARDPutControlBlock(GcCardControl *card, int32_t result);
 int32_t __CARDSync(int32_t chan);
 void __CARDSyncCallback(int32_t chan, int32_t result);
 
@@ -147,3 +148,5 @@ int32_t CARDGetSerialNo(int32_t chan, uint64_t* serialNo);
 
 /* CARD status API (decomp: external/mp4-decomp/src/dolphin/card/CARDStat.c). */
 int32_t CARDGetStatus(int32_t chan, int32_t fileNo, CARDStat* stat);
+int32_t CARDSetStatusAsync(int32_t chan, int32_t fileNo, CARDStat* stat, CARDCallback callback);
+int32_t CARDSetStatus(int32_t chan, int32_t fileNo, CARDStat* stat);

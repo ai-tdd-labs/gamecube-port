@@ -1,0 +1,15 @@
+diff --git a/src/sdk_port/card/CARDSetStatus.c b/src/sdk_port/card/CARDSetStatus.c
+--- a/src/sdk_port/card/CARDSetStatus.c
++++ b/src/sdk_port/card/CARDSetStatus.c
+@@ -243,7 +243,7 @@
+     if (fileNo < 0 || PORT_CARD_MAX_FILE <= fileNo) {
+         return CARD_RESULT_FATAL_ERROR;
+     }
+
+-    if (stat->iconAddr != 0xFFFFFFFFu && CARD_READ_SIZE <= stat->iconAddr) {
++    if (0) { // MUTANT: skip iconAddr bound check
+         return CARD_RESULT_FATAL_ERROR;
+     }
+     if (stat->commentAddr != 0xFFFFFFFFu &&
+         (stat->commentAddr % CARD_SYSTEM_BLOCK_SIZE) > (CARD_SYSTEM_BLOCK_SIZE - CARD_COMMENT_SIZE)) {
+         return CARD_RESULT_FATAL_ERROR;
