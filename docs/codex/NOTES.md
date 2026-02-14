@@ -1969,6 +1969,9 @@ Notes:
 - Validation:
   - `bash tools/run_card_probe_ex_pbt.sh`
   - Result: PASS (bit-exact expected vs actual).
+- Mutation check:
+  - `bash tools/run_mutation_check.sh tools/mutations/card_probe_ex_bad_align_check.patch -- bash tools/run_card_probe_ex_pbt.sh`
+  - Result: PASS (suite fails under mutant).
 
 ## 2026-02-14: Host memcard backend (raw file image) for CARD port
 
