@@ -3244,6 +3244,10 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
   - L5 edge: BUSY lock path does not start IO
     - Setup: `oracle_exi_lock_ok=0` (or host EXILock forced fail), call `__CARDReadSegment`.
     - Expect: returns READY (MP4: `BUSY` coerced to `READY`), but no DMA occurs and callback is not invoked.
-  - Error path: DMA failure returns NOCARD and cleans up
+- Error path: DMA failure returns NOCARD and cleans up
     - Setup: `oracle_exi_dma_ok=0` (or host `gc_exi_dma_hook = 0`), call `__CARDReadSegment`.
     - Expect: returns `CARD_RESULT_NOCARD (-3)` and does `EXIDeselect+EXIUnlock` (observable via host EXI state).
+
+- DOL test implementation (built):
+  - `tests/sdk/card/card_read/dol/pbt/card_read_pbt_001/*`
+  - Build: `make -C tests/sdk/card/card_read/dol/pbt/card_read_pbt_001`
