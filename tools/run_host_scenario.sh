@@ -64,7 +64,7 @@ is_workload=0
 
 # Smoke suites may span multiple subsystems; compile the union.
 if [[ "$subsystem" == "smoke" ]]; then
-  subsystem="os+dvd+vi+pad+gx"
+  subsystem="os+dvd+vi+pad+gx+mtx"
 fi
 
 extra_includes=()
@@ -164,13 +164,19 @@ case "$subsystem" in
       -DVERSION_NTSC=1
       -DGC_HOST_WORKLOAD=1
     )
-    subsystem="os+dvd+vi+pad+gx"
+    # MTX is optional for host workloads; enable when a slice needs MTXOrtho/MTXIdentity.
+    if [[ "${GC_HOST_WORKLOAD_MTX:-0}" == "1" ]]; then
+      extra_cflags+=(-DGC_HOST_WORKLOAD_MTX=1)
+      subsystem="os+dvd+vi+pad+gx+mtx"
+    else
+      subsystem="os+dvd+vi+pad+gx"
+    fi
     ;;
 esac
 
 port_srcs=()
 case "$subsystem" in
-	  os|os+dvd+vi+pad+gx)
+	  os|os+dvd+vi+pad+gx|os+dvd+vi+pad+gx+mtx)
 	    port_srcs+=(
 	      "$repo_root/src/sdk_port/os/OSArena.c"
 	      "$repo_root/src/sdk_port/os/OSCache.c"
@@ -189,7 +195,7 @@ case "$subsystem" in
 	esac
 
 case "$subsystem" in
-  si|os+dvd+vi+pad+gx)
+  si|os+dvd+vi+pad+gx|os+dvd+vi+pad+gx+mtx)
     port_srcs+=(
       "$repo_root/src/sdk_port/os/OSInterrupts.c"
       "$repo_root/src/sdk_port/os/OSError.c"
@@ -200,7 +206,7 @@ case "$subsystem" in
 esac
 
 case "$subsystem" in
-  vi|os+dvd+vi+pad+gx)
+  vi|os+dvd+vi+pad+gx|os+dvd+vi+pad+gx+mtx)
     port_srcs+=(
       "$repo_root/src/sdk_port/os/OSInterrupts.c"
       "$repo_root/src/sdk_port/vi/VI.c"
@@ -209,7 +215,7 @@ case "$subsystem" in
 esac
 
 case "$subsystem" in
-  pad|os+dvd+vi+pad+gx)
+  pad|os+dvd+vi+pad+gx|os+dvd+vi+pad+gx+mtx)
     port_srcs+=(
       "$repo_root/src/sdk_port/os/OSInterrupts.c"
       "$repo_root/src/sdk_port/os/OSError.c"
@@ -221,7 +227,7 @@ case "$subsystem" in
 esac
 
 case "$subsystem" in
-  gx|os+dvd+vi+pad+gx)
+  gx|os+dvd+vi+pad+gx|os+dvd+vi+pad+gx+mtx)
     port_srcs+=(
       "$repo_root/src/sdk_port/gx/GX.c"
     )
@@ -229,7 +235,7 @@ case "$subsystem" in
 esac
 
 case "$subsystem" in
-  mtx)
+  mtx|os+dvd+vi+pad+gx+mtx)
     port_srcs+=(
       "$repo_root/src/sdk_port/mtx/mtx.c"
       "$repo_root/src/sdk_port/mtx/mtx44.c"
@@ -238,7 +244,7 @@ case "$subsystem" in
 esac
 
 case "$subsystem" in
-  dvd|os+dvd+vi+pad+gx)
+  dvd|os+dvd+vi+pad+gx|os+dvd+vi+pad+gx+mtx)
     port_srcs+=(
       "$repo_root/src/sdk_port/dvd/DVD.c"
     )

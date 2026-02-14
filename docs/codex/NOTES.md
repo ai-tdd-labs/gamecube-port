@@ -3475,3 +3475,13 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
   - Enum values are copied from `external/mp4-decomp/include/dolphin/gx/GXEnum.h` (avoid guessing).
 - Evidence:
   - `./tools/run_mp4_workload_ladder.sh --from 10` -> `DONE` after the slice upgrades.
+
+## 2026-02-14: MP4 host workload optional MTX link mode (GC_HOST_WORKLOAD_MTX)
+
+- Build knob:
+  - `GC_HOST_WORKLOAD_MTX=1` makes `tools/run_host_scenario.sh` link `src/sdk_port/mtx/*` into MP4 workload scenarios (subsystem union `os+dvd+vi+pad+gx+mtx`) and defines `GC_HOST_WORKLOAD_MTX=1` for compile-time guards.
+- Wipe slice MTX-backed state setup:
+  - `tests/workload/mp4/slices/wipeexecalways_decomp_blank.c` contains a host-safe `WipeColorFill()` implementation that runs only when built with `GC_HOST_WORKLOAD_MTX=1` (otherwise it stays a no-op to keep the default ladder lightweight).
+- Evidence:
+  - Default ladder (no MTX): `./tools/run_mp4_workload_ladder.sh` -> `DONE`
+  - MTX build quick check: `GC_HOST_WORKLOAD_MTX=1 ./tools/run_mp4_workload_ladder.sh --from 10 --to 11` -> `DONE`

@@ -132,6 +132,9 @@
                 <div class="muted" style="margin-top:6px;">
                   Slices: <span class="mono">WipeExecAlways</span> and <span class="mono">pfDrawFonts</span> are host-safe but closer to decomp control-flow/state setup (no real GX rendering yet).
                 </div>
+                <div class="muted" style="margin-top:6px;">
+                  Optional: set <span class="mono">GC_HOST_WORKLOAD_MTX=1</span> to link MTX into host workloads (enables MTX-backed slices like WipeColorFill state setup).
+                </div>
               </td>
               <td class="mono">
                 tools/run_host_scenario.sh tests/workload/mp4/...<br/>
