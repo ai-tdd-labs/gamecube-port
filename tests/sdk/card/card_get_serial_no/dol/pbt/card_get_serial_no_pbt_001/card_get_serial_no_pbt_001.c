@@ -117,7 +117,6 @@ int main(void)
     }
     serial = 0x0123456789000000uLL;
     rc = oracle_CARDGetSerialNo(0, &serial);
-    serial = expected_serial_from_work_area((const u8 *)mem);
     write_row(out, &off, 0x43534E35u, rc, serial, gc_card_block[0].result);
 
     wr32be(out + 0xF0u, 0x43534E56u);

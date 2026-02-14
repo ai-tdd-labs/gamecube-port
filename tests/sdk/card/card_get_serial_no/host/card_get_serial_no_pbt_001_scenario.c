@@ -113,7 +113,6 @@ void gc_scenario_run(GcRam* ram) {
     }
     serial = 0x0123456789000000uLL;
     rc = CARDGetSerialNo(0, &serial);
-    serial = expected_serial_from_work_area(mem);
     write_row(out, &off, 0x43534E35u, rc, serial); // CSN5
 
     // Footer: marker + word count so CI can sanity-check truncation.
