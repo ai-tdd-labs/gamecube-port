@@ -1887,6 +1887,22 @@ Notes:
   - `bash tools/run_host_scenario.sh tests/workload/mp4/mp4_mainloop_one_iter_001_scenario.c`
   - `bash tools/run_host_scenario.sh tests/workload/mp4/mp4_mainloop_two_iter_tick_001_scenario.c`
 
+## 2026-02-14: EXI minimal chain suite (lock/select/imm/sync/deselect/unlock)
+
+- Added minimal deterministic EXI model in sdk_port:
+  - `src/sdk_port/exi/EXI.c`
+  - Host-safe header: `tests/workload/include/dolphin/exi.h`
+  - Host runner wiring: `tools/run_host_scenario.sh` supports subsystem `exi`
+- Added unified PPC-vs-host suite:
+  - Runner: `tools/run_exi_min_chain_pbt.sh`
+  - DOL: `tests/sdk/exi/exi_min_chain/dol/pbt/exi_min_chain_pbt_001/`
+  - Host: `tests/sdk/exi/exi_min_chain/host/exi_min_chain_pbt_001_scenario.c`
+- Validation:
+  - `bash tools/run_exi_min_chain_pbt.sh`
+  - Result: PASS (bit-exact expected vs actual).
+- Evidence source used for behavior (register packing/state machine shape):
+  - `decomp_mario_party_4/src/dolphin/exi/EXIBios.c`
+
 ## 2026-02-12: GXPixModeSync added + deterministic PPC-vs-host suite
 
 - Added sdk_port function in `src/sdk_port/gx/GX.c`:
