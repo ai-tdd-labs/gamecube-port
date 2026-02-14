@@ -28,9 +28,32 @@ fi
 
 mkdir -p "$(dirname "$OUT_BIN")"
 
-# Keep the workflow deterministic: kill stale headless Dolphin instances that
-# might still be bound to the GDB stub port (e.g. after a crash).
-pkill -f "Dolphin -b -d -e" >/dev/null 2>&1 || true
+source "$repo_root/tools/helpers/lock.sh"
+
+# Prevent parallel runs from interfering with each other (Dolphin + GDB stub
+# port are singletons). Without this, multiple dump_expected runs can kill each
+# other's Dolphin instances and make suites flaky.
+acquire_lock "gc-trace-replay" 600
+trap release_lock EXIT INT TERM HUP
+
+# Keep the workflow deterministic: if a stale headless Dolphin is still bound to
+# the GDB stub port (9090), terminate only that listener.
+#
+# This is intentionally narrower than the old global pkill, so unrelated Dolphin
+# instances are not affected.
+if command -v lsof >/dev/null 2>&1; then
+  stale_pid="$(
+    (lsof -nP -iTCP:9090 -sTCP:LISTEN 2>/dev/null || true) | awk '
+      NR==1 { next } # header
+      $1 ~ /Dolphin/ { print $2; exit 0 }
+    '
+  )"
+  if [[ -n "${stale_pid:-}" ]]; then
+    kill -TERM "$stale_pid" >/dev/null 2>&1 || true
+    sleep 0.2
+    kill -KILL "$stale_pid" >/dev/null 2>&1 || true
+  fi
+fi
 
 # Optional: isolate Dolphin user/config for determinism (memcard/SRAM/etc).
 #
