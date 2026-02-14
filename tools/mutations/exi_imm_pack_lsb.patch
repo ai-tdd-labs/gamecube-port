@@ -1,0 +1,13 @@
+diff --git a/src/sdk_port/exi/EXI.c b/src/sdk_port/exi/EXI.c
+index 9169b79..c20ab09 100644
+--- a/src/sdk_port/exi/EXI.c
++++ b/src/sdk_port/exi/EXI.c
+@@ -169,7 +169,7 @@ BOOL EXIImm(s32 channel, void* buffer, s32 length, u32 type, EXICallback callbac
+     const uint8_t* b = (const uint8_t*)buffer;
+     u32 data = 0;
+     for (s32 i = 0; i < length; i++) {
+-      data |= (u32)b[i] << ((3 - (u32)i) * 8);
++      data |= (u32)b[i] << ((u32)i * 8);
+     }
+     *regp(channel, 4) = data;
+   }
