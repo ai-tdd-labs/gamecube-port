@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GameCube SDK Port Dashboard</title>
+    <style>
+      :root {
+        --bg: #0b0f14;
+        --panel: #111824;
+        --text: #e7eef9;
+        --muted: #9bb0c9;
+        --good: #7ce38b;
+        --warn: #ffd37a;
+        --bad: #ff7b7b;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      }
+      body {
+        margin: 0;
+        background: radial-gradient(1200px 800px at 20% 0%, #10243a 0%, var(--bg) 55%) fixed;
+        color: var(--text);
+        font-family: var(--sans);
+      }
+      .wrap { max-width: 980px; margin: 0 auto; padding: 28px 18px 56px; }
+      h1 { margin: 0 0 8px; font-size: 22px; letter-spacing: 0.2px; }
+      .sub { color: var(--muted); margin: 0 0 18px; font-size: 13px; }
+      .panel {
+        background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.03));
+        border: 1px solid rgba(255,255,255,0.10);
+        border-radius: 14px;
+        padding: 16px 14px;
+        box-shadow: 0 20px 70px rgba(0,0,0,0.40);
+      }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th, td { text-align: left; vertical-align: top; padding: 10px 10px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+      th { color: var(--muted); font-weight: 600; }
+      code { font-family: var(--mono); font-size: 12px; }
+      .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; margin-right: 8px; }
+      .good { background: rgba(124,227,139,0.16); color: var(--good); border: 1px solid rgba(124,227,139,0.30); }
+      .warn { background: rgba(255,211,122,0.14); color: var(--warn); border: 1px solid rgba(255,211,122,0.26); }
+      .bad { background: rgba(255,123,123,0.12); color: var(--bad); border: 1px solid rgba(255,123,123,0.24); }
+      .muted { color: var(--muted); }
+      .mono { font-family: var(--mono); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>GameCube SDK Port Dashboard</h1>
+      <p class="sub">Last updated: 2026-02-14. Evidence lives in <code>docs/codex/NOTES.md</code> and linked test runners.</p>
+
+      <div class="panel">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 120px;">Subsystem</th>
+              <th style="width: 140px;">Status</th>
+              <th>What’s Covered (Deterministic Suites)</th>
+              <th style="width: 260px;">Key Runners</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>EXI</strong></td>
+              <td><span class="tag good">Covered</span></td>
+              <td>
+                Minimal deterministic EXI model with:
+                <span class="mono">lock/select/imm/sync/deselect/unlock</span>,
+                Probe/ProbeEx/GetID test knobs, and a minimal CARD command-address decode + DMA hook.
+              </td>
+              <td class="mono">
+                tools/run_exi_min_chain_pbt.sh<br/>
+                tools/run_exi_probe_getid_pbt.sh<br/>
+                tools/run_exi_dma_card_proto_pbt.sh
+              </td>
+            </tr>
+            <tr>
+              <td><strong>CARD</strong></td>
+              <td><span class="tag warn">In Progress</span></td>
+              <td>
+                Host memcard backend (raw image), CARDInit, and CARDProbeEx (L0-L5) modeled + tested.
+                <div class="muted" style="margin-top:6px;">
+                  Remaining: CARDMount/CARDCheck/CARDRead/Write/Format chains (hardware-heavy).
+                </div>
+              </td>
+              <td class="mono">
+                tools/run_memcard_backend_unit.sh<br/>
+                tools/run_card_init_pbt.sh<br/>
+                tools/run_card_probe_ex_pbt.sh
+              </td>
+            </tr>
+            <tr>
+              <td><strong>OSLink</strong></td>
+              <td><span class="tag good">Covered</span></td>
+              <td>OSUnlink trace replays harvested from MP4 RVZ (pipe input), replayed on host with mutation gate.</td>
+              <td class="mono">tools/run_os_unlink_trace_replays.sh</td>
+            </tr>
+            <tr>
+              <td><strong>OS SRAM</strong></td>
+              <td><span class="tag good">Covered</span></td>
+              <td>
+                Deterministic model + unified DOL-vs-host compare for:
+                <span class="mono">__OSInitSram/__OSLockSram/__OSLockSramEx/__OSUnlockSram/__OSUnlockSramEx</span>
+                (includes OSSramEx <span class="mono">flashID</span>/<span class="mono">flashIDCheckSum</span> fields used by CARD).
+                <div class="muted" style="margin-top:6px;">
+                  Note: This is a host model (no RTC EXI transfers); Read/Write success is controlled by test knobs.
+                </div>
+              </td>
+              <td class="mono">tools/run_os_lock_sram_ex_pbt.sh</td>
+            </tr>
+            <tr>
+              <td><strong>MP4 Workload</strong></td>
+              <td><span class="tag warn">Partial</span></td>
+              <td>Host workload checkpoints run for reachability regressions (init to VIWait, mainloop slices).</td>
+              <td class="mono">tools/run_host_scenario.sh tests/workload/mp4/...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </body>
+</html>

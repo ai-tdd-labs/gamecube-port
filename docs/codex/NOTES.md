@@ -2009,6 +2009,35 @@ Notes:
   - `DOLPHIN_USERDIR=tests/build/dolphin_userdir_smoke_* DOLPHIN_CONFIG="Core.MMU=True" tools/dump_expected.sh <dol> <bin> ...`
   - Result: PASS (expected dump produced under isolated userdir).
 
+## 2026-02-14: __OSLockSramEx/__OSUnlockSramEx host model + unified DOL PBT suite
+
+- Decomp contract (MP4 Dolphin SDK):
+  - Layout:
+    - `decomp_mario_party_4/include/dolphin/OSRtcPriv.h`:
+      - `OSSramEx` contains `flashID[2][12]` and `flashIDCheckSum[2]` (used by CARD).
+  - Locking semantics:
+    - `decomp_mario_party_4/src/dolphin/os/OSRtc.c`:
+      - `__OSLockSramEx()` returns `LockSram(sizeof(OSSram))`.
+      - Lock is non-reentrant: if `Scb.locked` is already set, returns `NULL`.
+      - `__OSUnlockSramEx(commit)` calls `UnlockSram(commit, sizeof(OSSram))` which always clears `Scb.locked` and returns `Scb.sync`.
+- Added deterministic host model:
+  - `src/sdk_port/os/OSRtc.c`:
+    - Implemented `__OSInitSram/__OSLockSram/__OSLockSramEx/__OSUnlockSram/__OSUnlockSramEx/__OSSyncSram`.
+    - Added deterministic knobs: `gc_os_sram_read_ok`, `gc_os_sram_write_ok`.
+    - Added test-only instrumentation mirrors: `gc_os_scb_locked/gc_os_scb_offset/gc_os_scb_sync/...`.
+- Added unified PPC-vs-host suite:
+  - Runner: `tools/run_os_lock_sram_ex_pbt.sh`
+  - DOL: `tests/sdk/os/os_lock_sram_ex/dol/pbt/os_lock_sram_ex_pbt_001/`
+  - Host: `tests/sdk/os/os_lock_sram_ex/host/os_lock_sram_ex_pbt_001_scenario.c`
+- Validation:
+  - `bash tools/run_os_lock_sram_ex_pbt.sh`
+  - Result: PASS (bit-exact expected vs actual).
+- Mutation check:
+  - `bash tools/run_mutation_check.sh tools/mutations/os_lock_sram_ex_reentrant_lock_allowed.patch -- bash tools/run_os_lock_sram_ex_pbt.sh`
+  - Result: PASS (suite fails under mutant).
+- Note:
+  - This suite is a deterministic model of SRAM read/write (no RTC EXI transfers); it focuses on lock/unlock semantics and byte-level OSSramEx fields used by CARD.
+
 ## 2026-02-14: Host memcard backend (raw file image) for CARD port
 
 - Added host-only memcard backend used by sdk_port to simulate a memory card image:
