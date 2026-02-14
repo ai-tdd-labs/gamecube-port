@@ -1906,6 +1906,18 @@ Notes:
 - Evidence source used for behavior (register packing/state machine shape):
   - `decomp_mario_party_4/src/dolphin/exi/EXIBios.c`
 
+## 2026-02-14: Host memcard backend (raw file image) for CARD port
+
+- Added host-only memcard backend used by sdk_port to simulate a memory card image:
+  - `src/sdk_port/card/memcard_backend.c`
+  - `src/sdk_port/card/memcard_backend.h`
+- Behavior:
+  - `gc_memcard_insert(chan, path, size)` loads existing raw image or creates a new `0xFF`-filled image on disk.
+  - `gc_memcard_read/write` operate on the in-memory image; `gc_memcard_flush` persists (best-effort).
+- Unit check:
+  - `bash tools/run_memcard_backend_unit.sh`
+  - Result: PASS.
+
 ## 2026-02-12: GXPixModeSync added + deterministic PPC-vs-host suite
 
 - Added sdk_port function in `src/sdk_port/gx/GX.c`:
