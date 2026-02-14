@@ -1,7 +1,10 @@
 diff --git a/src/sdk_port/card/CARDMount.c b/src/sdk_port/card/CARDMount.c
 --- a/src/sdk_port/card/CARDMount.c
 +++ b/src/sdk_port/card/CARDMount.c
-@@
+@@ -207,7 +207,7 @@ static s32 DoMount(s32 chan) {
+       goto error;
+     }
+ 
 -    if ((status & 0x40u) == 0) {
 +    if ((status & 0x40u) != 0) {
        result = __CARDUnlock(chan, card->id);
