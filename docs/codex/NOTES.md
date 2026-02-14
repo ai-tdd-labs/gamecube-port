@@ -3267,3 +3267,4 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
     - `src/sdk_port/card/card_bios.c`: `gc_card_tx_calls[]`
 - Validation:
   - `tools/run_card_read_pbt.sh` -> PASS (bit-exact expected == actual)
+  - `tools/run_mutation_check.sh tools/mutations/card_read_segment_wrong_cmd.patch -- tools/run_card_read_pbt.sh` -> PASS (mutant fails as expected)
