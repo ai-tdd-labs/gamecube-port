@@ -2058,6 +2058,24 @@ Notes:
 - Note:
   - This is an incremental DoMount port: later DoMount stages (mountStep 1/2 + system block reads + interrupt enable) are not implemented yet.
 
+## 2026-02-14: __CARDEnableInterrupt unified DOL PBT suite
+
+- Decomp contract (MP4 Dolphin SDK):
+  - `decomp_mario_party_4/src/dolphin/card/CARDBios.c` `__CARDEnableInterrupt(chan, enable)`:
+    - Requires `EXISelect(chan, 0, 4)` else `CARD_RESULT_NOCARD`.
+    - Sends `0x81010000` (enable) or `0x81000000` (disable) as 2 bytes via `EXIImm`, then `EXISync`, then `EXIDeselect`.
+    - Returns `CARD_RESULT_READY` on success else `CARD_RESULT_NOCARD`.
+- Added sdk_port implementation:
+  - `src/sdk_port/card/card_bios.c`: `__CARDEnableInterrupt` implemented using explicit command bytes (`0x81, 0x01/0x00`) to avoid host endianness pitfalls.
+- Added unified PPC-vs-host suite:
+  - Runner: `tools/run_card_enable_interrupt_pbt.sh`
+  - DOL: `tests/sdk/card/card_enable_interrupt/dol/pbt/card_enable_interrupt_pbt_001/`
+  - Host: `tests/sdk/card/card_enable_interrupt/host/card_enable_interrupt_pbt_001_scenario.c`
+- Validation:
+  - `bash tools/run_card_enable_interrupt_pbt.sh` -> PASS
+- Mutation check:
+  - `bash tools/run_mutation_check.sh tools/mutations/card_enable_interrupt_bad_cmd.patch -- bash tools/run_card_enable_interrupt_pbt.sh` -> PASS (mutant fails as expected)
+
 ## 2026-02-14: dump_expected.sh supports isolated Dolphin userdir + config overrides
 
 - Updated tooling:
