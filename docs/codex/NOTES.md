@@ -3323,3 +3323,7 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
   - Case E (FAT freeblock mismatch):
     - FAT checksum ok but `fat[FREEBLOCKS]` does not equal counted free blocks.
     - Expect: returns BROKEN.
+
+- DOL test implementation (built, partial cases A-C):
+  - `tests/sdk/card/card_verify/dol/pbt/card_verify_pbt_001/*`
+  - Build: `make -C tests/sdk/card/card_verify/dol/pbt/card_verify_pbt_001`
