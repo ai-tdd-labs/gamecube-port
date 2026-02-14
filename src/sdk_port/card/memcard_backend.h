@@ -21,3 +21,6 @@ int gc_memcard_write(int chan, uint32_t off, const void* src, uint32_t len);
 // Flush dirty image to disk (best-effort). Returns 0 on success.
 int gc_memcard_flush(int chan);
 
+// EXI DMA hook adapter (for sdk_port EXI model).
+// Returns 1 on success, 0 on failure.
+int gc_memcard_exi_dma(int chan, uint32_t exi_addr, void* buffer, int length, uint32_t type);

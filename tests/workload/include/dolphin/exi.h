@@ -46,3 +46,7 @@ void EXIProbeReset(void);
 extern s32 gc_exi_probeex_ret[3]; /* -1 no device, 0 busy, >0 present */
 extern u32 gc_exi_getid_ok[3];    /* 0 => EXIGetID fails, 1 => succeeds */
 extern u32 gc_exi_id[3];          /* returned by EXIGetID when enabled */
+
+// Optional DMA hook for device-backed transfers (e.g. CARD).
+// If NULL, EXIDma returns FALSE.
+extern int (*gc_exi_dma_hook)(s32 channel, u32 exi_addr, void* buffer, s32 length, u32 type);

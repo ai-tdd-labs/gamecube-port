@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Keep this host-only backend decoupled from sdk headers; define the EXI type
+// values we need locally.
+enum { GC_EXI_READ = 0, GC_EXI_WRITE = 1 };
+
 typedef struct GcMemcard {
   int inserted;
   uint32_t size;
@@ -123,3 +127,17 @@ int gc_memcard_flush(int chan) {
   return 0;
 }
 
+int gc_memcard_exi_dma(int chan, uint32_t exi_addr, void* buffer, int length, uint32_t type) {
+  if (!buffer || length <= 0) return 0;
+  if (!gc_memcard_is_inserted(chan)) return 0;
+
+  // EXI/CARD address is already a byte offset in the CARDBios command encoding.
+  uint32_t len = (uint32_t)length;
+  if (type == (uint32_t)GC_EXI_READ) {
+    return gc_memcard_read(chan, exi_addr, buffer, len) == 0;
+  }
+  if (type == (uint32_t)GC_EXI_WRITE) {
+    return gc_memcard_write(chan, exi_addr, buffer, len) == 0;
+  }
+  return 0;
+}

@@ -1925,6 +1925,23 @@ Notes:
   - `bash tools/run_mutation_check.sh tools/mutations/exi_getid_always_fail.patch -- bash tools/run_exi_probe_getid_pbt.sh`
   - Result: PASS (suite fails under mutant).
 
+## 2026-02-14: EXI DMA minimal CARD command-address decode + unified PPC-vs-host suite
+
+- Added a minimal "CARD proto" modeling layer to sdk_port EXI:
+  - `src/sdk_port/exi/EXI.c`:
+    - `EXIImmEx(EXI_WRITE, len>=5)` captures CARD command packets (`0x52` read, `0xF2` write) and decodes the EXI/CARD address using the decomp macros shape from `decomp_mario_party_4/src/dolphin/card/CARDBios.c` (`AD1/AD2/AD3/BA`).
+    - `EXIDma` consults `gc_exi_dma_hook` to perform the actual device-backed transfer, then completes immediately and calls the transfer callback.
+  - `tests/workload/include/dolphin/exi.h` exports `gc_exi_dma_hook`.
+- Added memcard-backed EXI DMA hook:
+  - `src/sdk_port/card/memcard_backend.c`: `gc_memcard_exi_dma()` adapter (read/write against raw image).
+- Added unified PPC-vs-host suite:
+  - Runner: `tools/run_exi_dma_card_proto_pbt.sh`
+  - DOL: `tests/sdk/card/exi_dma_card_proto/dol/pbt/exi_dma_card_proto_pbt_001/`
+  - Host: `tests/sdk/card/exi_dma_card_proto/host/exi_dma_card_proto_pbt_001_scenario.c`
+- Validation:
+  - `bash tools/run_exi_dma_card_proto_pbt.sh`
+  - Result: PASS (bit-exact expected vs actual).
+
 ## 2026-02-14: Host memcard backend (raw file image) for CARD port
 
 - Added host-only memcard backend used by sdk_port to simulate a memory card image:

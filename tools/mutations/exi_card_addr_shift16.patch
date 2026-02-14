@@ -1,0 +1,11 @@
+diff --git a/src/sdk_port/exi/EXI.c b/src/sdk_port/exi/EXI.c
+--- a/src/sdk_port/exi/EXI.c
++++ b/src/sdk_port/exi/EXI.c
+@@ -231,6 +231,6 @@ BOOL EXIImmEx(s32 channel, void* buffer, s32 length, u32 type) {
+       s_card[channel].cmd0 = b[0];
+       s_card[channel].addr =
+-          (((u32)(b[1] & 0x7Fu)) << 17) |
++          (((u32)(b[1] & 0x7Fu)) << 16) |
+           (((u32)b[2]) << 9) |
+           (((u32)(b[3] & 0x03u)) << 7) |
+           ((u32)(b[4] & 0x7Fu));

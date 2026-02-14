@@ -41,6 +41,12 @@ s32 gc_exi_probeex_ret[MAX_CHAN] = { -1, -1, -1 };
 u32 gc_exi_getid_ok[MAX_CHAN];
 u32 gc_exi_id[MAX_CHAN];
 
+// Optional DMA hook used to model device-backed transfers (e.g. CARD).
+// If NULL, EXIDma returns FALSE.
+//
+// Contract: return 1 on success, 0 on failure.
+int (*gc_exi_dma_hook)(s32 channel, u32 exi_addr, void* buffer, s32 length, u32 type);
+
 typedef struct GcExiControl {
   EXICallback exi_cb;
   EXICallback tc_cb;
@@ -52,6 +58,14 @@ typedef struct GcExiControl {
 } GcExiControl;
 
 static GcExiControl s_ecb[MAX_CHAN];
+
+typedef struct GcExiCardProto {
+  uint8_t cmd0;
+  u32 addr;
+  int has_addr;
+} GcExiCardProto;
+
+static GcExiCardProto s_card[MAX_CHAN];
 
 static inline volatile u32* regp(s32 chan, int idx) {
   return &gc_exi_regs[(u32)chan * REG_MAX + (u32)idx];
@@ -90,6 +104,8 @@ EXICallback EXISetExiCallback(s32 channel, EXICallback callback) {
 void EXIInit(void) {
   memset(gc_exi_regs, 0, sizeof(gc_exi_regs));
   memset(s_ecb, 0, sizeof(s_ecb));
+  memset(s_card, 0, sizeof(s_card));
+  gc_exi_dma_hook = 0;
   // Default: no devices present.
   for (int i = 0; i < MAX_CHAN; i++) {
     gc_exi_probeex_ret[i] = -1;
@@ -203,6 +219,25 @@ BOOL EXIImm(s32 channel, void* buffer, s32 length, u32 type, EXICallback callbac
 }
 
 BOOL EXIImmEx(s32 channel, void* buffer, s32 length, u32 type) {
+  // Capture CARD-style command/address writes (5-byte command packets).
+  if (channel >= 0 && channel < MAX_CHAN && type != EXI_READ && length >= 5 && buffer) {
+    const uint8_t* b = (const uint8_t*)buffer;
+    // Known CARD command encodings (from decomp CARDBios.c):
+    // - 0x52: read segment
+    // - 0xF2: write page
+    // Address decode in SDK uses:
+    //   addr = (cmd1<<17) | (cmd2<<9) | (cmd3<<7) | cmd4  (with masking)
+    if (b[0] == 0x52 || b[0] == 0xF2 || b[0] == 0xF1) {
+      s_card[channel].cmd0 = b[0];
+      s_card[channel].addr =
+          (((u32)(b[1] & 0x7Fu)) << 17) |
+          (((u32)b[2]) << 9) |
+          (((u32)(b[3] & 0x03u)) << 7) |
+          ((u32)(b[4] & 0x7Fu));
+      s_card[channel].has_addr = 1;
+    }
+  }
+
   // Minimal: chunk into <=4 bytes and sync after each.
   uint8_t* p = (uint8_t*)buffer;
   s32 remaining = length;
@@ -221,12 +256,33 @@ BOOL EXIImmEx(s32 channel, void* buffer, s32 length, u32 type) {
 }
 
 BOOL EXIDma(s32 channel, void* buffer, s32 length, u32 type, EXICallback callback) {
-  (void)buffer;
-  (void)length;
-  (void)type;
-  (void)callback;
-  // Not modeled yet. CARD will drive this; keep deterministic failure for now.
-  return FALSE;
+  if (channel < 0 || channel >= MAX_CHAN) return FALSE;
+  if (!buffer || length <= 0) return FALSE;
+
+  GcExiControl* exi = &s_ecb[channel];
+  if ((exi->state & EXI_STATE_SELECTED) == 0) return FALSE;
+  if (exi->state & EXI_STATE_BUSY) return FALSE;
+
+  // We model DMA as an immediate completion that optionally consults a device hook.
+  if (!s_card[channel].has_addr) return FALSE;
+  if (!gc_exi_dma_hook) return FALSE;
+
+  exi->tc_cb = callback;
+  exi->state |= EXI_STATE_DMA;
+  // CONTROL: tstart=1, dma=1, rw=type, tlen ignored (best-effort).
+  *regp(channel, 3) = exi_0cr(1u, 1u, type ? 1u : 0u, 0u);
+
+  int ok = gc_exi_dma_hook(channel, s_card[channel].addr, buffer, length, type);
+  exi->state &= ~EXI_STATE_DMA;
+  if (!ok) return FALSE;
+
+  // Deliver callback immediately (deterministic host model).
+  if (exi->tc_cb) {
+    EXICallback cb = exi->tc_cb;
+    exi->tc_cb = 0;
+    cb(channel, 0);
+  }
+  return TRUE;
 }
 
 BOOL EXISync(s32 channel) {
