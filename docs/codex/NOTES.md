@@ -1876,6 +1876,16 @@ Notes:
 - Replays (all harvested cases):
   - `GC_ALLOW_DIRTY=1 bash tools/run_os_unlink_trace_replays.sh tests/trace-harvest/os_unlink/mp4_rvz_pipe_v1`
   - Result: PASS (3 cases).
+  - Mutation check:
+  - `bash tools/run_mutation_check.sh tools/mutations/os_unlink_keep_head_tail.patch -- bash tools/run_os_unlink_trace_replays.sh tests/trace-harvest/os_unlink/mp4_rvz_pipe_v1`
+  - Result: PASS (suite fails under mutant).
+
+## 2026-02-14: MP4 workload checkpoints rerun after OSLink/OSUnlink coverage
+
+- Host workload scenarios still build+run (reachability regression check):
+  - `bash tools/run_host_scenario.sh tests/workload/mp4/mp4_init_to_viwait_001_scenario.c`
+  - `bash tools/run_host_scenario.sh tests/workload/mp4/mp4_mainloop_one_iter_001_scenario.c`
+  - `bash tools/run_host_scenario.sh tests/workload/mp4/mp4_mainloop_two_iter_tick_001_scenario.c`
 
 ## 2026-02-12: GXPixModeSync added + deterministic PPC-vs-host suite
 
