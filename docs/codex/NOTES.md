@@ -2122,6 +2122,34 @@ Notes:
     - `mp4_mainloop_two_iter_001`: `MP49` (`0x4D503439`) + `DEADBEEF`
     - `mp4_mainloop_two_iter_tick_001`: `MP4Q` (`0x4D503451`) + `DEADBEEF`
 
+## 2026-02-14: CARDUnmount unified DOL PBT suite
+
+- Decomp contract (MP4 Dolphin SDK):
+  - `decomp_mario_party_4/src/dolphin/card/CARDBios.c`:
+    - `__CARDGetControlBlock(chan, &card)`:
+      - fatal when `chan` out of range or `card->diskID == NULL`
+      - if `!card->attached` -> `CARD_RESULT_NOCARD`
+      - if `card->result == CARD_RESULT_BUSY` -> `CARD_RESULT_BUSY`
+      - else sets `card->result = CARD_RESULT_BUSY`, clears `card->apiCallback`, returns READY and outputs `card`
+  - `decomp_mario_party_4/src/dolphin/card/CARDMount.c`:
+    - `CARDUnmount(chan)` calls `__CARDGetControlBlock`, returns early on `<0`, else calls `DoUnmount(chan, CARD_RESULT_NOCARD)` and returns READY.
+    - `DoUnmount` clears EXI callback, detaches EXI, cancels alarm, sets `attached=FALSE`, `result=<arg>`, `mountStep=0`.
+- Callsites:
+  - MP4: `decomp_mario_party_4/src/game/card.c` calls `CARDUnmount(slot)`.
+  - TP/WW/AC: `CARDUnmount` exists in their Dolphin CARDMount/CARDBios implementations; game callsites vary (see ripgrep output in repo).
+- Added sdk_port implementation:
+  - `src/sdk_port/card/card_bios.c`: `__CARDGetControlBlock` modeled.
+  - `src/sdk_port/card/CARDMount.c`: `CARDUnmount` implemented using the existing `DoUnmount`.
+  - `src/sdk_port/exi/EXI.c`: added observable callback pointers `gc_exi_exi_callback_ptr[]` and `gc_exi_ext_callback_ptr[]` for deterministic assertions.
+- Added unified PPC-vs-host suite:
+  - Runner: `tools/run_card_unmount_pbt.sh`
+  - DOL: `tests/sdk/card/card_unmount/dol/pbt/card_unmount_pbt_001/`
+  - Host: `tests/sdk/card/card_unmount/host/card_unmount_pbt_001_scenario.c`
+- Validation:
+  - `bash tools/run_card_unmount_pbt.sh` -> PASS (bit-exact expected == actual)
+- Mutation check:
+  - `bash tools/run_mutation_check.sh tools/mutations/card_unmount_skip_detach.patch -- bash tools/run_card_unmount_pbt.sh` -> PASS (mutant killed; suite failed as expected)
+
 ## 2026-02-14: __CARDEnableInterrupt unified DOL PBT suite
 
 - Decomp contract (MP4 Dolphin SDK):
