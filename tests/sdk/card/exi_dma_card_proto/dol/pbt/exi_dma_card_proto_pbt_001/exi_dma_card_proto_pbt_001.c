@@ -24,11 +24,12 @@ static inline void be(volatile uint8_t* p, u32 v) {
   p[3] = (uint8_t)v;
 }
 
-static inline u32 rotl1(u32 v) { return (v << 1) | (v >> 31); }
-
-static u32 hash_bytes(const uint8_t* p, u32 n) {
-  u32 h = 0;
-  for (u32 i = 0; i < n; i++) h = rotl1(h) ^ (u32)p[i];
+static u32 fnv1a32(const uint8_t* p, u32 n) {
+  u32 h = 2166136261u;
+  for (u32 i = 0; i < n; i++) {
+    h ^= (u32)p[i];
+    h *= 16777619u;
+  }
   return h;
 }
 
@@ -58,7 +59,7 @@ int main(void) {
   uint8_t buf[512];
   memset(buf, 0, sizeof(buf));
   int rd_ok = oracle_EXIDma(0, buf, (s32)sizeof(buf), EXI_READ, 0);
-  u32 rd_h = hash_bytes(buf, (u32)sizeof(buf));
+  u32 rd_h = fnv1a32(buf, (u32)sizeof(buf));
 
   // Write 128 bytes @0x22000 then read-back from oracle store.
   encode_cmd(cmd, 0xF2, 0x22000u);
@@ -69,7 +70,7 @@ int main(void) {
   uint8_t back[128];
   memset(back, 0, sizeof(back));
   int bk_ok = oracle_card_peek(0x22000u, back, (u32)sizeof(back));
-  u32 bk_h = hash_bytes(back, (u32)sizeof(back));
+  u32 bk_h = fnv1a32(back, (u32)sizeof(back));
 
   oracle_EXIDeselect(0);
   oracle_EXIUnlock(0);

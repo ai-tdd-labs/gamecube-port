@@ -10,13 +10,14 @@
 
 #include "sdk_port/card/memcard_backend.h"
 
-static inline uint32_t rotl1(uint32_t v) { return (v << 1) | (v >> 31); }
-
 static void be(uint8_t *p, uint32_t v) { wr32be(p, v); }
 
-static uint32_t hash_bytes(const uint8_t *p, uint32_t n) {
-  uint32_t h = 0;
-  for (uint32_t i = 0; i < n; i++) h = rotl1(h) ^ (uint32_t)p[i];
+static uint32_t fnv1a32(const uint8_t *p, uint32_t n) {
+  uint32_t h = 2166136261u;
+  for (uint32_t i = 0; i < n; i++) {
+    h ^= (uint32_t)p[i];
+    h *= 16777619u;
+  }
   return h;
 }
 
@@ -62,7 +63,7 @@ void gc_scenario_run(GcRam *ram) {
   uint8_t buf[512];
   memset(buf, 0, sizeof(buf));
   int rd_ok = EXIDma(0, buf, (s32)sizeof(buf), EXI_READ, 0);
-  uint32_t rd_h = hash_bytes(buf, (uint32_t)sizeof(buf));
+  uint32_t rd_h = fnv1a32(buf, (uint32_t)sizeof(buf));
 
   // Write 128 bytes @0x22000 then read-back via backend.
   encode_cmd(cmd, 0xF2, 0x22000u);
@@ -73,7 +74,7 @@ void gc_scenario_run(GcRam *ram) {
   uint8_t back[128];
   memset(back, 0, sizeof(back));
   int bk_ok = (gc_memcard_read(0, 0x22000u, back, (uint32_t)sizeof(back)) == 0);
-  uint32_t bk_h = hash_bytes(back, (uint32_t)sizeof(back));
+  uint32_t bk_h = fnv1a32(back, (uint32_t)sizeof(back));
 
   EXIDeselect(0);
   EXIUnlock(0);
