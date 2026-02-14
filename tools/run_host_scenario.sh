@@ -100,9 +100,21 @@ case "$subsystem" in
     # Coroutine/context-switch implementation for HuPrc* on host.
     #
     # Options:
-    # - ucontext (default): portable and "good enough" for our deterministic host workloads
-    # - asm: aarch64 save/restore experiment (currently unstable)
-    GC_HOST_JMP_IMPL=${GC_HOST_JMP_IMPL:-ucontext}
+    # - ucontext (default): portable and "good enough" for init/mainloop workloads
+    # - asm: aarch64 save/restore implementation (preferred for mp4_process_* workloads on macOS)
+    #
+    # NOTE: mp4_process_* scenarios exercise process context switches heavily; on macOS,
+    # ucontext/makecontext can be fragile. Default those scenarios to asm unless overridden.
+    if [[ -z "${GC_HOST_JMP_IMPL:-}" ]]; then
+      case "$scenario_base" in
+        mp4_process_*)
+          GC_HOST_JMP_IMPL=asm
+          ;;
+        *)
+          GC_HOST_JMP_IMPL=ucontext
+          ;;
+      esac
+    fi
     case "$GC_HOST_JMP_IMPL" in
       ucontext)
         extra_srcs+=("$repo_root/tests/workload/mp4/slices/jmp_ucontext.c")
@@ -121,7 +133,7 @@ case "$subsystem" in
 
     # Only link heavy-module stubs for scenarios that explicitly need them.
     case "$scenario_base" in
-      mp4_init_to_viwait_001_scenario|mp4_mainloop_one_iter_001_scenario|mp4_mainloop_one_iter_tick_001_scenario|mp4_mainloop_two_iter_001_scenario|mp4_mainloop_two_iter_tick_001_scenario|mp4_mainloop_ten_iter_tick_001_scenario)
+      mp4_init_to_viwait_001_scenario|mp4_mainloop_one_iter_001_scenario|mp4_mainloop_one_iter_tick_001_scenario|mp4_mainloop_two_iter_001_scenario|mp4_mainloop_two_iter_tick_001_scenario|mp4_mainloop_ten_iter_tick_001_scenario|mp4_mainloop_hundred_iter_tick_001_scenario)
         extra_srcs+=("$repo_root/tests/workload/mp4/slices/post_sprinit_stubs.c")
         ;;
     esac
@@ -135,13 +147,13 @@ case "$subsystem" in
     # so we can later swap in a decomp slice without editing the scenario. For now,
     # we link a minimal decomp slice that does not emulate GX drawing.
     case "$scenario_base" in
-      mp4_mainloop_one_iter_001_scenario|mp4_mainloop_one_iter_tick_001_scenario|mp4_mainloop_two_iter_001_scenario|mp4_mainloop_two_iter_tick_001_scenario|mp4_mainloop_ten_iter_tick_001_scenario)
+      mp4_mainloop_one_iter_001_scenario|mp4_mainloop_one_iter_tick_001_scenario|mp4_mainloop_two_iter_001_scenario|mp4_mainloop_two_iter_tick_001_scenario|mp4_mainloop_ten_iter_tick_001_scenario|mp4_mainloop_hundred_iter_tick_001_scenario)
         extra_srcs+=("$repo_root/tests/workload/mp4/slices/wipeexecalways_decomp_blank.c")
         ;;
     esac
     # pfDrawFonts() is game-specific and GX-heavy; keep it as a host-safe slice.
     case "$scenario_base" in
-      mp4_mainloop_one_iter_001_scenario|mp4_mainloop_one_iter_tick_001_scenario|mp4_mainloop_two_iter_001_scenario|mp4_mainloop_two_iter_tick_001_scenario|mp4_mainloop_ten_iter_tick_001_scenario)
+      mp4_mainloop_one_iter_001_scenario|mp4_mainloop_one_iter_tick_001_scenario|mp4_mainloop_two_iter_001_scenario|mp4_mainloop_two_iter_tick_001_scenario|mp4_mainloop_ten_iter_tick_001_scenario|mp4_mainloop_hundred_iter_tick_001_scenario)
         extra_srcs+=("$repo_root/tests/workload/mp4/slices/pfdrawfonts_gx_setup_only.c")
         ;;
     esac

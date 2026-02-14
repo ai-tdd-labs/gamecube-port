@@ -86,6 +86,10 @@ scenarios=(
   "$repo_root/tests/workload/mp4/mp4_mainloop_two_iter_001_scenario.c"
   "$repo_root/tests/workload/mp4/mp4_mainloop_two_iter_tick_001_scenario.c"
   "$repo_root/tests/workload/mp4/mp4_mainloop_ten_iter_tick_001_scenario.c"
+  "$repo_root/tests/workload/mp4/mp4_mainloop_hundred_iter_tick_001_scenario.c"
+  "$repo_root/tests/workload/mp4/mp4_process_scheduler_001_scenario.c"
+  "$repo_root/tests/workload/mp4/mp4_process_sleep_001_scenario.c"
+  "$repo_root/tests/workload/mp4/mp4_process_vsleep_001_scenario.c"
 )
 
 idx=0

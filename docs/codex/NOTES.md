@@ -3451,3 +3451,16 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
   - `tests/workload/mp4/mp4_mainloop_ten_iter_tick_001_scenario.c`
 - Evidence:
   - `./tools/run_mp4_workload_ladder.sh --from 14 --to 14` -> `OK` marker `MP4X` (`mp4_mainloop_ten_iter_tick_001.bin`).
+
+## 2026-02-14: MP4 workload ladder extended (process scenarios + 100 ticks)
+
+- Process scenarios in MP4 workload:
+  - `tests/workload/mp4/mp4_process_scheduler_001_scenario.c`
+  - `tests/workload/mp4/mp4_process_sleep_001_scenario.c`
+  - `tests/workload/mp4/mp4_process_vsleep_001_scenario.c`
+- Host build note:
+  - `tools/run_host_scenario.sh` defaults `GC_HOST_JMP_IMPL=asm` for `mp4_process_*` scenarios (ucontext/makecontext is fragile on macOS for heavy context switching).
+- 100-tick mainloop scenario:
+  - `tests/workload/mp4/mp4_mainloop_hundred_iter_tick_001_scenario.c` (marker `MP4Y`)
+- Evidence:
+  - `./tools/run_mp4_workload_ladder.sh` -> `DONE` (includes the new `mp4_mainloop_hundred_iter_tick_001` and `mp4_process_*` steps).
