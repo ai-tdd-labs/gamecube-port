@@ -137,7 +137,7 @@ Plus QUAT (8): Add, Multiply, Normalize, Inverse, Slerp, RotAxisRad, Mtx.
 **Still need for game:** none in current MTX batch set.
 (batch/reorder ops — PPC paired-single ASM, need C loop equivalents)
 
-### CARD (16/23 = 70%)
+### CARD (17/23 = 74%)
 
 **Ported:**
 - FAT internals: `__CARDCheckSum`, `__CARDUpdateFatBlock`, `__CARDAllocBlock`, `__CARDFreeBlock`
@@ -146,14 +146,15 @@ Plus QUAT (8): Add, Multiply, Normalize, Inverse, Slerp, RotAxisRad, Mtx.
 - Unlock crypto: `exnor_1st`, `exnor`, `bitrev`, `CARDSrand`, `CARDRand`
 - `CARDInit` — modeled (init side effects verified via unified DOL-PBT suite)
 - `CARDGetSerialNo` — trace replay parity with `tests/sdk/card/card_get_serial_no` (`tools/run_card_get_serial_no_pbt.sh`)
+- `CARDGetStatus` — trace replay parity with `tests/sdk/card/card_get_status` (`tools/run_card_get_status_pbt.sh`)
 
 PBT suites: CARD-FAT (AllocBlock/FreeBlock/CheckSum) + CARD-Dir (CompareFileName/Access/IsPublic/GetFileNo/Seek) + CARD-Unlock (exnor_1st/exnor/bitrev/CARDRand) — 330k+ checks, all PASS.
 
 **Missing (API functions):**
 CARDMount, CARDUnmount, CARDOpen, CARDClose, CARDCreate, CARDDelete,
 CARDRead, CARDWrite, CARDFormat, CARDCheck, CARDFreeBlocks, CARDGetSectorSize,
-CARDProbeEx, CARDGetStatus, CARDSetStatus, CARDSetBannerFormat,
-CARDSetCommentAddress, CARDSetIconAddress, CARDSetIconAnim, CARDSetIconFormat, CARDSetIconSpeed
+CARDProbeEx, CARDSetStatus, CARDSetBannerFormat, CARDSetCommentAddress,
+CARDSetIconAddress, CARDSetIconAnim, CARDSetIconFormat, CARDSetIconSpeed
 
 Note: Remaining CARD functions need EXI subsystem for actual hardware I/O.
 For port, we'll simulate with host filesystem (similar to Dolphin emulator approach).
