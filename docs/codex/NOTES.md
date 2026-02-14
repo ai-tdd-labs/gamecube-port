@@ -1921,6 +1921,9 @@ Notes:
 - Validation:
   - `bash tools/run_exi_probe_getid_pbt.sh`
   - Result: PASS (bit-exact expected vs actual).
+- Mutation check:
+  - `bash tools/run_mutation_check.sh tools/mutations/exi_getid_always_fail.patch -- bash tools/run_exi_probe_getid_pbt.sh`
+  - Result: PASS (suite fails under mutant).
 
 ## 2026-02-14: Host memcard backend (raw file image) for CARD port
 
