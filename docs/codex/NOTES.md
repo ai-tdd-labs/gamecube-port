@@ -1945,6 +1945,31 @@ Notes:
   - `bash tools/run_mutation_check.sh tools/mutations/exi_card_addr_shift16.patch -- bash tools/run_exi_dma_card_proto_pbt.sh`
   - Result: PASS (suite fails under mutant).
 
+## 2026-02-14: CARDProbeEx unified DOL PBT suite (L0-L5)
+
+- Callsite evidence (MP4):
+  - MP4 card subsystem calls `CARDProbeEx(slot, &memSize, &sectorSize)` before mount/check (`decomp_mario_party_4/src/game/card.c`).
+- Decomp contract (MP4 Dolphin SDK):
+  - `decomp_mario_party_4/src/dolphin/card/CARDMount.c`:
+    - `chan` out of range -> `CARD_RESULT_FATAL_ERROR`.
+    - If `GameChoice & 0x80` -> `CARD_RESULT_NOCARD`.
+    - Uses `EXIProbeEx`, `EXIGetState`, `EXIGetID` and `IsCard(id)` to return `{NOCARD,BUSY,WRONGDEVICE,READY}` and fill `memSize/sectorSize`.
+- Constant evidence (MP4 retail disasm):
+  - `CARD_RESULT_FATAL_ERROR = -128` via `li r3,0xFF80` at `0x800D4868`.
+  - `CARD_RESULT_NOCARD = -3` via `li r3,0xFFFD` at `0x800D4880`.
+  - `CARD_RESULT_BUSY = -1` via `li r30,0xFFFF` at `0x800D48C0`.
+  - `CARD_RESULT_WRONGDEVICE = -2` via `li r30,0xFFFE` at `0x800D4920`.
+  - Evidence dump: `tests/trace-harvest/card_probe_ex/tmp/code_800D4840_400.bin` (RAM dump of 0x800D4840..+0x400 via `tools/ram_dump.py`).
+- Added sdk_port implementation:
+  - `src/sdk_port/card/CARDMount.c`: `CARDProbeEx` + `IsCard` (minimal).
+- Added unified PPC-vs-host suite:
+  - Runner: `tools/run_card_probe_ex_pbt.sh`
+  - DOL: `tests/sdk/card/card_probe_ex/dol/pbt/card_probe_ex_pbt_001/`
+  - Host: `tests/sdk/card/card_probe_ex/host/card_probe_ex_pbt_001_scenario.c`
+- Validation:
+  - `bash tools/run_card_probe_ex_pbt.sh`
+  - Result: PASS (bit-exact expected vs actual).
+
 ## 2026-02-14: Host memcard backend (raw file image) for CARD port
 
 - Added host-only memcard backend used by sdk_port to simulate a memory card image:

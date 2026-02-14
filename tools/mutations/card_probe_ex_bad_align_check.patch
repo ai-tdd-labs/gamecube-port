@@ -1,0 +1,11 @@
+diff --git a/src/sdk_port/card/CARDMount.c b/src/sdk_port/card/CARDMount.c
+--- a/src/sdk_port/card/CARDMount.c
++++ b/src/sdk_port/card/CARDMount.c
+@@ -45,6 +45,6 @@ static int IsCard(u32 id) {
+   if ((id & 0xFFFF0000u) && (id != 0x80000004u || s_card_vendor_id == 0xFFFFu)) {
+     return 0;
+   }
+-  if ((id & 3u) != 0) {
++  if ((id & 3u) == 0) {
+     return 0;
+   }
