@@ -1,6 +1,11 @@
-*** Begin Patch
-*** Update File: src/sdk_port/card/CARDCreate.c
-@@
+diff --git a/src/sdk_port/card/CARDCreate.c b/src/sdk_port/card/CARDCreate.c
+--- a/src/sdk_port/card/CARDCreate.c
++++ b/src/sdk_port/card/CARDCreate.c
+@@ -97,7 +97,7 @@ static void CreateCallbackFat(s32 chan, s32 result)
+ 
+     ent[PORT_CARD_DIR_OFF_BANNER_FORMAT] = 0;
 -    wr32be(ent + PORT_CARD_DIR_OFF_ICON_ADDR, 0xFFFFFFFFu);
 +    wr32be(ent + PORT_CARD_DIR_OFF_ICON_ADDR, 0u);
-*** End Patch
+     wr16be(ent + PORT_CARD_DIR_OFF_ICON_FORMAT, 0);
+     // icon0 speed FAST => 1 in low 2 bits
+     wr16be(ent + PORT_CARD_DIR_OFF_ICON_SPEED, 1u);
