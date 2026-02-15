@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/card/CARDFormat.c b/src/sdk_port/card/CARDFormat.c
+--- a/src/sdk_port/card/CARDFormat.c
++++ b/src/sdk_port/card/CARDFormat.c
+@@ -142,7 +142,7 @@ s32 __CARDFormatRegionAsync(s32 chan, u16 encode, CARDCallback callback)
+     // deviceID=0 (BE u16), size, encode (BE u16 each).
+     wr16be(id + 32u, 0u);
+     wr16be(id + 34u, card->size_u16);
+-    wr16be(id + 36u, encode);
++    wr16be(id + 36u, (u16)(encode ^ 1u));
+ 
+     // Header checksum over first 512 bytes minus final u32 (4 bytes).
+     u16 id_cs = 0, id_csi = 0;
