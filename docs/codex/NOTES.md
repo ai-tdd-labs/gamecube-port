@@ -3602,6 +3602,7 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
 - Validation:
   - `tools/run_card_check_pbt.sh` -> PASS: `PASS: CARDCheck pbt_001`
   - `tools/run_mutation_check.sh tools/mutations/card_verify_ignore_encode.patch -- tools/run_card_check_pbt.sh` -> PASS (mutant fails as expected)
+  - Added coverage for orphan-repair path (case `CCK7` / tag `0x43434B37`): forces a non-AVAIL FAT entry with no directory references and validates FAT repair + checksums across both copies.
 
 ## 2026-02-15: CARDStat banner/icon/comment setter macros (contract + callsites)
 
