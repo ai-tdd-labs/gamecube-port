@@ -170,6 +170,19 @@ Evidence:
 - Verification:
   - `bash tools/run_card_delete_pbt.sh` => PASS (`expected.bin == actual.bin`)
 
+### CARDFormat deterministic parity suite (2026-02-15)
+- Decomp contract source: `external/mp4-decomp/src/dolphin/card/CARDFormat.c` (`__CARDFormatRegionAsync` + `CARDFormatAsync`/`CARDFormat`).
+- Added unified DOL-PBT suite (fixed-encode path via `__CARDFormatRegionAsync`):
+  - DOL oracle: `tests/sdk/card/card_format/dol/pbt/card_format_pbt_001/oracle_card_format.c`
+  - DOL driver: `tests/sdk/card/card_format/dol/pbt/card_format_pbt_001/card_format_pbt_001.c`
+  - Host runner: `tests/sdk/card/card_format/host/card_format_pbt_001_scenario.c`
+  - Runner: `tools/run_card_format_pbt.sh` (expected.bin vs actual.bin)
+- Mutation check:
+  - `tools/mutations/card_format_encode_xor1.patch` (ID encode field mutant)
+  - `bash tools/run_mutation_check.sh tools/mutations/card_format_encode_xor1.patch -- bash tools/run_card_format_pbt.sh` => PASS (suite fails under mutant, as expected)
+- Verification:
+  - `bash tools/run_card_format_pbt.sh` => PASS (`expected.bin == actual.bin`)
+
 ### Dolphin GDB Stub (macOS build on this machine)
 - Stop packets include PC/NIP in reg `0x40` (usable for PC-polling checkpoints).
   Evidence: `tools/ram_dump.py` `parse_stop_pc()`; observed stop example `T0540:800ba2f0;01:8019d798;` from real MP4 RVZ.
