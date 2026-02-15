@@ -58,6 +58,16 @@ typedef struct GcCardControl {
     uint16_t  _pad_verify0;
     uintptr_t current_dir_ptr;
     uintptr_t current_fat_ptr;
+
+    // __CARDBlock / CARDCreate / CARDWrite / CARDDelete chain state.
+    uint16_t  freeNo;
+    uint16_t  startBlock;
+    uintptr_t fileInfo;
+
+    // Shared erase/write callback plumbing for FAT/DIR updates.
+    uintptr_t erase_callback;
+
+    uint32_t  formatStep;
 } GcCardControl;
 
 /* CARDFileInfo (host-side, mirrors decomp layout). */
@@ -96,6 +106,9 @@ enum {
     CARD_STAT_SPEED_MIDDLE = 2,
     CARD_STAT_SPEED_SLOW = 3,
     CARD_STAT_SPEED_MASK = 3,
+    CARD_STAT_ANIM_LOOP = 0x00u,
+    CARD_STAT_ANIM_BOUNCE = 0x04u,
+    CARD_STAT_ANIM_MASK = 0x04u,
 };
 
 typedef struct {
@@ -135,6 +148,18 @@ int32_t __CARDPutControlBlock(GcCardControl *card, int32_t result);
 int32_t __CARDSync(int32_t chan);
 void __CARDSyncCallback(int32_t chan, int32_t result);
 
+int32_t __CARDReadSegment(int32_t chan, CARDCallback callback);
+int32_t __CARDRead(int32_t chan, uint32_t addr, int32_t length, void* dst, CARDCallback callback);
+int32_t __CARDWrite(int32_t chan, uint32_t addr, int32_t length, const void* src, CARDCallback callback);
+int32_t __CARDWritePage(int32_t chan, CARDCallback callback);
+int32_t __CARDEraseSector(int32_t chan, uint32_t addr, CARDCallback callback);
+
+int32_t __CARDSeek(CARDFileInfo* fileInfo, int32_t length, int32_t offset, GcCardControl **pcard);
+void __CARDDefaultApiCallback(int32_t chan, int32_t result);
+int32_t __CARDAccess(const GcCardControl* card, const void* dirEntry);
+int32_t __CARDGetFileNo(const GcCardControl* card, const char* fileName, int32_t* pfileNo);
+int32_t __CARDIsOpened(const GcCardControl* card, int32_t fileNo);
+
 /* CARD open / close API (decomp: external/mp4-decomp/src/dolphin/card/CARDOpen.c). */
 int32_t CARDOpen(int32_t chan, const char* fileName, CARDFileInfo* fileInfo);
 int32_t CARDClose(CARDFileInfo* fileInfo);
@@ -150,3 +175,81 @@ int32_t CARDGetSerialNo(int32_t chan, uint64_t* serialNo);
 int32_t CARDGetStatus(int32_t chan, int32_t fileNo, CARDStat* stat);
 int32_t CARDSetStatusAsync(int32_t chan, int32_t fileNo, CARDStat* stat, CARDCallback callback);
 int32_t CARDSetStatus(int32_t chan, int32_t fileNo, CARDStat* stat);
+
+int32_t CARDCreateAsync(int32_t chan, const char* fileName, uint32_t size, CARDFileInfo* fileInfo, CARDCallback callback);
+int32_t CARDCreate(int32_t chan, const char* fileName, uint32_t size, CARDFileInfo* fileInfo);
+
+int32_t CARDFastDeleteAsync(int32_t chan, int32_t fileNo, CARDCallback callback);
+int32_t CARDDeleteAsync(int32_t chan, const char* fileName, CARDCallback callback);
+int32_t CARDDelete(int32_t chan, const char* fileName);
+
+int32_t CARDWriteAsync(CARDFileInfo* fileInfo, const void* buffer, int32_t length, int32_t offset, CARDCallback callback);
+int32_t CARDWrite(CARDFileInfo* fileInfo, const void* buffer, int32_t length, int32_t offset);
+
+int32_t __CARDFormatRegionAsync(int32_t chan, uint16_t encode, CARDCallback callback);
+int32_t CARDFormatAsync(int32_t chan, CARDCallback callback);
+int32_t CARDFormat(int32_t chan);
+
+int32_t CARDCheckExAsync(int32_t chan, int32_t* xferBytes, CARDCallback callback);
+int32_t CARDCheckAsync(int32_t chan, CARDCallback callback);
+int32_t CARDCheck(int32_t chan);
+
+uint16_t __CARDGetFontEncode(void);
+
+// CARD directory/FAT helpers.
+struct CARDDir;
+struct CARDDir* __CARDGetDirBlock(struct GcCardControl* card);
+uint16_t* __CARDGetFatBlock(struct GcCardControl* card);
+int32_t __CARDAllocBlock(int32_t chan, uint32_t cBlock, CARDCallback callback);
+int32_t __CARDFreeBlock(int32_t chan, uint16_t nBlock, CARDCallback callback);
+int32_t __CARDUpdateFatBlock(int32_t chan, uint16_t* fat, CARDCallback callback);
+
+// Helpers used by CARDCreate convenience accessors.
+static inline uint8_t CARDSetBannerFormat(CARDStat* stat, uint8_t value)
+{
+    stat->bannerFormat = (uint8_t)((stat->bannerFormat & (uint8_t)~CARD_STAT_BANNER_MASK) | (value & (uint8_t)CARD_STAT_BANNER_MASK));
+    return stat->bannerFormat;
+}
+
+static inline uint16_t CARDSetIconFormat(CARDStat* stat, int32_t idx, uint16_t value) {
+    if (idx < 0 || idx >= CARD_ICON_MAX) {
+        return stat ? stat->iconFormat : 0u;
+    }
+    if (!stat) {
+        return 0u;
+    }
+    stat->iconFormat = (uint16_t)((uint16_t)stat->iconFormat & (uint16_t)~(CARD_STAT_ICON_MASK << (idx * 2u)));
+    stat->iconFormat |= (uint16_t)(value << (idx * 2));
+    return stat->iconFormat;
+}
+
+static inline uint16_t CARDSetIconSpeed(CARDStat* stat, int32_t idx, uint16_t value) {
+    if (!stat || idx < 0 || idx >= (int32_t)CARD_ICON_MAX) {
+        return stat ? stat->iconSpeed : 0u;
+    }
+    uint32_t shift = (uint32_t)(idx * 2u);
+    stat->iconSpeed = (uint16_t)((uint16_t)stat->iconSpeed & (uint16_t)~(CARD_STAT_SPEED_MASK << shift));
+    stat->iconSpeed |= (uint16_t)(value << shift);
+    return stat->iconSpeed;
+}
+
+static inline void CARDSetIconAddress(CARDStat* stat, uint32_t addr)
+{
+    if (stat) {
+        stat->iconAddr = addr;
+    }
+}
+
+static inline void CARDSetCommentAddress(CARDStat* stat, uint32_t addr)
+{
+    if (stat) {
+        stat->commentAddr = addr;
+    }
+}
+
+static inline void CARDSetIconAnim(CARDStat* stat, uint8_t value)
+{
+    if (stat) {
+        stat->bannerFormat = (uint8_t)((stat->bannerFormat & (uint8_t)~CARD_STAT_ANIM_MASK) | (uint8_t)(value & CARD_STAT_ANIM_MASK));
+    }
+}

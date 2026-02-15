@@ -163,11 +163,6 @@ s32 CARDProbeEx(s32 chan, s32* memSize, s32* sectorSize) {
   return result;
 }
 
-static void __CARDDefaultApiCallback(s32 chan, s32 result) {
-  (void)chan;
-  (void)result;
-}
-
 enum { CARD_SYSTEM_BLOCK_SIZE = 8 * 1024 };
 enum { CARD_WORKAREA_SIZE = 5 * CARD_SYSTEM_BLOCK_SIZE };
 enum { CARD_MAX_MOUNT_STEP = 7 };
