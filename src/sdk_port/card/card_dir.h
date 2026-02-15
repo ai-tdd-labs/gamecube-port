@@ -17,10 +17,17 @@
 /* CARDDir field offsets (64-byte struct in gc_mem) */
 #define PORT_CARD_DIR_OFF_GAMENAME    0   /* u8[4] */
 #define PORT_CARD_DIR_OFF_COMPANY     4   /* u8[2] */
+#define PORT_CARD_DIR_OFF_BANNER_FORMAT 7 /* u8 (CARD_STAT_BANNER_*) */
 #define PORT_CARD_DIR_OFF_FILENAME    8   /* u8[32] */
+#define PORT_CARD_DIR_OFF_TIME        40  /* u32 BE (seconds) */
+#define PORT_CARD_DIR_OFF_ICON_ADDR   44  /* u32 BE (0xFFFFFFFF => no icon/banner) */
+#define PORT_CARD_DIR_OFF_ICON_FORMAT 48  /* u16 BE (2 bits per icon) */
+#define PORT_CARD_DIR_OFF_ICON_SPEED  50  /* u16 BE (2 bits per icon) */
 #define PORT_CARD_DIR_OFF_PERMISSION  52  /* u8 */
+#define PORT_CARD_DIR_OFF_COPY_TIMES  53  /* u8 */
 #define PORT_CARD_DIR_OFF_STARTBLOCK  54  /* u16 BE */
 #define PORT_CARD_DIR_OFF_LENGTH      56  /* u16 BE */
+#define PORT_CARD_DIR_OFF_COMMENT_ADDR 60 /* u32 BE */
 #define PORT_CARD_DIR_SIZE            64
 
 /* Constants (from card.h / CARDPriv.h) */

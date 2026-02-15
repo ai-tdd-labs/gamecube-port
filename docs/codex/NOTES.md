@@ -138,6 +138,24 @@ Rules:
   - `bash tools/run_card_get_serial_no_pbt.sh` => PASS (`expected.bin == actual.bin`).
   - Mutation gate prepared: `tools/mutations/card_get_serial_no_xor_bad_not.patch` (must cause suite fail in mutation check).
 
+### CARDCreate deterministic parity suite + CARD memory-pointer normalization (2026-02-15)
+- Added unified DOL-PBT suite for `CARDCreateAsync`/`CARDCreate`:
+  - DOL oracle: `tests/sdk/card/card_create/dol/pbt/card_create_pbt_001/oracle_card_create.c`
+  - DOL driver: `tests/sdk/card/card_create/dol/pbt/card_create_pbt_001/card_create_pbt_001.c`
+  - Host runner: `tests/sdk/card/card_create/host/card_create_pbt_001_scenario.c`
+  - Runner: `tools/run_card_create_pbt.sh` (expected.bin vs actual.bin)
+- Normalized CARD dir entry offsets into `src/sdk_port/card/card_dir.h` (includes banner/time/icon/comment fields).
+- Added `src/sdk_port/card/card_mem.h` helper so CARD code can dereference either host pointers (gc_ram_ptr) or GC addresses (0x80xxxxxx) without breaking existing suites.
+- Rewrote `src/sdk_port/card/CARDBlock.c` to be deterministic (no EXI erase/write I/O): FAT updates are immediate (checkcode + checksum), callback invoked synchronously.
+
+Evidence:
+- `bash tools/run_card_create_pbt.sh` => PASS
+- `bash tools/run_card_get_status_pbt.sh` => PASS
+- `bash tools/run_card_set_status_pbt.sh` => PASS
+- `bash tools/run_card_open_pbt.sh` => PASS
+- `bash tools/run_card_mount_pbt.sh` => PASS
+- `bash tools/run_card_read_pbt.sh` => PASS
+
 ### Dolphin GDB Stub (macOS build on this machine)
 - Stop packets include PC/NIP in reg `0x40` (usable for PC-polling checkpoints).
   Evidence: `tools/ram_dump.py` `parse_stop_pc()`; observed stop example `T0540:800ba2f0;01:8019d798;` from real MP4 RVZ.

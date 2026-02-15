@@ -20,15 +20,6 @@ enum {
     CARD_SYSTEM_BLOCK_SIZE = 8 * 1024,
 };
 
-enum {
-    PORT_CARD_DIR_OFF_BANNER_FORMAT = 7,
-    PORT_CARD_DIR_OFF_TIME = 40,
-    PORT_CARD_DIR_OFF_ICON_ADDR = 44,
-    PORT_CARD_DIR_OFF_ICON_FORMAT = 48,
-    PORT_CARD_DIR_OFF_ICON_SPEED = 50,
-    PORT_CARD_DIR_OFF_COMMENT_ADDR = 60,
-};
-
 GcCardControl gc_card_block[GC_CARD_CHANS];
 
 s32 __CARDGetControlBlock(s32 chan, GcCardControl **pcard)

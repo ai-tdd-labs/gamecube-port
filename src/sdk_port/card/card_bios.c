@@ -1,12 +1,18 @@
 #include <stdint.h>
+#include <string.h>
 #include "card_bios.h"
 #include "dolphin/exi.h"
 #include "dolphin/os.h"
+#include "card_dir.h"
+#include "card_mem.h"
 
 /* CARD results (mp4-decomp dolphin/card.h). */
 enum {
     CARD_RESULT_READY = 0,
     CARD_RESULT_NOCARD = -3,
+    CARD_RESULT_NOFILE = -4,
+    CARD_RESULT_BROKEN = -6,
+    CARD_RESULT_NOPERM = -10,
     CARD_RESULT_BUSY = -1,
     CARD_RESULT_FATAL_ERROR = -128,
 };
@@ -23,6 +29,8 @@ s32 __CARDReadSegment(s32 chan, CARDCallback callback);
 
 static void DSPInit(void) { gc_card_dsp_init_calls++; }
 static void OSInitAlarm(void) { gc_card_os_init_alarm_calls++; }
+
+extern uint16_t OSGetFontEncode(void);
 
 static void OSInitThreadQueue(uint32_t *dst, int chan)
 {
@@ -60,6 +68,81 @@ void __CARDSyncCallback(s32 chan, s32 result)
 {
     (void)result;
     OSWakeupThread((OSThreadQueue *)&gc_card_block[chan].thread_queue_inited);
+}
+
+void __CARDDefaultApiCallback(s32 chan, s32 result)
+{
+    (void)chan;
+    (void)result;
+}
+
+static inline int card_compare_filename(const u8 *entry_addr, const char *file_name)
+{
+    const char *n = file_name;
+    int i;
+
+    for (i = 0; i < (int)PORT_CARD_FILENAME_MAX; i++) {
+        char a = (char)entry_addr[PORT_CARD_DIR_OFF_FILENAME + (u32)i];
+        char b = n[i];
+        if (a != b) {
+            return 0;
+        }
+        if (a == '\0') {
+            return 1;
+        }
+    }
+
+    return file_name[PORT_CARD_FILENAME_MAX] == '\0';
+}
+
+s32 __CARDAccess(const GcCardControl* card, const void* dirEntry)
+{
+    const u8 *entry = (const u8 *)dirEntry;
+    if (!card || !entry) {
+        return -128; // CARD_RESULT_FATAL_ERROR
+    }
+    if (entry[PORT_CARD_DIR_OFF_GAMENAME] == 0xFFu) {
+        return CARD_RESULT_NOFILE;
+    }
+    if (memcmp(entry + PORT_CARD_DIR_OFF_GAMENAME, card->id, 4) == 0 &&
+        memcmp(entry + PORT_CARD_DIR_OFF_COMPANY, card->id + 4, 2) == 0) {
+        return CARD_RESULT_READY;
+    }
+    return CARD_RESULT_NOPERM;
+}
+
+s32 __CARDGetFileNo(const GcCardControl* card, const char* fileName, s32* pfileNo)
+{
+    if (!card || !fileName || !pfileNo) {
+        return -128; // CARD_RESULT_FATAL_ERROR
+    }
+    if (!card->attached || !card->current_dir_ptr) {
+        return CARD_RESULT_NOCARD;
+    }
+
+    for (s32 fileNo = 0; fileNo < PORT_CARD_MAX_FILE; fileNo++) {
+        const u8 *entry = (const u8 *)card_ptr_ro(card->current_dir_ptr + (u32)fileNo * PORT_CARD_DIR_SIZE,
+                                                  PORT_CARD_DIR_SIZE);
+        if (!entry) {
+            continue;
+        }
+        s32 access = __CARDAccess(card, entry);
+        if (access < 0) {
+            continue;
+        }
+        if (card_compare_filename(entry, fileName)) {
+            *pfileNo = fileNo;
+            return CARD_RESULT_READY;
+        }
+    }
+    return CARD_RESULT_NOFILE;
+}
+
+s32 __CARDIsOpened(const GcCardControl* card, s32 fileNo)
+{
+    (void)card;
+    (void)fileNo;
+    return FALSE;
 }
 
 void CARDInit(void)
@@ -222,6 +305,11 @@ s32 __CARDSync(s32 chan)
     }
     OSRestoreInterrupts(enabled);
     return result;
+}
+
+u16 __CARDGetFontEncode(void)
+{
+    return OSGetFontEncode();
 }
 
 static void __CARDUnlockedHandler(s32 chan, OSContext *context)
@@ -397,4 +485,86 @@ s32 __CARDRead(s32 chan, u32 addr, s32 length, void *dst, CARDCallback callback)
     card->addr = addr;
     card->buffer = (uintptr_t)dst;
     return __CARDReadSegment(chan, BlockReadCallback);
+}
+
+s32 __CARDWritePage(s32 chan, CARDCallback callback)
+{
+    GcCardControl *card;
+    s32 result;
+
+    if (chan < 0 || chan >= GC_CARD_CHANS) {
+        return -128;
+    }
+
+    card = &gc_card_block[chan];
+    if (!card->attached) {
+        return -3;
+    }
+
+    card->cmd[0] = 0xF2u;
+    card->cmd[1] = AD1(card->addr);
+    card->cmd[2] = AD2(card->addr);
+    card->cmd[3] = AD3(card->addr);
+    card->cmd[4] = BA(card->addr);
+    card->cmdlen = 5;
+    card->mode = 1;
+    card->retry = 3;
+
+    result = __CARDStart(chan, 0, callback);
+    if (result == -1) {
+        return 0;
+    }
+    if (result >= 0) {
+        if (!EXIImmEx(chan, card->cmd, card->cmdlen, EXI_WRITE) ||
+            !EXIDma(chan, (void *)(uintptr_t)card->buffer, 128, card->mode, __CARDTxHandler)) {
+            card->exi_callback = 0;
+            EXIDeselect(chan);
+            EXIUnlock(chan);
+            result = -3;
+        }
+        else {
+            result = 0;
+        }
+    }
+    return result;
+}
+
+s32 __CARDEraseSector(s32 chan, u32 addr, CARDCallback callback)
+{
+    GcCardControl *card;
+    s32 result;
+
+    if (chan < 0 || chan >= GC_CARD_CHANS) {
+        return -128;
+    }
+
+    card = &gc_card_block[chan];
+    if (!card->attached) {
+        return -3;
+    }
+
+    card->cmd[0] = 0xF1u;
+    card->cmd[1] = AD1(addr);
+    card->cmd[2] = AD2(addr);
+    card->cmdlen = 3;
+    card->mode = -1;
+    card->retry = 3;
+    result = __CARDStart(chan, 0, callback);
+
+    if (result == -1) {
+        return 0;
+    }
+    else if (result >= 0) {
+        if (!EXIImmEx(chan, card->cmd, card->cmdlen, EXI_WRITE)) {
+            card->exi_callback = 0;
+            result = -3;
+        }
+        else {
+            result = 0;
+        }
+
+        EXIDeselect(chan);
+        EXIUnlock(chan);
+    }
+    return result;
 }

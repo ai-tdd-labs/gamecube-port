@@ -1,0 +1,6 @@
+*** Begin Patch
+*** Update File: src/sdk_port/card/CARDCreate.c
+@@
+-    wr32be(ent + PORT_CARD_DIR_OFF_ICON_ADDR, 0xFFFFFFFFu);
++    wr32be(ent + PORT_CARD_DIR_OFF_ICON_ADDR, 0u);
+*** End Patch

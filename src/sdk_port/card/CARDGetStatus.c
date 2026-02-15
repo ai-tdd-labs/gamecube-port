@@ -2,9 +2,9 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "../gc_mem.h"
 #include "card_bios.h"
 #include "card_dir.h"
+#include "card_mem.h"
 
 extern int32_t __CARDGetControlBlock(int32_t chan, GcCardControl **pcard);
 extern int32_t __CARDPutControlBlock(GcCardControl *card, int32_t result);
@@ -20,46 +20,36 @@ enum {
     CARD_RESULT_FATAL_ERROR = -128,
 };
 
-enum {
-    // Offsets in CARDDir (from decomp layout).
-    PORT_CARD_DIR_OFF_BANNER_FORMAT = 7,
-    PORT_CARD_DIR_OFF_TIME = 40,
-    PORT_CARD_DIR_OFF_ICON_ADDR = 44,
-    PORT_CARD_DIR_OFF_ICON_FORMAT = 48,
-    PORT_CARD_DIR_OFF_ICON_SPEED = 50,
-    PORT_CARD_DIR_OFF_COMMENT_ADDR = 60,
-};
-
-static inline u8 load_u8(uint32_t addr)
+static inline u8 load_u8(uintptr_t addr)
 {
-    u8 *p = gc_mem_ptr(addr, 1);
+    u8 *p = (u8*)card_ptr(addr, 1);
     return p ? p[0] : 0;
 }
 
-static inline u16 load_u16be(uint32_t addr)
+static inline u16 load_u16be(uintptr_t addr)
 {
-    u8 *p = gc_mem_ptr(addr, 2);
+    u8 *p = (u8*)card_ptr(addr, 2);
     if (!p) {
         return 0;
     }
     return (u16)(((u16)p[0] << 8) | (u16)p[1]);
 }
 
-static inline u32 load_u32be(uint32_t addr)
+static inline u32 load_u32be(uintptr_t addr)
 {
-    u8 *p = gc_mem_ptr(addr, 4);
+    u8 *p = (u8*)card_ptr(addr, 4);
     if (!p) {
         return 0;
     }
     return ((u32)p[0] << 24) | ((u32)p[1] << 16) | ((u32)p[2] << 8) | (u32)p[3];
 }
 
-static inline s32 card_get_banner_format(u32 ent_addr)
+static inline s32 card_get_banner_format(uintptr_t ent_addr)
 {
     return (s32)(load_u8(ent_addr + PORT_CARD_DIR_OFF_BANNER_FORMAT) & CARD_STAT_BANNER_MASK);
 }
 
-static inline s32 card_get_icon_format(u32 ent_addr, s32 icon_no)
+static inline s32 card_get_icon_format(uintptr_t ent_addr, s32 icon_no)
 {
     if (icon_no < 0 || CARD_ICON_MAX <= icon_no) {
         return CARD_STAT_ICON_NONE;
@@ -68,7 +58,7 @@ static inline s32 card_get_icon_format(u32 ent_addr, s32 icon_no)
     return (s32)((iconFormat >> (icon_no * 2)) & CARD_STAT_ICON_MASK);
 }
 
-static void update_icon_offsets(u32 ent_addr, CARDStat* stat)
+static void update_icon_offsets(uintptr_t ent_addr, CARDStat* stat)
 {
     u32 offset;
     bool iconTlut = 0;
@@ -131,7 +121,7 @@ s32 CARDGetStatus(s32 chan, s32 fileNo, CARDStat* stat)
 {
     GcCardControl* card;
     s32 result;
-    u32 dir_addr;
+    uintptr_t dir_addr;
 
     if (fileNo < 0 || PORT_CARD_MAX_FILE <= fileNo) {
         return CARD_RESULT_FATAL_ERROR;
@@ -142,7 +132,7 @@ s32 CARDGetStatus(s32 chan, s32 fileNo, CARDStat* stat)
         return result;
     }
 
-    dir_addr = (u32)card->current_dir_ptr + (u32)fileNo * PORT_CARD_DIR_SIZE;
+    dir_addr = (uintptr_t)card->current_dir_ptr + (uintptr_t)fileNo * (uintptr_t)PORT_CARD_DIR_SIZE;
 
     // Match decomp: __CARDAccess then __CARDIsPublic fallback.
     port_CARDDirControl view;
@@ -160,10 +150,19 @@ s32 CARDGetStatus(s32 chan, s32 fileNo, CARDStat* stat)
     }
 
     if (result >= 0) {
-        memcpy(stat->gameName, gc_mem_ptr(dir_addr + PORT_CARD_DIR_OFF_GAMENAME, 4), 4);
-        memcpy(stat->company, gc_mem_ptr(dir_addr + PORT_CARD_DIR_OFF_COMPANY, 2), 2);
+        const void* gn = card_ptr(dir_addr + PORT_CARD_DIR_OFF_GAMENAME, 4);
+        const void* co = card_ptr(dir_addr + PORT_CARD_DIR_OFF_COMPANY, 2);
+        if (!gn || !co) {
+            return __CARDPutControlBlock(card, CARD_RESULT_BROKEN);
+        }
+        memcpy(stat->gameName, gn, 4);
+        memcpy(stat->company, co, 2);
         stat->length = load_u16be(dir_addr + PORT_CARD_DIR_OFF_LENGTH) * (u32)card->sector_size;
-        memcpy(stat->fileName, gc_mem_ptr(dir_addr + PORT_CARD_DIR_OFF_FILENAME, CARD_FILENAME_MAX), CARD_FILENAME_MAX);
+        const void* fn = card_ptr(dir_addr + PORT_CARD_DIR_OFF_FILENAME, CARD_FILENAME_MAX);
+        if (!fn) {
+            return __CARDPutControlBlock(card, CARD_RESULT_BROKEN);
+        }
+        memcpy(stat->fileName, fn, CARD_FILENAME_MAX);
         stat->time = load_u32be(dir_addr + PORT_CARD_DIR_OFF_TIME);
 
         stat->bannerFormat = load_u8(dir_addr + PORT_CARD_DIR_OFF_BANNER_FORMAT);

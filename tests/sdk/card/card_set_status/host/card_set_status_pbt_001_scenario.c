@@ -24,15 +24,6 @@ enum {
     CARD_SET_STATUS_DIR_ADDR = 0x80400000u,
 };
 
-enum {
-    PORT_CARD_DIR_OFF_BANNER_FORMAT = 7,
-    PORT_CARD_DIR_OFF_TIME = 40,
-    PORT_CARD_DIR_OFF_ICON_ADDR = 44,
-    PORT_CARD_DIR_OFF_ICON_FORMAT = 48,
-    PORT_CARD_DIR_OFF_ICON_SPEED = 50,
-    PORT_CARD_DIR_OFF_COMMENT_ADDR = 60,
-};
-
 s32 CARDSetStatus(s32 chan, s32 fileNo, CARDStat* stat);
 s32 CARDSetStatusAsync(s32 chan, s32 fileNo, CARDStat* stat, CARDCallback callback);
 

@@ -2,9 +2,9 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "../gc_mem.h"
 #include "card_bios.h"
 #include "card_dir.h"
+#include "card_mem.h"
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -24,41 +24,32 @@ enum {
     CARD_SYSTEM_BLOCK_SIZE = 8 * 1024,
 };
 
-enum {
-    PORT_CARD_DIR_OFF_BANNER_FORMAT = 7,
-    PORT_CARD_DIR_OFF_TIME = 40,
-    PORT_CARD_DIR_OFF_ICON_ADDR = 44,
-    PORT_CARD_DIR_OFF_ICON_FORMAT = 48,
-    PORT_CARD_DIR_OFF_ICON_SPEED = 50,
-    PORT_CARD_DIR_OFF_COMMENT_ADDR = 60,
-};
-
-static inline u8 rd_u8(u32 addr)
+static inline u8 rd_u8(uintptr_t addr)
 {
-    u8 *p = gc_mem_ptr(addr, 1);
+    u8 *p = (u8*)card_ptr(addr, 1);
     return p ? *p : 0;
 }
 
-static inline void wr_u8(u32 addr, u8 v)
+static inline void wr_u8(uintptr_t addr, u8 v)
 {
-    u8 *p = gc_mem_ptr(addr, 1);
+    u8 *p = (u8*)card_ptr(addr, 1);
     if (p) {
         *p = v;
     }
 }
 
-static inline u16 rd_u16be(u32 addr)
+static inline u16 rd_u16be(uintptr_t addr)
 {
-    u8 *p = gc_mem_ptr(addr, 2);
+    u8 *p = (u8*)card_ptr(addr, 2);
     if (!p) {
         return 0;
     }
     return (u16)(((u16)p[0] << 8) | p[1]);
 }
 
-static inline void wr_u16be(u32 addr, u16 v)
+static inline void wr_u16be(uintptr_t addr, u16 v)
 {
-    u8 *p = gc_mem_ptr(addr, 2);
+    u8 *p = (u8*)card_ptr(addr, 2);
     if (!p) {
         return;
     }
@@ -66,18 +57,18 @@ static inline void wr_u16be(u32 addr, u16 v)
     p[1] = (u8)(v);
 }
 
-static inline u32 rd_u32be(u32 addr)
+static inline u32 rd_u32be(uintptr_t addr)
 {
-    u8 *p = gc_mem_ptr(addr, 4);
+    u8 *p = (u8*)card_ptr(addr, 4);
     if (!p) {
         return 0;
     }
     return ((u32)p[0] << 24) | ((u32)p[1] << 16) | ((u32)p[2] << 8) | (u32)p[3];
 }
 
-static inline void wr_u32be(u32 addr, u32 v)
+static inline void wr_u32be(uintptr_t addr, u32 v)
 {
-    u8 *p = gc_mem_ptr(addr, 4);
+    u8 *p = (u8*)card_ptr(addr, 4);
     if (!p) {
         return;
     }
@@ -97,13 +88,13 @@ static inline s32 card_get_icon_format(u32 ent_addr, s32 icon_no)
     if (icon_no < 0 || CARD_ICON_MAX <= icon_no) {
         return CARD_STAT_ICON_NONE;
     }
-    u16 iconFormat = rd_u16be(ent_addr + PORT_CARD_DIR_OFF_ICON_FORMAT);
+    u16 iconFormat = rd_u16be((uintptr_t)ent_addr + PORT_CARD_DIR_OFF_ICON_FORMAT);
     return (s32)((iconFormat >> (icon_no * 2)) & CARD_STAT_ICON_MASK);
 }
 
 static void update_icon_offsets(u32 ent_addr, CARDStat* stat)
 {
-    u32 offset = rd_u32be(ent_addr + PORT_CARD_DIR_OFF_ICON_ADDR);
+    u32 offset = rd_u32be((uintptr_t)ent_addr + PORT_CARD_DIR_OFF_ICON_ADDR);
 
     if (offset == 0xFFFFFFFFu) {
         stat->bannerFormat = CARD_STAT_BANNER_NONE;
@@ -190,7 +181,7 @@ static void card_checksum_u16be(const u8 *ptr, u32 length, u16 *checksum, u16 *c
     *checksum_inv = csi;
 }
 
-static s32 __CARDUpdateDir(s32 chan, CARDCallback callback)
+int32_t __CARDUpdateDir(s32 chan, CARDCallback callback)
 {
     if (chan < 0 || chan >= GC_CARD_CHANS) {
         return CARD_RESULT_FATAL_ERROR;
@@ -201,17 +192,17 @@ static s32 __CARDUpdateDir(s32 chan, CARDCallback callback)
         return CARD_RESULT_NOCARD;
     }
 
-    u32 dir = (u32)card->current_dir_ptr;
+    uintptr_t dir = card->current_dir_ptr;
     if (!dir) {
         return CARD_RESULT_BROKEN;
     }
 
-    u8 *dir_block = gc_mem_ptr(dir, CARD_SYSTEM_BLOCK_SIZE);
+    u8 *dir_block = (u8*)card_ptr(dir, CARD_SYSTEM_BLOCK_SIZE);
     if (!dir_block) {
         return CARD_RESULT_BROKEN;
     }
 
-    u32 dir_check = dir + (u32)PORT_CARD_MAX_FILE * PORT_CARD_DIR_SIZE;
+    uintptr_t dir_check = dir + (uintptr_t)PORT_CARD_MAX_FILE * (uintptr_t)PORT_CARD_DIR_SIZE;
     u16 checkCode = rd_u16be(dir_check + PORT_CARD_DIR_SIZE - 6u);
     checkCode = (u16)(checkCode + 1u);
     wr_u16be(dir_check + PORT_CARD_DIR_SIZE - 6u, checkCode);
