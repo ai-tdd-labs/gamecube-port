@@ -1,0 +1,12 @@
+diff --git a/src/sdk_port/card/CARDDelete.c b/src/sdk_port/card/CARDDelete.c
+--- a/src/sdk_port/card/CARDDelete.c
++++ b/src/sdk_port/card/CARDDelete.c
+@@ -80,7 +80,7 @@ s32 CARDFastDeleteAsync(s32 chan, s32 fileNo, CARDCallback callback)
+     }
+ 
+     card->startBlock = rd16be(ent + PORT_CARD_DIR_OFF_STARTBLOCK);
+-    memset(ent, 0xFFu, PORT_CARD_DIR_SIZE);
++    memset(ent, 0x00u, PORT_CARD_DIR_SIZE);
+ 
+     card->api_callback = (uintptr_t)(callback ? callback : __CARDDefaultApiCallback);
+     result = __CARDUpdateDir(chan, DeleteCallback);
