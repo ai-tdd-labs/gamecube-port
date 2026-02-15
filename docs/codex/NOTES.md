@@ -157,6 +157,19 @@ Evidence:
 - `bash tools/run_card_mount_pbt.sh` => PASS
 - `bash tools/run_card_read_pbt.sh` => PASS
 
+### CARDDelete + CARDFastDeleteAsync unified parity suite (2026-02-15)
+- Decomp contract source: `external/mp4-decomp/src/dolphin/card/CARDDelete.c`.
+- Added unified DOL-PBT suite:
+  - DOL oracle: `tests/sdk/card/card_delete/dol/pbt/card_delete_pbt_001/oracle_card_delete.c`
+  - DOL driver: `tests/sdk/card/card_delete/dol/pbt/card_delete_pbt_001/card_delete_pbt_001.c`
+  - Host runner: `tests/sdk/card/card_delete/host/card_delete_pbt_001_scenario.c`
+  - Runner: `tools/run_card_delete_pbt.sh` (expected.bin vs actual.bin)
+- Mutation check:
+  - `tools/mutations/card_delete_dir_clear_zero.patch` (dir entry clear mutant)
+  - `bash tools/run_mutation_check.sh tools/mutations/card_delete_dir_clear_zero.patch -- bash tools/run_card_delete_pbt.sh` => PASS (suite fails under mutant, as expected)
+- Verification:
+  - `bash tools/run_card_delete_pbt.sh` => PASS (`expected.bin == actual.bin`)
+
 ### Dolphin GDB Stub (macOS build on this machine)
 - Stop packets include PC/NIP in reg `0x40` (usable for PC-polling checkpoints).
   Evidence: `tools/ram_dump.py` `parse_stop_pc()`; observed stop example `T0540:800ba2f0;01:8019d798;` from real MP4 RVZ.
