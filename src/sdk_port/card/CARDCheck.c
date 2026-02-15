@@ -40,9 +40,21 @@ enum {
 
 extern u16 OSGetFontEncode(void);
 
+static inline void wr16be(u8 *p, u16 v);
+
 static inline u16 rd16be(const u8 *p)
 {
     return (u16)(((u16)p[0] << 8) | (u16)p[1]);
+}
+
+static inline u16 rd16_be_from_u16(const u16 *p, u16 idx)
+{
+    return rd16be((const u8*)(p + idx));
+}
+
+static inline void wr16_be_to_u16(u16 *p, u16 idx, u16 v)
+{
+    wr16be((u8*)(p + idx), v);
 }
 
 static inline void wr16be(u8 *p, u16 v)
@@ -276,7 +288,6 @@ s32 CARDCheckExAsync(s32 chan, s32 *xferBytes, CARDCallback callback)
     if (xferBytes) {
         *xferBytes = 0;
     }
-
     result = __CARDGetControlBlock(chan, &card);
     if (result < 0) {
         return result;
@@ -325,7 +336,6 @@ s32 CARDCheckExAsync(s32 chan, s32 *xferBytes, CARDCallback callback)
         u32 entAddr = (u32)(uintptr_t)ent;
         u16 entStartBlock;
         u16 entLength;
-
         if (!valid) {
             return __CARDPutControlBlock(card, CARD_RESULT_BROKEN);
         }
@@ -336,7 +346,7 @@ s32 CARDCheckExAsync(s32 chan, s32 *xferBytes, CARDCallback callback)
 
         entStartBlock = rd16be((u8 *)(uintptr_t)(entAddr + PORT_CARD_DIR_OFF_STARTBLOCK));
         entLength = rd16be((u8 *)(uintptr_t)(entAddr + PORT_CARD_DIR_OFF_LENGTH));
-        for (iBlock = entStartBlock, cBlock = 0; iBlock != 0xFFFFu && cBlock < entLength; iBlock = fat[currentFat][iBlock], ++cBlock) {
+        for (iBlock = entStartBlock, cBlock = 0; iBlock != 0xFFFFu && cBlock < entLength; iBlock = rd16_be_from_u16(fat[currentFat], iBlock), ++cBlock) {
             if (!card_is_valid_block_no(card, iBlock) || 1 < ++map[iBlock]) {
                 return __CARDPutControlBlock(card, CARD_RESULT_BROKEN);
             }
@@ -348,10 +358,10 @@ s32 CARDCheckExAsync(s32 chan, s32 *xferBytes, CARDCallback callback)
 
     cFree = 0;
     for (iBlock = CARD_NUM_SYSTEM_BLOCK; iBlock < (u16)card->cblock; iBlock++) {
-        u16 nextBlock = fat[currentFat][iBlock];
+        u16 nextBlock = rd16_be_from_u16(fat[currentFat], iBlock);
         if (map[iBlock] == 0) {
             if (nextBlock != CARD_FAT_AVAIL) {
-                fat[currentFat][iBlock] = CARD_FAT_AVAIL;
+                wr16_be_to_u16(fat[currentFat], iBlock, CARD_FAT_AVAIL);
                 updateOrphan = 1;
             }
             cFree++;
@@ -360,8 +370,8 @@ s32 CARDCheckExAsync(s32 chan, s32 *xferBytes, CARDCallback callback)
             return __CARDPutControlBlock(card, CARD_RESULT_BROKEN);
         }
     }
-    if (cFree != fat[currentFat][CARD_FAT_FREEBLOCKS]) {
-        fat[currentFat][CARD_FAT_FREEBLOCKS] = cFree;
+    if (cFree != rd16_be_from_u16(fat[currentFat], CARD_FAT_FREEBLOCKS)) {
+        wr16_be_to_u16(fat[currentFat], CARD_FAT_FREEBLOCKS, cFree);
         updateOrphan = 1;
     }
     if (updateOrphan) {
@@ -408,7 +418,8 @@ s32 CARDCheck(s32 chan)
     s32 xferBytes;
     s32 result = CARDCheckExAsync(chan, &xferBytes, __CARDSyncCallback);
     if (result >= 0) {
-        return __CARDSync(chan);
+        s32 sync = __CARDSync(chan);
+        return sync;
     }
     return result;
 }

@@ -3576,11 +3576,32 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
   - `tests/sdk/card/card_verify/host/card_verify_pbt_001_scenario.c`
   - `tools/run_card_verify_pbt.sh`
 - Host port:
-  - `src/sdk_port/card/CARDCheck.c`: host-side `__CARDVerify(GcCardControl*)` with explicit big-endian reads over `work_area`.
-  - `src/sdk_port/os/OSFont.c`: `OSGetFontEncode()` modeled via knob `gc_os_font_encode` (default 0).
+- `src/sdk_port/card/CARDCheck.c`: host-side `__CARDVerify(GcCardControl*)` with explicit big-endian reads over `work_area`.
+- `src/sdk_port/os/OSFont.c`: `OSGetFontEncode()` modeled via knob `gc_os_font_encode` (default 0).
 - Validation:
   - `tools/run_card_verify_pbt.sh` -> PASS (bit-exact expected == actual)
   - `tools/run_mutation_check.sh tools/mutations/card_verify_ignore_encode.patch -- tools/run_card_verify_pbt.sh` -> PASS (mutant fails as expected)
+
+## 2026-02-15: CARDCheck deterministic trace replay parity (pbt_001)
+
+- Scope: `CARDCheck`, `__CARDVerify`, and `CARDCheckExAsync` end-to-end parity.
+- Decomp contract:
+  - `external/mp4-decomp/src/dolphin/card/CARDCheck.c`
+- Implemented host-suite:
+  - DOL:
+    - `tests/sdk/card/card_check/dol/pbt/card_check_pbt_001/card_check_pbt_001.c`
+    - `tests/sdk/card/card_check/dol/pbt/card_check_pbt_001/oracle_card_check.c`
+  - Host:
+    - `tests/sdk/card/card_check/host/card_check_pbt_001_scenario.c`
+  - Runner:
+    - `tools/run_card_check_pbt.sh`
+- Implementation changes in `src/sdk_port/card/CARDCheck.c`:
+  - Added explicit big-endian FAT path helpers for `u16` FAT fields used through `fat[...][...]` accesses.
+  - Fixed directory/FAT traversal and orphan repair reads/writes to avoid host-endianness corruption.
+  - `CARDCheck()` path remains synchronous with `__CARDSync` semantics for callback returns.
+- Validation:
+  - `tools/run_card_check_pbt.sh` -> PASS: `PASS: CARDCheck pbt_001`
+  - `tools/run_mutation_check.sh tools/mutations/card_verify_ignore_encode.patch -- tools/run_card_check_pbt.sh` -> PASS (mutant fails as expected)
 
 ## 2026-02-14: MP4 workload pfDrawFonts GX-setup-only slice (reachability)
 

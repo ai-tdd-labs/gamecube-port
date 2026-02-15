@@ -137,7 +137,7 @@ Plus QUAT (8): Add, Multiply, Normalize, Inverse, Slerp, RotAxisRad, Mtx.
 **Still need for game:** none in current MTX batch set.
 (batch/reorder ops — PPC paired-single ASM, need C loop equivalents)
 
-### CARD (18/23 = 78%)
+### CARD (19/23 = 83%)
 
 **Ported:**
 - FAT internals: `__CARDCheckSum`, `__CARDUpdateFatBlock`, `__CARDAllocBlock`, `__CARDFreeBlock`
@@ -148,12 +148,13 @@ Plus QUAT (8): Add, Multiply, Normalize, Inverse, Slerp, RotAxisRad, Mtx.
 - `CARDGetSerialNo` — trace replay parity with `tests/sdk/card/card_get_serial_no` (`tools/run_card_get_serial_no_pbt.sh`)
 - `CARDGetStatus` — trace replay parity with `tests/sdk/card/card_get_status` (`tools/run_card_get_status_pbt.sh`)
 - `CARDSetStatus` — trace replay parity with `tests/sdk/card/card_set_status` (`tools/run_card_set_status_pbt.sh`)
+- `CARDCheck` — trace replay parity with `tests/sdk/card/card_check` (`tools/run_card_check_pbt.sh`)
 
 PBT suites: CARD-FAT (AllocBlock/FreeBlock/CheckSum) + CARD-Dir (CompareFileName/Access/IsPublic/GetFileNo/Seek) + CARD-Unlock (exnor_1st/exnor/bitrev/CARDRand) — 330k+ checks, all PASS.
 
 **Missing (API functions):**
 CARDMount, CARDUnmount, CARDOpen, CARDClose, CARDCreate, CARDDelete,
-CARDRead, CARDWrite, CARDFormat, CARDCheck, CARDFreeBlocks, CARDGetSectorSize,
+CARDRead, CARDWrite, CARDFormat, CARDFreeBlocks, CARDGetSectorSize,
 CARDProbeEx, CARDSetBannerFormat, CARDSetCommentAddress,
 CARDSetIconAddress, CARDSetIconAnim, CARDSetIconFormat, CARDSetIconSpeed
 
