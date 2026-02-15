@@ -375,12 +375,14 @@ s32 CARDCheckExAsync(s32 chan, s32 *xferBytes, CARDCallback callback)
         updateOrphan = 1;
     }
     if (updateOrphan) {
-        __CARDCheckSum(
-            (void *)&fat[currentFat][CARD_FAT_CHECKCODE],
-            CARD_SYSTEM_BLOCK_SIZE - sizeof(u32),
-            &fat[currentFat][CARD_FAT_CHECKSUM],
-            &fat[currentFat][CARD_FAT_CHECKSUMINV]
-        );
+        // __CARDCheckSum computes u16 checksums over a BE byte stream. On PPC,
+        // passing pointers into the FAT block works because the CPU is BE.
+        // On host, we must store the checksum fields back as BE bytes.
+        u16 cs = 0;
+        u16 csi = 0;
+        __CARDCheckSum((void *)&fat[currentFat][CARD_FAT_CHECKCODE], CARD_SYSTEM_BLOCK_SIZE - (int)sizeof(u32), &cs, &csi);
+        wr16_be_to_u16(fat[currentFat], CARD_FAT_CHECKSUM, cs);
+        wr16_be_to_u16(fat[currentFat], CARD_FAT_CHECKSUMINV, csi);
     }
 
     memcpy(fat[currentFat ^ 1], fat[currentFat], CARD_SYSTEM_BLOCK_SIZE);

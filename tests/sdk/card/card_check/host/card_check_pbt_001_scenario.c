@@ -207,12 +207,12 @@ const char* gc_scenario_out_path(void) { return "../actual/card_check_pbt_001.bi
 void gc_scenario_run(GcRam* ram)
 {
     const char* limit_env = getenv("CARD_CHECK_CASE_LIMIT");
-    int limit = 6;
+    int limit = 7;
     if (limit_env && *limit_env) {
         char* endp = 0;
         long lv = strtol(limit_env, &endp, 0);
         if (endp && *endp == 0) {
-            if (lv > 0 && lv <= 6) {
+            if (lv > 0 && lv <= 7) {
                 limit = (int)lv;
             }
         }
@@ -339,4 +339,25 @@ void gc_scenario_run(GcRam* ram)
     g_cb_last = 0;
     rc = CARDCheckExAsync(0, &xfer, cb_record);
     dump_case(out, &off, 0x43434B36u, rc, (u32)xfer, g_cb_calls, g_cb_last);
+
+    if (limit <= 6) {
+        return;
+    }
+
+    // Case 0x37: orphan repair path updates FAT entries + FREEBLOCKS + checksums, then updates FAT block.
+    memset(work, 0, 5u * (u32)CARD_SYSTEM_BLOCK_SIZE);
+    reset_card_state(work, 0x1234u, cBlock);
+    make_id_block(work + 0x0000u, 0x1234u, 0u, flash0);
+    make_dir_block(work + 0x2000u, 1u, 0xA0u);
+    make_dir_block(work + 0x4000u, 2u, 0xB0u);
+    make_fat_block(work + 0x6000u, 1u, (u16)cBlock);
+    make_fat_block(work + 0x8000u, 2u, (u16)cBlock);
+    // Force a non-AVAIL entry that no directory references (map[]==0), so CARDCheck repairs it to AVAIL.
+    fat_set(work + 0x6000u, 10u, 0xFFFFu);
+
+    xfer = 0u;
+    g_cb_calls = 0;
+    g_cb_last = 0;
+    rc = CARDCheckExAsync(0, &xfer, cb_record);
+    dump_case(out, &off, 0x43434B37u, rc, (u32)xfer, g_cb_calls, g_cb_last);
 }

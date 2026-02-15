@@ -763,4 +763,21 @@ void oracle_card_check_pbt_001_suite(u8* out)
     g_oracle_cb_last = 0;
     rc = CARDCheckExAsync(0, &xfer, cb_record);
     dump_case(out, &w, 0x43434B36u, rc, (u32)xfer, g_oracle_cb_calls, g_oracle_cb_last);
+
+    // Case 0x7: orphan repair path updates FAT entries + FREEBLOCKS + checksums, then updates FAT block.
+    memset(work, 0, 5u * CARD_SYSTEM_BLOCK_SIZE);
+    reset_card_state(work, 0x1234u, (s32)cBlock);
+    make_id_block(work + 0x0000u, 0x1234u, 0u, flash0);
+    make_dir_block(work + 0x2000u, 1u, 0xA0u);
+    make_dir_block(work + 0x4000u, 2u, 0xB0u);
+    make_fat_block(work + 0x6000u, 1u, cBlock);
+    make_fat_block(work + 0x8000u, 2u, cBlock);
+    // Force a non-AVAIL entry that no directory references (map[]==0), so CARDCheck repairs it to AVAIL.
+    wr16be(work + 0x6000u + 10u * 2u, 0xFFFFu);
+
+    xfer = 0u;
+    g_oracle_cb_calls = 0;
+    g_oracle_cb_last = 0;
+    rc = CARDCheckExAsync(0, &xfer, cb_record);
+    dump_case(out, &w, 0x43434B37u, rc, (u32)xfer, g_oracle_cb_calls, g_oracle_cb_last);
 }

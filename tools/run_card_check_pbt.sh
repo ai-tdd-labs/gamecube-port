@@ -19,4 +19,3 @@ make -C "$dol_dir" >/dev/null
 "$repo_root/tools/diff_bins.sh" "$expected_bin" "$actual_bin" >/dev/null
 
 echo "PASS: CARDCheck pbt_001"
-
