@@ -183,6 +183,22 @@ Evidence:
 - Verification:
   - `bash tools/run_card_format_pbt.sh` => PASS (`expected.bin == actual.bin`)
 
+### CARDWrite deterministic parity suite (2026-02-15)
+- Decomp contract source:
+  - `external/mp4-decomp/src/dolphin/card/CARDWrite.c` (`CARDWriteAsync`/`CARDWrite` state machine)
+  - `external/mp4-decomp/src/dolphin/card/CARDBios.c` (`__CARDWritePage` uses `exiCallback` completion path)
+- Host model note: `src/sdk_port/card/card_bios.c` routes DMA completion to `tx_callback` for reads (`cmd[0]==0x52`) and to `exi_callback` for writes, and `__CARDEraseSector` invokes its callback synchronously for deterministic unit tests.
+- Added unified DOL-PBT suite:
+  - DOL oracle: `tests/sdk/card/card_write/dol/pbt/card_write_pbt_001/oracle_card_write.c`
+  - DOL driver: `tests/sdk/card/card_write/dol/pbt/card_write_pbt_001/card_write_pbt_001.c`
+  - Host runner: `tests/sdk/card/card_write/host/card_write_pbt_001_scenario.c`
+  - Runner: `tools/run_card_write_pbt.sh` (expected.bin vs actual.bin)
+- Mutation check:
+  - `tools/mutations/card_write_time_zero.patch` (time field update mutant)
+  - `bash tools/run_mutation_check.sh tools/mutations/card_write_time_zero.patch -- bash tools/run_card_write_pbt.sh` => PASS (suite fails under mutant, as expected)
+- Verification:
+  - `bash tools/run_card_write_pbt.sh` => PASS (`expected.bin == actual.bin`)
+
 ### Dolphin GDB Stub (macOS build on this machine)
 - Stop packets include PC/NIP in reg `0x40` (usable for PC-polling checkpoints).
   Evidence: `tools/ram_dump.py` `parse_stop_pc()`; observed stop example `T0540:800ba2f0;01:8019d798;` from real MP4 RVZ.
