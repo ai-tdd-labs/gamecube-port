@@ -84,7 +84,10 @@ static void fill_memcard(int chan, u32 size)
 {
   u8 tmp[512];
   for (u32 i = 0; i < size; i += (u32)sizeof(tmp)) {
-    for (u32 j = 0; j < (u32)sizeof(tmp); j++) tmp[j] = (u8)((i + j) ^ 0xA5u);
+    for (u32 j = 0; j < (u32)sizeof(tmp); j++) {
+      u32 x = i + j;
+      tmp[j] = (u8)((x ^ (x >> 8) ^ 0xA5u) & 0xFFu);
+    }
     if (gc_memcard_write(chan, i, tmp, (u32)sizeof(tmp)) != 0) die("gc_memcard_write fill failed");
   }
 }
@@ -271,4 +274,3 @@ void gc_scenario_run(GcRam* ram)
     wr32be(out + w, h); w += 4;
   }
 }
-

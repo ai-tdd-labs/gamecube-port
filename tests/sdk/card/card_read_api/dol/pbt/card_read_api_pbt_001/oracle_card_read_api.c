@@ -252,7 +252,9 @@ static void seed_entry(u8* dir, const u8* id6, u8 perm, u16 startBlock, u16 lenB
 }
 
 static void init_img(void) {
-    for (u32 i = 0; i < (u32)sizeof(s_card_img); i++) s_card_img[i] = (u8)(i ^ 0xA5u);
+    for (u32 i = 0; i < (u32)sizeof(s_card_img); i++) {
+        s_card_img[i] = (u8)((i ^ (i >> 8) ^ 0xA5u) & 0xFFu);
+    }
 }
 
 void oracle_card_read_api_pbt_001_suite(u8* out) {
@@ -413,4 +415,3 @@ void oracle_card_read_api_pbt_001_suite(u8* out) {
         wr32be(out + w, h); w += 4;
     }
 }
-
