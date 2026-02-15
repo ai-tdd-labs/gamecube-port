@@ -137,7 +137,7 @@ Plus QUAT (8): Add, Multiply, Normalize, Inverse, Slerp, RotAxisRad, Mtx.
 **Still need for game:** none in current MTX batch set.
 (batch/reorder ops — PPC paired-single ASM, need C loop equivalents)
 
-### CARD (19/23 = 83%)
+### CARD (17/23 = 74%)
 
 **Ported:**
 - FAT internals: `__CARDCheckSum`, `__CARDUpdateFatBlock`, `__CARDAllocBlock`, `__CARDFreeBlock`
