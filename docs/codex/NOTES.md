@@ -199,6 +199,22 @@ Evidence:
 - Verification:
   - `bash tools/run_card_write_pbt.sh` => PASS (`expected.bin == actual.bin`)
 
+### CARDRead API deterministic parity suite (2026-02-15)
+- Decomp contract source: `external/mp4-decomp/src/dolphin/card/CARDRead.c` (`CARDReadAsync`/`CARDRead` + `ReadCallback` state machine).
+- Implemented file-level read API:
+  - `src/sdk_port/card/CARDRead.c` (uses `__CARDSeek`, access check with `__CARDAccess` and public fallback via `__CARDIsPublic`, and BE FAT traversal via `card_ptr_ro` + `fat_get`).
+  - `src/sdk_port/card/card_bios.c` adds `__CARDIsPublic` (permission bit check).
+- Added unified DOL-PBT suite:
+  - DOL oracle: `tests/sdk/card/card_read_api/dol/pbt/card_read_api_pbt_001/oracle_card_read_api.c`
+  - DOL driver: `tests/sdk/card/card_read_api/dol/pbt/card_read_api_pbt_001/card_read_api_pbt_001.c`
+  - Host runner: `tests/sdk/card/card_read_api/host/card_read_api_pbt_001_scenario.c`
+  - Runner: `tools/run_card_read_api_pbt.sh` (expected.bin vs actual.bin)
+- Mutation check:
+  - `tools/mutations/card_read_off_in_sector_zero.patch` (mutates initial in-sector offset handling)
+  - `bash tools/run_mutation_check.sh tools/mutations/card_read_off_in_sector_zero.patch -- bash tools/run_card_read_api_pbt.sh` => PASS (suite fails under mutant, as expected)
+- Verification:
+  - `bash tools/run_card_read_api_pbt.sh` => PASS (`expected.bin == actual.bin`)
+
 ### Dolphin GDB Stub (macOS build on this machine)
 - Stop packets include PC/NIP in reg `0x40` (usable for PC-polling checkpoints).
   Evidence: `tools/ram_dump.py` `parse_stop_pc()`; observed stop example `T0540:800ba2f0;01:8019d798;` from real MP4 RVZ.
