@@ -137,7 +137,7 @@ Plus QUAT (8): Add, Multiply, Normalize, Inverse, Slerp, RotAxisRad, Mtx.
 **Still need for game:** none in current MTX batch set.
 (batch/reorder ops — PPC paired-single ASM, need C loop equivalents)
 
-### CARD (17/23 = 74%)
+### CARD
 
 **Ported:**
 - FAT internals: `__CARDCheckSum`, `__CARDUpdateFatBlock`, `__CARDAllocBlock`, `__CARDFreeBlock`
@@ -152,9 +152,9 @@ Plus QUAT (8): Add, Multiply, Normalize, Inverse, Slerp, RotAxisRad, Mtx.
 
 PBT suites: CARD-FAT (AllocBlock/FreeBlock/CheckSum) + CARD-Dir (CompareFileName/Access/IsPublic/GetFileNo/Seek) + CARD-Unlock (exnor_1st/exnor/bitrev/CARDRand) — 330k+ checks, all PASS.
 
-**Missing (API functions):**
-CARDSetBannerFormat, CARDSetCommentAddress, CARDSetIconAddress,
-CARDSetIconAnim, CARDSetIconFormat, CARDSetIconSpeed
+**Missing (API functions):** none in current game-needed set
+
+Note: `CARDSetBannerFormat`, `CARDSetIcon*`, and `CARDSet{Icon,Comment}Address` are decomp macros over `CARDStat` fields (`external/mp4-decomp/include/dolphin/card.h`) and are already available as `static inline` helpers in `src/sdk_port/card/card_bios.h`.
 
 Note: Remaining CARD functions need EXI subsystem for actual hardware I/O.
 For port, we'll simulate with host filesystem (similar to Dolphin emulator approach).

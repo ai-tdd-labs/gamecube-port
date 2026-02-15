@@ -3603,6 +3603,48 @@ Outcome: compare-gate blocker caused by fixed 0x40 host dumps is resolved for th
   - `tools/run_card_check_pbt.sh` -> PASS: `PASS: CARDCheck pbt_001`
   - `tools/run_mutation_check.sh tools/mutations/card_verify_ignore_encode.patch -- tools/run_card_check_pbt.sh` -> PASS (mutant fails as expected)
 
+## 2026-02-15: CARDStat banner/icon/comment setter macros (contract + callsites)
+
+- MP4 decomp header defines these as macros (not SDK functions):
+  - `external/mp4-decomp/include/dolphin/card.h`:
+    - `CARDSetBannerFormat(stat, f)` updates `stat->bannerFormat` by clearing `CARD_STAT_BANNER_MASK (0x03)` bits and OR-ing `f`.
+    - `CARDSetIconAnim(stat, f)` updates `stat->bannerFormat` by clearing `CARD_STAT_ANIM_MASK (0x04)` bit and OR-ing `f`.
+    - `CARDSetIconFormat(stat, n, f)` updates `stat->iconFormat` by clearing 2-bit field at `(2*n)` and OR-ing `(f << (2*n))`.
+    - `CARDSetIconSpeed(stat, n, f)` updates `stat->iconSpeed` by clearing 2-bit field at `(2*n)` and OR-ing `(f << (2*n))`.
+    - `CARDSetIconAddress(stat, addr)` assigns `stat->iconAddr = (u32)addr`.
+    - `CARDSetCommentAddress(stat, addr)` assigns `stat->commentAddr = (u32)addr`.
+- MP4 callsites:
+  - `external/mp4-decomp/src/game/saveload.c` `SLStatSet`:
+    - `CARDSetCommentAddress(&stat, 0);`
+    - `CARDSetIconAddress(&stat, 64);`
+    - `CARDSetBannerFormat(&stat, CARD_STAT_BANNER_C8);`
+    - `CARDSetIconFormat(&stat, 0..3, CARD_STAT_ICON_C8);`
+    - `CARDSetIconSpeed(&stat, 0..3, CARD_STAT_SPEED_MIDDLE);`
+    - `CARDSetIconSpeed(&stat, 4, CARD_STAT_SPEED_END);`
+    - `CARDSetIconAnim(&stat, CARD_STAT_ANIM_LOOP);`
+- WW callsites:
+  - `external/tww-decomp/src/m_Do/m_Do_MemCardRWmng.cpp` `mDoMemCdRWm_SetCardStat`:
+    - `CARDSetBannerFormat(&stat, 1);`
+    - `CARDSetIconAnim(&stat, 0);`
+    - `CARDSetIconFormat(&stat, 0, 1);` then `1..7` set to `0`
+    - `CARDSetIconSpeed(&stat, 0, 3);` then `1..7` set to `0`
+- TP callsites:
+  - `external/tp-decomp/src/m_Do/m_Do_MemCardRWmng.cpp` `mDoMemCdRWm_SetCardStat`:
+    - `stat.iconAddr = 0; stat.commentAddr = 0x2400;`
+    - `CARDSetBannerFormat(&stat, CARD_STAT_BANNER_C8);`
+    - `CARDSetIconAnim(&stat, CARD_STAT_ANIM_BOUNCE);`
+    - `CARDSetIconFormat(&stat, 0..4, CARD_STAT_ICON_C8);` and `5..7` set to `CARD_STAT_ICON_NONE`
+    - `CARDSetIconSpeed(&stat, 0..4, CARD_STAT_SPEED_FAST);` and `5..7` set to `CARD_STAT_SPEED_END`
+- AC: no callsites found in `external/ac-decomp` (only header macro definitions).
+- Related CARDStatus validation/offset behavior (MP4 decomp):
+  - `external/mp4-decomp/src/dolphin/card/CARDStat.c` `CARDSetStatusAsync` rejects with `CARD_RESULT_FATAL_ERROR` when:
+    - `stat->iconAddr != 0xffffffff && CARD_READ_SIZE <= stat->iconAddr` (i.e. `iconAddr` must be `< 512` unless disabled with `0xffffffff`)
+    - `stat->commentAddr != 0xffffffff && CARD_SYSTEM_BLOCK_SIZE - CARD_COMMENT_SIZE < (stat->commentAddr % CARD_SYSTEM_BLOCK_SIZE)`
+  - `UpdateIconOffsets(ent, stat)` computes `stat->offsetBanner/offsetIcon[]/offsetData` based on `ent->iconAddr`, `ent->bannerFormat`, and per-icon `ent->iconFormat` fields.
+
+- Host port mapping:
+  - `src/sdk_port/card/card_bios.h` already provides `static inline` implementations of these setter names for use by host code.
+
 ## 2026-02-14: MP4 workload pfDrawFonts GX-setup-only slice (reachability)
 
 - Motivation:

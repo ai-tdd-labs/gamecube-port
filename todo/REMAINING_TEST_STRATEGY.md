@@ -78,7 +78,7 @@ These are hardware-coupled and can only be verified against Dolphin ground truth
 | Module | Count | Functions | Complexity |
 |--------|-------|-----------|------------|
 | **GX** | 0 | — | Remaining GX blocker is now data compatibility: `GXNtsc480Prog` weak symbol wiring |
-| **CARD** | 6 | `CARDSetBannerFormat`, `CARDSetCommentAddress`, `CARDSetIconAddress`, `CARDSetIconAnim`, `CARDSetIconFormat`, `CARDSetIconSpeed` | Medium — needs icon/banner serialization + host formatting state |
+| **CARD** | 0 | — | Setter helpers are macros/inlines on `CARDStat` (not SDK functions); no remaining trace-replay-needed CARD API in current list |
 | **THP** | 27 | `THPInit`, `THPVideoDecode`, `THPSimpleOpen/Close/Decode/PreLoad/LoadStop/Init/Quit`, `THPSimpleSetBuffer/SetVolume/CalcNeedMemory`, `THPSimpleAudioStart/Stop`, `THPSimpleGetTotalFrame/GetVideoInfo/DrawCurrentFrame`, `THPGXYuv2RgbSetup/Draw`, `THPGXRestore`, `THPAudioMixCallback`, `THPDecodeFunc`, `THPViewFunc/ViewSprFunc`, `THPTestProc`, `THPSimpleInlineFunc` | Large — JPEG codec + ADPCM + locked cache emulation |
 | **AI** | 0 | — | Medium — needs audio backend (SDL_audio or similar) |
 
