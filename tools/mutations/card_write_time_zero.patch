@@ -1,0 +1,11 @@
+diff --git a/src/sdk_port/card/CARDRdwr.c b/src/sdk_port/card/CARDRdwr.c
+--- a/src/sdk_port/card/CARDRdwr.c
++++ b/src/sdk_port/card/CARDRdwr.c
+@@ -99,6 +99,6 @@ static void WriteCallback(s32 chan, s32 result)
+         }
+         u8* ent = dir + (u32)fileInfo->fileNo * (u32)PORT_CARD_DIR_SIZE;
+-        wr32be(ent + PORT_CARD_DIR_OFF_TIME, oracle_time_seconds());
++        wr32be(ent + PORT_CARD_DIR_OFF_TIME, 0u);
+ 
+         callback = (CARDCallback)(uintptr_t)card->api_callback;
+         card->api_callback = 0u;

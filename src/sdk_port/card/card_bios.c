@@ -383,9 +383,21 @@ void __CARDTxHandler(s32 chan, OSContext *context)
     err = !EXIDeselect(chan);
     EXIUnlock(chan);
 
-    callback = (CARDCallback)(uintptr_t)card->tx_callback;
-    if (callback) {
+    // Host-port note:
+    // The real SDK observes status via EXI interrupts and routes completion via
+    // txCallback (reads) or exiCallback (writes/erases). Our deterministic EXI
+    // model completes DMA immediately, so dispatch based on the last command.
+    callback = 0;
+    if (card->cmd[0] == 0x52u) { // read segment
+        callback = (CARDCallback)(uintptr_t)card->tx_callback;
         card->tx_callback = 0;
+    }
+    else {
+        callback = (CARDCallback)(uintptr_t)card->exi_callback;
+        card->exi_callback = 0;
+    }
+
+    if (callback) {
         gc_card_tx_calls[chan]++;
         callback(chan, (!err && EXIProbe(chan)) ? CARD_RESULT_READY : CARD_RESULT_NOCARD);
     }
@@ -565,6 +577,12 @@ s32 __CARDEraseSector(s32 chan, u32 addr, CARDCallback callback)
 
         EXIDeselect(chan);
         EXIUnlock(chan);
+    }
+    // Deterministic host model: treat erase as immediate completion (no EXI IRQ).
+    if (result >= 0 && callback) {
+        CARDCallback cb = callback;
+        card->exi_callback = 0;
+        cb(chan, CARD_RESULT_READY);
     }
     return result;
 }
