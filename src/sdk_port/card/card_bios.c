@@ -111,6 +111,21 @@ s32 __CARDAccess(const GcCardControl* card, const void* dirEntry)
     return CARD_RESULT_NOPERM;
 }
 
+s32 __CARDIsPublic(const void* dirEntry)
+{
+    const u8* entry = (const u8*)dirEntry;
+    if (!entry) {
+        return -128; // CARD_RESULT_FATAL_ERROR
+    }
+    if (entry[PORT_CARD_DIR_OFF_GAMENAME] == 0xFFu) {
+        return CARD_RESULT_NOFILE;
+    }
+    if ((entry[PORT_CARD_DIR_OFF_PERMISSION] & (u8)PORT_CARD_ATTR_PUBLIC) != 0) {
+        return CARD_RESULT_READY;
+    }
+    return CARD_RESULT_NOPERM;
+}
+
 s32 __CARDGetFileNo(const GcCardControl* card, const char* fileName, s32* pfileNo)
 {
     if (!card || !fileName || !pfileNo) {

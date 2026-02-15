@@ -291,6 +291,7 @@ case "$subsystem" in
       "$repo_root/src/sdk_port/card/CARDCreate.c"
       "$repo_root/src/sdk_port/card/CARDDelete.c"
       "$repo_root/src/sdk_port/card/CARDRdwr.c"
+      "$repo_root/src/sdk_port/card/CARDRead.c"
       "$repo_root/src/sdk_port/card/CARDFormat.c"
       "$repo_root/src/sdk_port/card/card_dir.c"
       "$repo_root/src/sdk_port/card/card_fat.c"

@@ -157,6 +157,7 @@ int32_t __CARDEraseSector(int32_t chan, uint32_t addr, CARDCallback callback);
 int32_t __CARDSeek(CARDFileInfo* fileInfo, int32_t length, int32_t offset, GcCardControl **pcard);
 void __CARDDefaultApiCallback(int32_t chan, int32_t result);
 int32_t __CARDAccess(const GcCardControl* card, const void* dirEntry);
+int32_t __CARDIsPublic(const void* dirEntry);
 int32_t __CARDGetFileNo(const GcCardControl* card, const char* fileName, int32_t* pfileNo);
 int32_t __CARDIsOpened(const GcCardControl* card, int32_t fileNo);
 
@@ -185,6 +186,9 @@ int32_t CARDDelete(int32_t chan, const char* fileName);
 
 int32_t CARDWriteAsync(CARDFileInfo* fileInfo, const void* buffer, int32_t length, int32_t offset, CARDCallback callback);
 int32_t CARDWrite(CARDFileInfo* fileInfo, const void* buffer, int32_t length, int32_t offset);
+
+int32_t CARDReadAsync(CARDFileInfo* fileInfo, void* buffer, int32_t length, int32_t offset, CARDCallback callback);
+int32_t CARDRead(CARDFileInfo* fileInfo, void* buffer, int32_t length, int32_t offset);
 
 int32_t __CARDFormatRegionAsync(int32_t chan, uint16_t encode, CARDCallback callback);
 int32_t CARDFormatAsync(int32_t chan, CARDCallback callback);
