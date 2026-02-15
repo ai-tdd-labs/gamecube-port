@@ -153,10 +153,8 @@ Plus QUAT (8): Add, Multiply, Normalize, Inverse, Slerp, RotAxisRad, Mtx.
 PBT suites: CARD-FAT (AllocBlock/FreeBlock/CheckSum) + CARD-Dir (CompareFileName/Access/IsPublic/GetFileNo/Seek) + CARD-Unlock (exnor_1st/exnor/bitrev/CARDRand) — 330k+ checks, all PASS.
 
 **Missing (API functions):**
-CARDMount, CARDUnmount, CARDOpen, CARDClose, CARDCreate, CARDDelete,
-CARDRead, CARDWrite, CARDFormat, CARDFreeBlocks, CARDGetSectorSize,
-CARDProbeEx, CARDSetBannerFormat, CARDSetCommentAddress,
-CARDSetIconAddress, CARDSetIconAnim, CARDSetIconFormat, CARDSetIconSpeed
+CARDSetBannerFormat, CARDSetCommentAddress, CARDSetIconAddress,
+CARDSetIconAnim, CARDSetIconFormat, CARDSetIconSpeed
 
 Note: Remaining CARD functions need EXI subsystem for actual hardware I/O.
 For port, we'll simulate with host filesystem (similar to Dolphin emulator approach).
