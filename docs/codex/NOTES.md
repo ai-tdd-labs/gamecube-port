@@ -150,6 +150,7 @@ Rules:
 
 Evidence:
 - `bash tools/run_card_create_pbt.sh` => PASS
+- `bash tools/run_mutation_check.sh tools/mutations/card_create_icon_addr_zero.patch -- bash tools/run_card_create_pbt.sh` => PASS (suite fails under mutant, as expected)
 - `bash tools/run_card_get_status_pbt.sh` => PASS
 - `bash tools/run_card_set_status_pbt.sh` => PASS
 - `bash tools/run_card_open_pbt.sh` => PASS
