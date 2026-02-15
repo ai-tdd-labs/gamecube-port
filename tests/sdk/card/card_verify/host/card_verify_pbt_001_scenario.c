@@ -20,7 +20,6 @@ s32 __CARDVerify(GcCardControl* card);
 enum { CARD_SYSTEM_BLOCK_SIZE = 8 * 1024 };
 enum { CARD_NUM_SYSTEM_BLOCK = 5 };
 enum { CARD_MAX_FILE = 127 };
-enum { CARD_FILENAME_MAX = 32 };
 enum { CARD_FAT_AVAIL = 0x0000u, CARD_FAT_CHECKSUM = 0, CARD_FAT_CHECKSUMINV = 1, CARD_FAT_CHECKCODE = 2, CARD_FAT_FREEBLOCKS = 3 };
 
 static inline void wr16be(u8* p, u16 v) {
